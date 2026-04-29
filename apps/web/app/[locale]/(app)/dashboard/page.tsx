@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkles, UserCog } from "lucide-react";
+import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles, UserCog } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,7 +73,7 @@ export default async function DashboardPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 animate-fade-in">
-      <Card>
+      <Card className="bg-macaron-peach dark:bg-slate-900">
         <CardHeader className="flex-row items-center gap-4">
           {user.avatar_url ? (
             <Image
@@ -100,38 +100,45 @@ export default async function DashboardPage({
         </CardHeader>
       </Card>
 
-      <Card>
+      <Card className="bg-macaron-mint dark:bg-slate-900">
         <CardHeader className="flex-row items-start gap-4">
-          <ShieldCheck className="mt-1 h-6 w-6 flex-none text-brand" />
+          <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-mint">
+            <ShieldCheck className="h-6 w-6 text-emerald-700" />
+          </span>
           <div className="flex-1">
             <CardTitle>{t("kycCard.title")}</CardTitle>
             <CardDescription>{kycCard.desc}</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <Button asChild={!kycCard.disabled} disabled={kycCard.disabled} variant={kycCard.disabled ? "outline" : "default"}>
-            {kycCard.disabled ? (
-              <span>{kycCard.cta}</span>
-            ) : (
+          {kycCard.disabled ? (
+            <span className="inline-flex h-11 items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-100/60 px-5 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+              {kycCard.cta}
+              <CheckCircle2 className="h-4 w-4" />
+            </span>
+          ) : (
+            <Button asChild>
               <Link href={kycCard.href}>
                 {kycCard.cta} <ArrowRight className="h-4 w-4" />
               </Link>
-            )}
-          </Button>
+            </Button>
+          )}
         </CardContent>
       </Card>
 
       {isAdmin ? (
-        <Card>
+        <Card className="bg-macaron-lavender dark:bg-slate-900">
           <CardHeader className="flex-row items-start gap-4">
-            <UserCog className="mt-1 h-6 w-6 flex-none text-amber" />
+            <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-lavender">
+              <UserCog className="h-6 w-6 text-violet-700" />
+            </span>
             <div className="flex-1">
               <CardTitle>{t("adminCard.title")}</CardTitle>
               <CardDescription>{t("adminCard.desc")}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline">
+            <Button asChild>
               <Link href={`/${locale}/admin/kyc`}>
                 {t("adminCard.cta")} <ArrowRight className="h-4 w-4" />
               </Link>
@@ -140,10 +147,12 @@ export default async function DashboardPage({
         </Card>
       ) : null}
 
-      <Card>
-        <CardContent className="flex items-start gap-4 pt-6">
-          <Sparkles className="mt-1 h-5 w-5 flex-none text-brand" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">{t("phaseNotice")}</p>
+      <Card className="bg-macaron-sky dark:bg-slate-900">
+        <CardContent className="flex items-center gap-4 pt-6">
+          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-bubble-sky">
+            <Sparkles className="h-5 w-5 text-sky-700" />
+          </span>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{t("phaseNotice")}</p>
         </CardContent>
       </Card>
     </div>

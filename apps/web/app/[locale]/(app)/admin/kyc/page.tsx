@@ -69,7 +69,7 @@ export default async function AdminKycListPage({
             className={
               (s.value || "") === (status || "")
                 ? "rounded-full bg-brand-gradient px-4 py-1.5 text-xs font-medium text-white"
-                : "rounded-full border border-slate-200 px-4 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                : "rounded-full border border-cream-edge bg-paper px-4 py-1.5 text-xs text-slate-600 hover:bg-cream/60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
             }
           >
             {s.label}
@@ -87,7 +87,7 @@ export default async function AdminKycListPage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800">
+                  <tr className="border-b border-cream-edge text-left text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800">
                     <th className="py-2 pr-4">ID</th>
                     <th className="py-2 pr-4">使用者</th>
                     <th className="py-2 pr-4">姓名</th>

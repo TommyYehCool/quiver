@@ -24,6 +24,26 @@ const config: Config = {
         },
         mint: "#10B981",
         amber: "#F59E0B",
+        cream: {
+          DEFAULT: "#F2ECF8",
+          edge: "#DDD3EC",
+        },
+        paper: "#FAF7FE",
+        macaron: {
+          rose: "#FBE4E8",
+          mint: "#E5F1E5",
+          lavender: "#EBE4F1",
+          peach: "#FBEFDC",
+          lemon: "#FAF1D6",
+          sky: "#E5EAF3",
+        },
+        bubble: {
+          peach: "#F5DEC0",
+          mint: "#C8E0CC",
+          lavender: "#DBCEE7",
+          sky: "#CFD9E8",
+          rose: "#F2C9D1",
+        },
         slate: {
           ink: "#0F172A",
         },

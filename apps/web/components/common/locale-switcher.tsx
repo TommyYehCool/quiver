@@ -24,7 +24,7 @@ export function LocaleSwitcher() {
   };
 
   return (
-    <div className="flex items-center gap-1 rounded-xl border border-slate-200 p-1 dark:border-slate-700">
+    <div className="flex items-center gap-1 rounded-xl border border-cream-edge bg-paper p-1 dark:border-slate-700 dark:bg-slate-900">
       <Globe className="ml-2 h-4 w-4 text-slate-400" aria-hidden />
       {locales.map((loc) => (
         <Button

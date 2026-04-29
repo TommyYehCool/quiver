@@ -14,9 +14,9 @@ const buttonVariants = cva(
         default:
           "bg-brand-gradient text-white shadow-md hover:shadow-lg hover:brightness-110 active:brightness-95",
         outline:
-          "border border-slate-200 bg-white text-slate-ink hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800",
+          "border border-cream-edge bg-paper text-slate-ink hover:bg-cream/60 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800",
         ghost:
-          "text-slate-ink hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800",
+          "text-slate-ink hover:bg-cream/60 dark:text-white dark:hover:bg-slate-800",
         destructive:
           "bg-red-600 text-white hover:bg-red-700",
       },

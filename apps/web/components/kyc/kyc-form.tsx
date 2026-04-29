@@ -255,7 +255,7 @@ function StepBasicInfo({
               id="country"
               value={form.country}
               onChange={(e) => update("country", e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-ink shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="flex h-11 w-full rounded-xl border border-cream-edge bg-paper px-3 py-2 text-sm text-slate-ink shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             >
               {COUNTRIES.map((c) => (
                 <option key={c} value={c}>

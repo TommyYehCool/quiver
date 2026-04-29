@@ -79,7 +79,7 @@ function Features() {
         {items.map(({ icon: Icon, key }) => (
           <div
             key={key}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            className="rounded-2xl border border-cream-edge bg-paper p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient text-white">
               <Icon className="h-5 w-5" />
@@ -97,7 +97,7 @@ function Features() {
 
 function Footer() {
   return (
-    <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+    <footer className="border-t border-cream-edge py-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
       © 2026 Quiver
     </footer>
   );
