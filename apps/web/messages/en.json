@@ -1,0 +1,71 @@
+{
+  "brand": {
+    "name": "Quiver",
+    "tagline": "A crypto wallet built for everyone"
+  },
+  "nav": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "dashboard": "Home"
+  },
+  "marketing": {
+    "hero": {
+      "title": "Crypto, in numbers you understand.",
+      "subtitle": "Always shown in your local currency. No blockchain knowledge required. 3 minutes to start.",
+      "cta": "Get started — it's free",
+      "secondary": "Learn more"
+    },
+    "features": {
+      "f1": {
+        "title": "Always your local currency",
+        "desc": "See balances in TWD or USD — no mental math needed."
+      },
+      "f2": {
+        "title": "Free transfers between users",
+        "desc": "Send money to friends with just an email — instant and free."
+      },
+      "f3": {
+        "title": "We pay the gas fees",
+        "desc": "Withdraw to any wallet — we cover the on-chain fees."
+      }
+    }
+  },
+  "login": {
+    "title": "Welcome back to Quiver",
+    "subtitle": "Sign in with Google to manage your digital assets",
+    "googleButton": "Continue with Google",
+    "termsNote": "By signing in, you agree to our Terms and Privacy Policy",
+    "errors": {
+      "oauth_failed": "Sign in failed. Please try again.",
+      "email_unverified": "Your Google email is not verified."
+    }
+  },
+  "dashboard": {
+    "greeting": "Hi, {name}",
+    "phaseNotice": "Phase 1 skeleton complete. Wallet, KYC, and transactions arrive in later phases.",
+    "logout": "Sign out"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong. Please try again."
+  },
+  "locale": {
+    "switch": "Language",
+    "zh-TW": "繁體中文",
+    "en": "English"
+  },
+  "theme": {
+    "toggle": "Toggle theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "errors": {
+    "auth.notAuthenticated": "Please sign in first",
+    "auth.invalidToken": "Session expired, please sign in again",
+    "auth.userNotFound": "User not found",
+    "auth.userSuspended": "Account suspended",
+    "auth.adminRequired": "Admin access required",
+    "server.internalError": "Something went wrong, please try again"
+  }
+}

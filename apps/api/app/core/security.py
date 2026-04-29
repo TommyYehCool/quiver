@@ -1,0 +1,69 @@
+"""JWT + cookie helpers."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from fastapi import Response
+from jose import JWTError, jwt
+
+from app.core.config import settings
+
+COOKIE_NAME = "quiver_session"
+
+
+class TokenError(Exception):
+    """JWT 驗證錯誤。"""
+
+
+def create_access_token(
+    user_id: int,
+    email: str,
+    roles: list[str],
+    expires_seconds: int | None = None,
+) -> str:
+    now = datetime.now(UTC)
+    expires = now + timedelta(seconds=expires_seconds or settings.jwt_expires_seconds)
+    payload: dict[str, Any] = {
+        "sub": str(user_id),
+        "email": email,
+        "roles": roles,
+        "iat": int(now.timestamp()),
+        "exp": int(expires.timestamp()),
+        "iss": "quiver",
+    }
+    return jwt.encode(
+        payload,
+        settings.jwt_secret.get_secret_value(),
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def decode_access_token(token: str) -> dict[str, Any]:
+    try:
+        return jwt.decode(
+            token,
+            settings.jwt_secret.get_secret_value(),
+            algorithms=[settings.jwt_algorithm],
+            issuer="quiver",
+        )
+    except JWTError as e:
+        raise TokenError(f"invalid token: {e}") from e
+
+
+def set_session_cookie(response: Response, token: str) -> None:
+    """寫 HttpOnly + SameSite=Lax cookie。Secure 在 HTTPS 環境才開。"""
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        max_age=settings.jwt_expires_seconds,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+        path="/",
+    )
+
+
+def clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(key=COOKIE_NAME, path="/")

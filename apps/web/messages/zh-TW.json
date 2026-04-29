@@ -1,0 +1,71 @@
+{
+  "brand": {
+    "name": "Quiver",
+    "tagline": "為新手打造的加密貨幣錢包"
+  },
+  "nav": {
+    "login": "登入",
+    "logout": "登出",
+    "dashboard": "首頁"
+  },
+  "marketing": {
+    "hero": {
+      "title": "把加密貨幣，變成你看得懂的數字",
+      "subtitle": "以新台幣為主、不用懂區塊鏈，3 分鐘開好你的第一個帳戶。",
+      "cta": "免費開始使用",
+      "secondary": "了解更多"
+    },
+    "features": {
+      "f1": {
+        "title": "永遠用台幣顯示",
+        "desc": "看到的數字就是台幣，不用換算、不用心算。"
+      },
+      "f2": {
+        "title": "免手續費轉給朋友",
+        "desc": "用戶之間轉帳完全免費，輸入 email 秒到。"
+      },
+      "f3": {
+        "title": "代付鏈上手續費",
+        "desc": "提領出去時，所有區塊鏈手續費由我們負擔。"
+      }
+    }
+  },
+  "login": {
+    "title": "歡迎回到 Quiver",
+    "subtitle": "用 Google 帳號登入，開始管理你的數位資產",
+    "googleButton": "使用 Google 繼續",
+    "termsNote": "登入即代表你同意我們的服務條款與隱私政策",
+    "errors": {
+      "oauth_failed": "登入失敗，請再試一次",
+      "email_unverified": "你的 Google 信箱尚未驗證，無法登入"
+    }
+  },
+  "dashboard": {
+    "greeting": "嗨，{name}",
+    "phaseNotice": "Phase 1 骨架完成。Phase 2 起會加入錢包、KYC、交易功能。",
+    "logout": "登出"
+  },
+  "common": {
+    "loading": "載入中…",
+    "error": "發生錯誤，請稍後再試"
+  },
+  "locale": {
+    "switch": "語言",
+    "zh-TW": "繁體中文",
+    "en": "English"
+  },
+  "theme": {
+    "toggle": "切換主題",
+    "light": "淺色",
+    "dark": "深色",
+    "system": "系統"
+  },
+  "errors": {
+    "auth.notAuthenticated": "請先登入",
+    "auth.invalidToken": "登入狀態已過期，請重新登入",
+    "auth.userNotFound": "找不到使用者",
+    "auth.userSuspended": "帳號已被停權",
+    "auth.adminRequired": "需要管理員權限",
+    "server.internalError": "系統發生錯誤，請稍後再試"
+  }
+}
