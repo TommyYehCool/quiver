@@ -63,6 +63,21 @@
       "cta": "Open admin"
     }
   },
+  "wallet": {
+    "title": "My receive address",
+    "desc": "Share this address or QR. USDT goes directly to your Quiver account.",
+    "addressLabel": "Receive address (TRON Network)",
+    "copy": "Copy address",
+    "copied": "Copied",
+    "hint": "Only accepts USDT on the TRON network (TRC20). When withdrawing from an exchange, select TRC20.",
+    "testnetBadge": "TESTNET",
+    "loading": "Loading…",
+    "loadFailed": "Load failed, please refresh",
+    "notReady": {
+      "title": "Wallet not ready",
+      "desc": "System setup is incomplete. Please contact admin."
+    }
+  },
   "kyc": {
     "title": "Identity verification",
     "subtitle": "Complete verification to unlock withdrawals and transfers. All data is encrypted at rest.",

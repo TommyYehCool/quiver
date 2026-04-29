@@ -36,6 +36,7 @@ class User(Base, TimestampMixin):
         String(16), nullable=False, server_default=UserStatus.ACTIVE.value
     )
     locale: Mapped[str] = mapped_column(String(8), nullable=False, server_default="zh-TW")
+    tron_address: Mapped[str | None] = mapped_column(String(34), unique=True, index=True)
 
     @property
     def is_admin(self) -> bool:

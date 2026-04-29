@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowRight, CheckCircle2, Key, ShieldCheck, Sparkles, Us
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ReceiveCard } from "@/components/wallet/receive-card";
 import { fetchMeServer } from "@/lib/auth";
 
 interface KycResp {
@@ -142,6 +143,8 @@ export default async function DashboardPage({
           )}
         </CardContent>
       </Card>
+
+      {kyc?.status === "APPROVED" ? <ReceiveCard /> : null}
 
       {needsSetup ? (
         <Card className="bg-macaron-rose dark:bg-slate-900">

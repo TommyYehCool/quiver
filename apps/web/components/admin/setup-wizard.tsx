@@ -129,7 +129,7 @@ export function SetupWizard({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="break-all rounded-xl border border-cream-edge bg-paper p-4 font-mono text-sm">
+            <div className="break-all rounded-xl border border-cream-edge bg-paper p-4 font-mono text-sm text-slate-ink dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
               {kekB64}
             </div>
             <div className="flex items-center gap-3">

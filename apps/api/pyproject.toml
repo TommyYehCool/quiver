@@ -22,6 +22,7 @@ dependencies = [
   "structlog>=24.4",
   "python-multipart>=0.0.20",
   "slowapi>=0.1.9",
+  "bip-utils>=2.9",
 ]
 
 [dependency-groups]

@@ -63,6 +63,21 @@
       "cta": "進入後台"
     }
   },
+  "wallet": {
+    "title": "我的收款地址",
+    "desc": "把這個地址或 QR 給對方,USDT 會直接收到你的 Quiver 帳戶。",
+    "addressLabel": "收款地址 (TRON Network)",
+    "copy": "複製地址",
+    "copied": "已複製",
+    "hint": "只接受 TRON 鏈上的 USDT (TRC20)。從交易所提領時請選 TRC20 網路。",
+    "testnetBadge": "TESTNET",
+    "loading": "載入中…",
+    "loadFailed": "載入失敗,請重新整理",
+    "notReady": {
+      "title": "錢包尚未準備好",
+      "desc": "系統初始化未完成,請聯絡管理員。"
+    }
+  },
   "kyc": {
     "title": "身分驗證",
     "subtitle": "完成驗證後可使用提領與轉帳功能。所有資料皆加密儲存。",

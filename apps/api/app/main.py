@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import auth, kyc, me
+from app.api import auth, kyc, me, wallet
 from app.api.admin import kyc as admin_kyc
 from app.api.admin import setup as admin_setup
 from app.core.config import settings
@@ -127,6 +127,7 @@ async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONRespons
 app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(kyc.router)
+app.include_router(wallet.router)
 app.include_router(admin_kyc.router)
 app.include_router(admin_setup.router)
 
