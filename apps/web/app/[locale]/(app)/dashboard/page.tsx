@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles, UserCog } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Key, ShieldCheck, Sparkles, UserCog } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,11 @@ import { fetchMeServer } from "@/lib/auth";
 
 interface KycResp {
   status: "PENDING" | "APPROVED" | "REJECTED";
+}
+
+interface SetupResp {
+  initialized: boolean;
+  awaiting_verify: boolean;
 }
 
 const SERVER_API_BASE_URL = process.env.SERVER_API_BASE_URL ?? "http://api:8000";
@@ -22,6 +27,16 @@ async function fetchKycStatus(cookieHeader: string): Promise<KycResp | null> {
   });
   if (!res.ok) return null;
   const wrapped = (await res.json()) as { success: boolean; data?: KycResp | null };
+  return wrapped.success ? wrapped.data ?? null : null;
+}
+
+async function fetchSetupStatus(cookieHeader: string): Promise<SetupResp | null> {
+  const res = await fetch(`${SERVER_API_BASE_URL}/api/admin/setup/status`, {
+    headers: { Cookie: cookieHeader },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  const wrapped = (await res.json()) as { success: boolean; data?: SetupResp };
   return wrapped.success ? wrapped.data ?? null : null;
 }
 
@@ -37,6 +52,8 @@ export default async function DashboardPage({
 
   const kyc = await fetchKycStatus(cookieHeader);
   const isAdmin = user.roles.includes("ADMIN");
+  const setupStatus = isAdmin ? await fetchSetupStatus(cookieHeader) : null;
+  const needsSetup = isAdmin && setupStatus !== null && !setupStatus.initialized;
 
   const kycCard = (() => {
     if (!kyc) {
@@ -125,6 +142,32 @@ export default async function DashboardPage({
           )}
         </CardContent>
       </Card>
+
+      {needsSetup ? (
+        <Card className="bg-macaron-rose dark:bg-slate-900">
+          <CardHeader className="flex-row items-start gap-4">
+            <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-rose">
+              <Key className="h-6 w-6 text-rose-700" />
+            </span>
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2">
+                系統初始化
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+              </CardTitle>
+              <CardDescription>
+                還未設定主加密金鑰 (KEK),Phase 3+ 功能無法使用。
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href={`/${locale}/admin/setup`}>
+                前往設定 <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {isAdmin ? (
         <Card className="bg-macaron-lavender dark:bg-slate-900">

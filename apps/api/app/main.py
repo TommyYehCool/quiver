@@ -14,15 +14,66 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import auth, kyc, me
 from app.api.admin import kyc as admin_kyc
+from app.api.admin import setup as admin_setup
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.schemas.api import ApiResponse
+
+
+async def _verify_kek_consistency() -> None:
+    """啟動時檢查 env 的 KEK 與 DB 中存的 hash 是否一致。
+
+    - 若 system_keys 不存在或 state=AWAITING_VERIFY:不需要 KEK,允許啟動
+    - 若 state=INITIALIZED 但 env 沒 KEK:拒絕啟動
+    - 若 state=INITIALIZED 且 env 有 KEK 但 hash 不一致:拒絕啟動
+    """
+    from sqlalchemy import select
+
+    from app.core.db import db_session
+    from app.models.system_keys import SystemKey, SystemKeyState
+    from app.services import crypto
+
+    logger = get_logger(__name__)
+
+    async with db_session() as session:
+        result = await session.execute(select(SystemKey).order_by(SystemKey.id.asc()).limit(1))
+        row = result.scalar_one_or_none()
+
+    if row is None:
+        logger.info("kek_check_skipped_no_row")
+        return
+    if row.state != SystemKeyState.INITIALIZED.value:
+        logger.info("kek_check_skipped_not_initialized", state=row.state)
+        return
+
+    env_kek_b64 = settings.kek_current_b64.get_secret_value()
+    if not env_kek_b64:
+        logger.error("kek_missing_in_env")
+        raise RuntimeError(
+            "System is INITIALIZED but KEK_CURRENT_B64 is empty in env. "
+            "Restore KEK to .env and restart."
+        )
+
+    try:
+        kek = crypto.kek_from_b64(env_kek_b64)
+    except crypto.CryptoError as e:
+        raise RuntimeError(f"KEK_CURRENT_B64 has invalid format: {e}") from e
+
+    if crypto.kek_hash(kek) != row.kek_hash:
+        logger.error("kek_hash_mismatch")
+        raise RuntimeError(
+            "KEK_CURRENT_B64 in env does not match DB hash. "
+            "Either env KEK is wrong or DB was tampered. Refusing to start."
+        )
+
+    logger.info("kek_check_ok")
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     configure_logging("DEBUG" if settings.is_dev else "INFO")
     logger = get_logger(__name__)
+    await _verify_kek_consistency()
     logger.info("api_starting", env=settings.env)
     yield
     logger.info("api_stopping")
@@ -77,6 +128,7 @@ app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(kyc.router)
 app.include_router(admin_kyc.router)
+app.include_router(admin_setup.router)
 
 
 @app.get("/healthz", tags=["health"])

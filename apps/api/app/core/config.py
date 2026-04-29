@@ -45,7 +45,8 @@ class Settings(BaseSettings):
     google_client_secret: SecretStr
 
     # ---- Tatum (Phase 3+) ----
-    tatum_api_key: SecretStr = SecretStr("")
+    tatum_api_key_testnet: SecretStr = SecretStr("")
+    tatum_api_key_mainnet: SecretStr = SecretStr("")
     tatum_base_url: str = "https://api.tatum.io"
     webhook_callback_url: str = ""
     webhook_path_token: SecretStr = SecretStr("")
@@ -78,6 +79,10 @@ class Settings(BaseSettings):
     @property
     def cookie_secure(self) -> bool:
         return self.frontend_base_url.startswith("https://")
+
+    @property
+    def tatum_api_key(self) -> SecretStr:
+        return self.tatum_api_key_mainnet if self.env == "mainnet" else self.tatum_api_key_testnet
 
 
 @lru_cache
