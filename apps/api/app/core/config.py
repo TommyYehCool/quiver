@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from decimal import Decimal
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import EmailStr, Field, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     bitopro_base_url: str = "https://api.bitopro.com/v3"
 
     # ---- 業務參數 ----
-    admin_emails: list[EmailStr] = Field(default_factory=list)
+    admin_emails: Annotated[list[EmailStr], NoDecode] = Field(default_factory=list)
     withdrawal_fee_usdt: Decimal = Decimal("1")
     withdrawal_large_threshold_usd: Decimal = Decimal("1000")
     min_withdrawal_usdt: Decimal = Decimal("5")

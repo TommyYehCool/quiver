@@ -12,7 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import auth, me
+from app.api import auth, kyc, me
+from app.api.admin import kyc as admin_kyc
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.schemas.api import ApiResponse
@@ -74,6 +75,8 @@ async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONRespons
 
 app.include_router(auth.router)
 app.include_router(me.router)
+app.include_router(kyc.router)
+app.include_router(admin_kyc.router)
 
 
 @app.get("/healthz", tags=["health"])

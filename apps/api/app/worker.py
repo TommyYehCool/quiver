@@ -1,4 +1,4 @@
-"""arq worker 設定 — Phase 1 沒任務，先佔位 noop。"""
+"""arq worker 設定。"""
 
 from __future__ import annotations
 
@@ -8,11 +8,31 @@ from arq.connections import RedisSettings
 
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
+from app.services.email import send_kyc_approved, send_kyc_rejected
 
 
 async def noop(ctx: dict[str, Any]) -> str:
-    """Placeholder — Phase 3+ 會被真實任務取代。"""
+    """Placeholder。"""
     return "noop"
+
+
+async def kyc_send_approved_email(
+    ctx: dict[str, Any],
+    *,
+    to: str,
+    display_name: str | None,
+) -> bool:
+    return await send_kyc_approved(to=to, display_name=display_name)
+
+
+async def kyc_send_rejected_email(
+    ctx: dict[str, Any],
+    *,
+    to: str,
+    display_name: str | None,
+    reason: str,
+) -> bool:
+    return await send_kyc_rejected(to=to, display_name=display_name, reason=reason)
 
 
 async def startup(ctx: dict[str, Any]) -> None:
@@ -29,7 +49,7 @@ def _redis_settings() -> RedisSettings:
 
 
 class WorkerSettings:
-    functions = [noop]
+    functions = [noop, kyc_send_approved_email, kyc_send_rejected_email]
     redis_settings = _redis_settings()
     on_startup = startup
     on_shutdown = shutdown

@@ -6,7 +6,9 @@
   "nav": {
     "login": "登入",
     "logout": "登出",
-    "dashboard": "首頁"
+    "dashboard": "首頁",
+    "kyc": "身分驗證",
+    "admin": "後台"
   },
   "marketing": {
     "hero": {
@@ -42,8 +44,91 @@
   },
   "dashboard": {
     "greeting": "嗨，{name}",
-    "phaseNotice": "Phase 1 骨架完成。Phase 2 起會加入錢包、KYC、交易功能。",
-    "logout": "登出"
+    "phaseNotice": "Phase 2 — 接下來請完成身分驗證 (KYC)，之後才能使用錢包功能。",
+    "logout": "登出",
+    "kycCard": {
+      "title": "完成身分驗證",
+      "descNew": "需要 4 步驟，約 3 分鐘",
+      "descPending": "已送出，等待管理員審核",
+      "descApproved": "已通過，可使用全部功能",
+      "descRejected": "未通過，請重新提交",
+      "ctaNew": "開始驗證",
+      "ctaPending": "查看狀態",
+      "ctaApproved": "已完成",
+      "ctaRejected": "重新提交"
+    },
+    "adminCard": {
+      "title": "管理員後台",
+      "desc": "審核用戶 KYC 申請",
+      "cta": "進入後台"
+    }
+  },
+  "kyc": {
+    "title": "身分驗證",
+    "subtitle": "完成驗證後可使用提領與轉帳功能。所有資料皆加密儲存。",
+    "step1": {
+      "title": "基本資料",
+      "desc": "請填寫真實姓名與身分證字號，需與證件一致。"
+    },
+    "step2": {
+      "title": "證件影像",
+      "desc": "上傳身分證正反面（jpg / png / webp，5MB 以內）。"
+    },
+    "step3": {
+      "title": "自拍照",
+      "desc": "請手持身分證自拍，臉與證件需清晰可辨。"
+    },
+    "step4": {
+      "title": "確認送出",
+      "desc": "送出後會進入審核流程，通常 1 個工作天內回覆。",
+      "notice": "送出後若需修改，請等待管理員退回後再重新提交。"
+    },
+    "fields": {
+      "legalName": "法定姓名",
+      "legalNamePlaceholder": "與證件相同",
+      "idNumber": "身分證 / 護照號碼",
+      "idNumberPlaceholder": "例如 A123456789",
+      "birthDate": "出生日期",
+      "country": "國家",
+      "idFront": "證件正面",
+      "idBack": "證件反面",
+      "selfie": "手持證件自拍照"
+    },
+    "upload": {
+      "cta": "點擊上傳",
+      "hint": "JPG / PNG / WebP，5MB 以內"
+    },
+    "nav": {
+      "prev": "上一步",
+      "next": "下一步",
+      "submit": "送出申請"
+    },
+    "approved": {
+      "title": "身分驗證已通過",
+      "subtitle": "你已可使用 Quiver 全部功能。",
+      "backHome": "回到首頁"
+    },
+    "pending": {
+      "title": "審核中",
+      "subtitle": "我們已收到你的資料，將盡快完成審核。結果會以 email 通知。",
+      "backHome": "回到首頁"
+    },
+    "rejected": {
+      "title": "上次審核未通過"
+    },
+    "errors": {
+      "kyc": {
+        "alreadySubmitted": "你已有審核中或已通過的申請",
+        "fileEmpty": "檔案是空的",
+        "fileTooLarge": "檔案太大，最多 5MB",
+        "fileFormatUnsupported": "格式不支援，請上傳 JPG / PNG / WebP",
+        "invalidPath": "路徑錯誤",
+        "fileNotFound": "找不到檔案"
+      },
+      "server": {
+        "internalError": "系統發生錯誤，請稍後再試"
+      }
+    }
   },
   "common": {
     "loading": "載入中…",
@@ -61,11 +146,15 @@
     "system": "系統"
   },
   "errors": {
-    "auth.notAuthenticated": "請先登入",
-    "auth.invalidToken": "登入狀態已過期，請重新登入",
-    "auth.userNotFound": "找不到使用者",
-    "auth.userSuspended": "帳號已被停權",
-    "auth.adminRequired": "需要管理員權限",
-    "server.internalError": "系統發生錯誤，請稍後再試"
+    "auth": {
+      "notAuthenticated": "請先登入",
+      "invalidToken": "登入狀態已過期，請重新登入",
+      "userNotFound": "找不到使用者",
+      "userSuspended": "帳號已被停權",
+      "adminRequired": "需要管理員權限"
+    },
+    "server": {
+      "internalError": "系統發生錯誤，請稍後再試"
+    }
   }
 }

@@ -37,6 +37,9 @@ next-env.d.ts
 *.swo
 .DS_Store
 
+# --- Claude Code worktrees / agent state ---
+.claude/
+
 # --- Env / Secrets ---
 .env
 .env.local

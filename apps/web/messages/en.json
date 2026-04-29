@@ -6,7 +6,9 @@
   "nav": {
     "login": "Sign in",
     "logout": "Sign out",
-    "dashboard": "Home"
+    "dashboard": "Home",
+    "kyc": "Identity verification",
+    "admin": "Admin"
   },
   "marketing": {
     "hero": {
@@ -42,8 +44,91 @@
   },
   "dashboard": {
     "greeting": "Hi, {name}",
-    "phaseNotice": "Phase 1 skeleton complete. Wallet, KYC, and transactions arrive in later phases.",
-    "logout": "Sign out"
+    "phaseNotice": "Phase 2 — Complete identity verification (KYC) to unlock wallet features.",
+    "logout": "Sign out",
+    "kycCard": {
+      "title": "Verify your identity",
+      "descNew": "4 steps, about 3 minutes",
+      "descPending": "Submitted — waiting for review",
+      "descApproved": "Verified — all features unlocked",
+      "descRejected": "Not approved — please resubmit",
+      "ctaNew": "Start verification",
+      "ctaPending": "View status",
+      "ctaApproved": "Done",
+      "ctaRejected": "Resubmit"
+    },
+    "adminCard": {
+      "title": "Admin console",
+      "desc": "Review user KYC submissions",
+      "cta": "Open admin"
+    }
+  },
+  "kyc": {
+    "title": "Identity verification",
+    "subtitle": "Complete verification to unlock withdrawals and transfers. All data is encrypted at rest.",
+    "step1": {
+      "title": "Basic info",
+      "desc": "Enter your legal name and ID number. Must match your document."
+    },
+    "step2": {
+      "title": "ID photos",
+      "desc": "Upload front and back of your ID (jpg / png / webp, max 5MB)."
+    },
+    "step3": {
+      "title": "Selfie",
+      "desc": "Hold your ID and take a selfie. Both face and ID must be clearly visible."
+    },
+    "step4": {
+      "title": "Review & submit",
+      "desc": "Once submitted, expect a response within 1 business day.",
+      "notice": "After submission, you can only edit data once your application is rejected by an admin."
+    },
+    "fields": {
+      "legalName": "Legal name",
+      "legalNamePlaceholder": "Same as your ID",
+      "idNumber": "ID / Passport number",
+      "idNumberPlaceholder": "e.g. A123456789",
+      "birthDate": "Date of birth",
+      "country": "Country",
+      "idFront": "ID front",
+      "idBack": "ID back",
+      "selfie": "Selfie holding ID"
+    },
+    "upload": {
+      "cta": "Click to upload",
+      "hint": "JPG / PNG / WebP, max 5MB"
+    },
+    "nav": {
+      "prev": "Back",
+      "next": "Next",
+      "submit": "Submit"
+    },
+    "approved": {
+      "title": "Identity verified",
+      "subtitle": "All Quiver features are now available.",
+      "backHome": "Back to home"
+    },
+    "pending": {
+      "title": "Under review",
+      "subtitle": "We've received your submission. You'll get an email once it's reviewed.",
+      "backHome": "Back to home"
+    },
+    "rejected": {
+      "title": "Previous submission was rejected"
+    },
+    "errors": {
+      "kyc": {
+        "alreadySubmitted": "You already have an active submission",
+        "fileEmpty": "File is empty",
+        "fileTooLarge": "File too large (max 5MB)",
+        "fileFormatUnsupported": "Unsupported format — use JPG / PNG / WebP",
+        "invalidPath": "Invalid path",
+        "fileNotFound": "File not found"
+      },
+      "server": {
+        "internalError": "Something went wrong, please try again"
+      }
+    }
   },
   "common": {
     "loading": "Loading…",
@@ -61,11 +146,15 @@
     "system": "System"
   },
   "errors": {
-    "auth.notAuthenticated": "Please sign in first",
-    "auth.invalidToken": "Session expired, please sign in again",
-    "auth.userNotFound": "User not found",
-    "auth.userSuspended": "Account suspended",
-    "auth.adminRequired": "Admin access required",
-    "server.internalError": "Something went wrong, please try again"
+    "auth": {
+      "notAuthenticated": "Please sign in first",
+      "invalidToken": "Session expired, please sign in again",
+      "userNotFound": "User not found",
+      "userSuspended": "Account suspended",
+      "adminRequired": "Admin access required"
+    },
+    "server": {
+      "internalError": "Something went wrong, please try again"
+    }
   }
 }
