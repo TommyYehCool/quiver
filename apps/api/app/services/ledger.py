@@ -205,6 +205,36 @@ async def get_user_balance(
     return Decimal(credits) - Decimal(debits)
 
 
+async def get_total_user_balance(db: AsyncSession, currency: str = CURRENCY) -> Decimal:
+    """所有 USER 帳戶的 ledger 餘額總和(sum(CR) - sum(DR))。
+
+    用於 admin 對帳:HOT 鏈上 USDT - 此值 = 平台累計收的手續費。
+    """
+    user_acct_ids_q = await db.execute(
+        select(Account.id).where(
+            Account.kind == AccountKind.USER.value,
+            Account.currency == currency,
+        )
+    )
+    user_acct_ids = [r[0] for r in user_acct_ids_q.all()]
+    if not user_acct_ids:
+        return Decimal("0")
+
+    credits_q = await db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(
+            LedgerEntry.account_id.in_(user_acct_ids),
+            LedgerEntry.direction == EntryDirection.CREDIT.value,
+        )
+    )
+    debits_q = await db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(
+            LedgerEntry.account_id.in_(user_acct_ids),
+            LedgerEntry.direction == EntryDirection.DEBIT.value,
+        )
+    )
+    return Decimal(credits_q.scalar_one() or 0) - Decimal(debits_q.scalar_one() or 0)
+
+
 async def get_pending_amount(
     db: AsyncSession, user_id: int, currency: str = CURRENCY
 ) -> Decimal:

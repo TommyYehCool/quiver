@@ -92,3 +92,6 @@ class HotWalletInfo(BaseModel):
     usdt_balance: Decimal
     trx_balance: Decimal
     network: str
+    # 拆解(可選 — 沒接到 ledger 時為 None)
+    user_balances_total: Decimal | None = None  # 所有 USER 帳戶 ledger 餘額總和
+    platform_profit: Decimal | None = None  # = usdt_balance - user_balances_total(累計手續費)

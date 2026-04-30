@@ -135,6 +135,8 @@ export interface HotWalletInfo {
   usdt_balance: string;
   trx_balance: string;
   network: string;
+  user_balances_total?: string | null;
+  platform_profit?: string | null;
 }
 
 export async function fetchHotWallet(): Promise<HotWalletInfo> {

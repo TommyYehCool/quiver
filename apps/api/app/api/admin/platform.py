@@ -57,9 +57,14 @@ async def get_fee_payer(_: CurrentAdminDep, db: DbDep) -> ApiResponse[FeePayerIn
 
 @router.get("/hot-wallet", response_model=ApiResponse[HotWalletInfo])
 async def get_hot_wallet(_: CurrentAdminDep, db: DbDep) -> ApiResponse[HotWalletInfo]:
-    """HOT wallet 地址 + USDT/TRX 餘額。
+    """HOT wallet 地址 + USDT/TRX 餘額 + 用戶 ledger 拆解。
+
     所有提領從這裡出,所有 sweep 把 user 鏈上 USDT 集中到這裡。
+    顯示 user_balances_total / platform_profit 讓 admin 一眼看出資金結構:
+      HOT_USDT = sum(user ledger) + 累計手續費(平台獲利)
     """
+    from app.services.ledger import get_total_user_balance
+
     try:
         address = await get_platform_hot_wallet_address(db)
     except WalletError as e:
@@ -78,11 +83,16 @@ async def get_hot_wallet(_: CurrentAdminDep, db: DbDep) -> ApiResponse[HotWallet
     except TatumError as e:
         logger.warning("hot_wallet_tatum_error", error=str(e))
 
+    user_balances_total = await get_total_user_balance(db)
+    platform_profit = usdt_balance - user_balances_total
+
     return ApiResponse[HotWalletInfo].ok(
         HotWalletInfo(
             address=address,
             usdt_balance=usdt_balance,
             trx_balance=trx_balance,
             network=settings.env,
+            user_balances_total=user_balances_total,
+            platform_profit=platform_profit,
         )
     )

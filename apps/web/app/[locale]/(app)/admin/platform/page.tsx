@@ -80,6 +80,40 @@ export default async function AdminPlatformPage({
                   </p>
                 </div>
               </div>
+              {hot.user_balances_total !== null && hot.user_balances_total !== undefined ? (
+                <div className="rounded-lg border border-cream-edge bg-paper/50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800/50">
+                  <p className="font-medium text-slate-600 dark:text-slate-300">USDT 結構拆解</p>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <div className="flex items-baseline justify-between rounded-md bg-paper px-3 py-2 dark:bg-slate-900">
+                      <span className="text-slate-500 dark:text-slate-400">用戶餘額</span>
+                      <span className="font-mono tabular-nums text-slate-700 dark:text-slate-200">
+                        {hot.user_balances_total} <span className="text-[10px] text-slate-400">USDT</span>
+                      </span>
+                    </div>
+                    <div
+                      className={
+                        Number(hot.platform_profit ?? 0) < 0
+                          ? "flex items-baseline justify-between rounded-md bg-red-50 px-3 py-2 dark:bg-red-950/30"
+                          : "flex items-baseline justify-between rounded-md bg-emerald-50 px-3 py-2 dark:bg-emerald-950/30"
+                      }
+                    >
+                      <span className="text-slate-500 dark:text-slate-400">獲利(累計手續費)</span>
+                      <span
+                        className={
+                          Number(hot.platform_profit ?? 0) < 0
+                            ? "font-mono tabular-nums text-red-700 dark:text-red-300"
+                            : "font-mono tabular-nums text-emerald-700 dark:text-emerald-300"
+                        }
+                      >
+                        {hot.platform_profit ?? "0"} <span className="text-[10px] text-slate-400">USDT</span>
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    HOT USDT = 所有用戶 ledger 餘額總和 + 平台累計手續費。獲利為負代表平台對用戶有負債(insolvency),需立即排查。
+                  </p>
+                </div>
+              ) : null}
               <div className="rounded-lg border border-cream-edge bg-paper/50 p-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
                 <p className="font-medium text-slate-600 dark:text-slate-300">Bulk sweep — 一次性 migration</p>
                 <p className="mt-1">
