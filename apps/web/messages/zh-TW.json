@@ -258,6 +258,21 @@
     "loading": "載入中…",
     "error": "發生錯誤，請稍後再試"
   },
+  "notifications": {
+    "ariaLabel": "通知",
+    "title": "通知",
+    "markAllRead": "全部標已讀",
+    "empty": "目前沒有通知",
+    "messages": {
+      "DEPOSIT_POSTED": "收到入金 +{amount} {currency}",
+      "TRANSFER_RECEIVED": "{sender_display_name} 轉帳 +{amount} {currency}",
+      "KYC_APPROVED": "身分驗證已通過 ✓",
+      "KYC_REJECTED": "身分驗證未通過：{reason}",
+      "WITHDRAWAL_COMPLETED": "提領 {amount} {currency} 已完成",
+      "WITHDRAWAL_FAILED": "提領 {amount} {currency} 失敗,已退款",
+      "WITHDRAWAL_REJECTED": "提領申請被退回:{reason}"
+    }
+  },
   "locale": {
     "switch": "語言",
     "zh-TW": "繁體中文",

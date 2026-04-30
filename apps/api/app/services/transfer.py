@@ -142,6 +142,23 @@ async def execute_transfer(
         ]
     )
 
+    # 通知收件人
+    from app.models.notification import NotificationType
+    from app.services.notifications import create_notification
+
+    create_notification(
+        db,
+        recipient.id,
+        NotificationType.TRANSFER_RECEIVED,
+        params={
+            "amount": str(amount),
+            "currency": currency,
+            "sender_email": sender.email,
+            "sender_display_name": sender.display_name,
+            "note": note,
+        },
+    )
+
     try:
         await db.commit()
     except IntegrityError as e:

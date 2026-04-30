@@ -160,6 +160,12 @@ async def approve_submission(
     submission.reviewed_by = admin.id
     submission.reviewed_at = datetime.now(timezone.utc)
     submission.reject_reason = None
+
+    from app.models.notification import NotificationType
+    from app.services.notifications import create_notification
+
+    create_notification(db, user.id, NotificationType.KYC_APPROVED, params={})
+
     await db.commit()
     await db.refresh(submission)
 
@@ -186,6 +192,17 @@ async def reject_submission(
     submission.reviewed_by = admin.id
     submission.reviewed_at = datetime.now(timezone.utc)
     submission.reject_reason = payload.reason
+
+    from app.models.notification import NotificationType
+    from app.services.notifications import create_notification
+
+    create_notification(
+        db,
+        user.id,
+        NotificationType.KYC_REJECTED,
+        params={"reason": payload.reason},
+    )
+
     await db.commit()
     await db.refresh(submission)
 

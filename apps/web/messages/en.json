@@ -256,6 +256,21 @@
     "loading": "Loading…",
     "error": "Something went wrong. Please try again."
   },
+  "notifications": {
+    "ariaLabel": "Notifications",
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "empty": "No notifications yet",
+    "messages": {
+      "DEPOSIT_POSTED": "Deposit received: +{amount} {currency}",
+      "TRANSFER_RECEIVED": "{sender_display_name} sent +{amount} {currency}",
+      "KYC_APPROVED": "Identity verification approved ✓",
+      "KYC_REJECTED": "Identity verification rejected: {reason}",
+      "WITHDRAWAL_COMPLETED": "Withdrawal of {amount} {currency} completed",
+      "WITHDRAWAL_FAILED": "Withdrawal of {amount} {currency} failed, refunded",
+      "WITHDRAWAL_REJECTED": "Withdrawal request rejected: {reason}"
+    }
+  },
   "locale": {
     "switch": "Language",
     "zh-TW": "繁體中文",

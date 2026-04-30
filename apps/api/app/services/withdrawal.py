@@ -308,6 +308,22 @@ async def mark_completed(db: AsyncSession, withdrawal_id: int) -> WithdrawalRequ
         return None
     req.status = WithdrawalStatus.COMPLETED.value
     req.completed_at = datetime.now(timezone.utc)
+
+    from app.models.notification import NotificationType
+    from app.services.notifications import create_notification
+
+    create_notification(
+        db,
+        req.user_id,
+        NotificationType.WITHDRAWAL_COMPLETED,
+        params={
+            "amount": str(req.amount),
+            "currency": req.currency,
+            "to_address": req.to_address,
+            "tx_hash": req.tx_hash,
+        },
+    )
+
     await db.commit()
     await db.refresh(req)
     return req
@@ -380,6 +396,22 @@ async def fail_and_reverse_withdrawal(
 
     req.status = WithdrawalStatus.FAILED.value
     req.reject_reason = reason[:1024] if reason else "broadcast or chain failure"
+
+    from app.models.notification import NotificationType
+    from app.services.notifications import create_notification
+
+    create_notification(
+        db,
+        req.user_id,
+        NotificationType.WITHDRAWAL_FAILED,
+        params={
+            "amount": str(req.amount),
+            "currency": req.currency,
+            "to_address": req.to_address,
+            "reason": req.reject_reason,
+        },
+    )
+
     await db.commit()
     await db.refresh(req)
     logger.warning("withdrawal_failed_and_reversed", withdrawal_id=req.id, reason=req.reject_reason)
@@ -413,6 +445,21 @@ async def admin_reject(
     req.reject_reason = reason
     req.reviewed_by = admin.id
     req.reviewed_at = datetime.now(timezone.utc)
+
+    from app.models.notification import NotificationType
+    from app.services.notifications import create_notification
+
+    create_notification(
+        db,
+        req.user_id,
+        NotificationType.WITHDRAWAL_REJECTED,
+        params={
+            "amount": str(req.amount),
+            "currency": req.currency,
+            "reason": reason,
+        },
+    )
+
     await db.commit()
     await db.refresh(req)
     logger.info(

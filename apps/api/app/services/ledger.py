@@ -126,6 +126,21 @@ async def post_deposit(db: AsyncSession, onchain_tx: OnchainTx) -> LedgerTransac
     onchain_tx.status = OnchainTxStatus.POSTED.value
     onchain_tx.posted_at = datetime.now(timezone.utc)
 
+    # 通知
+    from app.models.notification import NotificationType
+    from app.services.notifications import create_notification
+
+    create_notification(
+        db,
+        onchain_tx.user_id,
+        NotificationType.DEPOSIT_POSTED,
+        params={
+            "amount": str(onchain_tx.amount),
+            "currency": onchain_tx.currency,
+            "tx_hash": onchain_tx.tx_hash,
+        },
+    )
+
     await db.commit()
     await db.refresh(ledger_tx)
     logger.info(

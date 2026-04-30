@@ -11,6 +11,7 @@ from app.models.ledger import (
     LedgerTxStatus,
     LedgerTxType,
 )
+from app.models.notification import Notification, NotificationType
 from app.models.onchain_tx import OnchainTx, OnchainTxStatus
 from app.models.system_keys import SystemKey, SystemKeyState
 from app.models.user import User, UserStatus
@@ -27,6 +28,8 @@ __all__ = [
     "LedgerTransaction",
     "LedgerTxStatus",
     "LedgerTxType",
+    "Notification",
+    "NotificationType",
     "OnchainTx",
     "OnchainTxStatus",
     "SystemKey",

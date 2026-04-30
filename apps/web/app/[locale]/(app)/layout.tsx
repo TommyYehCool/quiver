@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
+import { NotificationBell } from "@/components/common/notification-bell";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { LogoutButton } from "@/components/common/logout-button";
 import { fetchMeServer } from "@/lib/auth";
@@ -29,6 +30,7 @@ export default async function AppLayout({
           <span className="text-lg font-semibold tracking-tight">Quiver</span>
         </Link>
         <div className="flex items-center gap-2">
+          <NotificationBell />
           <LocaleSwitcher />
           <ThemeToggle />
           <LogoutButton locale={locale} />
