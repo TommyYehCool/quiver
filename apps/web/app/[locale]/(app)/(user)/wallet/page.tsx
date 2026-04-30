@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { BalanceCard } from "@/components/wallet/balance-card";
+import { RecentActivityCard } from "@/components/wallet/recent-activity-card";
 import { WalletTabs } from "@/components/wallet/wallet-tabs";
 import { fetchMeServer } from "@/lib/auth";
 
@@ -46,6 +47,7 @@ export default async function WalletPage({
       </div>
       <BalanceCard />
       <WalletTabs />
+      <RecentActivityCard />
     </div>
   );
 }

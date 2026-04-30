@@ -8,6 +8,7 @@ import { AlertTriangle, ArrowRight, CheckCircle2, Key, ShieldCheck, Wallet } fro
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BalanceCard } from "@/components/wallet/balance-card";
+import { RecentActivityCard } from "@/components/wallet/recent-activity-card";
 import { DevSimulator } from "@/components/admin/dev-simulator";
 import { fetchMeServer } from "@/lib/auth";
 
@@ -166,6 +167,9 @@ export default async function DashboardPage({
               </Button>
             </CardContent>
           </Card>
+
+          {/* 最近活動 — 從 BalanceCard 拆出來,放在錢包操作下方 */}
+          <RecentActivityCard />
 
           {isAdmin ? <DevSimulator userId={user.id} /> : null}
         </>
