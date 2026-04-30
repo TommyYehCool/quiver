@@ -50,20 +50,36 @@
 
 ---
 
-### 6E-2 — 提領安全(預估半天)
-- 2FA(TOTP)
-  - 設定頁:QR code + 8 個備用碼
-  - 提領 submit 前必驗 6 位數 code
-  - schema:`users.totp_secret_enc` (envelope encrypted)
-- 提領白名單地址
-  - 用戶可預先綁定多個地址(命名 + 24hr 冷靜期才能用)
-  - 開啟白名單模式後,只能提到白名單上的地址
-  - schema:`whitelist_addresses` (user_id, address, label, activated_at)
-- 提領頻率上限
-  - 每用戶單日 ≤ N 筆 / 單日總額 ≤ M USD(可調)
-  - 違反 → 自動 PENDING_REVIEW
+### 6E-2 — 提領安全 ✅(已完成,commit `52aa229`)
 
-**驗收**:啟用 2FA 後提領流程多一步驗證、改提領未綁定地址會被擋、單日超上限自動進審核佇列。
+實作內容:
+- **2FA TOTP**(`pyotp` + envelope encryption)
+  - schema:`users.totp_secret_enc` / `totp_key_version` / `totp_enabled_at` + `totp_backup_codes` 表(只存 sha256 hash + used_at)
+  - `/api/me/2fa` GET / setup / enable / disable(rate-limited 10/5min)
+  - 啟用後產 8 組一次性 backup codes,disable 時驗 TOTP 或 backup code 都通
+  - frontend `/settings/security` TwoFACard:QR(qrcode.react)+ 啟用 + backup codes 一次性顯示後消失
+  - dev / prod 區分:`Quiver (Dev): {email}` vs `Quiver: {email}` 顯示在 Authenticator app
+- **提領白名單地址**
+  - schema:`withdrawal_whitelist`(user_id, address, label, activated_at, removed_at)
+  - 加地址 → 24hr 冷靜期(`whitelist_cooldown_hours` 可調)
+  - `users.withdrawal_whitelist_only` toggle 開啟後,提領只能到 active 白名單
+  - 切換模式時 admin 有開 2FA 必驗 totp_code
+- **提領頻率上限**
+  - settings:`withdrawal_daily_count_limit=3`、`withdrawal_daily_amount_limit_usd=5000`(可調)
+  - 過去 24h `count >= limit OR sum+amount > limit` → 自動 `PENDING_REVIEW`
+  - 提領 submit 完整守則:**TOS → KYC → 2FA → whitelist-only → velocity → FEE_PAYER 健康 → 餘額**
+- **提領完成訊息精準化**:`review_reason` 欄位(LARGE_AMOUNT / VELOCITY_COUNT / VELOCITY_AMOUNT)讓前端顯示正確訊息,不再「金額較大」誤導
+- **內部轉帳也套上 2FA**(commit `ea19dbb`):`execute_transfer` 同樣會驗 totp_code
+- **平台獲利提領**(commit `e282e32`)— 順便把 `app/services/platform_outbound.py` 抽出來成通用「平台 outbound」service,reusable for 6E-4
+  - 強制 admin 必須 2FA(`TwoFAAdminDep`,commit `b28e562`,412 admin.twofaRequired)
+  - amount ≤ platform_profit(race-safe quota,扣 in-flight 提領金額,commit `9b7541c`)
+  - audit log `platform.fee_withdraw`
+
+驗收(已通過):
+- 2FA setup → enable → 8 組 backup codes → 提領 / 轉帳必驗 TOTP
+- 白名單 24hr cooldown 才 active、only mode 擋未啟用地址
+- 第 4 筆提領自動 PENDING_REVIEW 並回 `VELOCITY_COUNT` reason
+- admin 沒開 2FA → 平台獲利提領 412
 
 ---
 
@@ -89,19 +105,37 @@
 
 ---
 
-### 6E-4 — 冷熱錢包架構(預估 1 天)
-> 業界標準:HOT 只放營運額度(< 20% 總資產),其餘存 COLD。
+### 6E-4 — 冷熱錢包架構 ✅(已完成,commit `47bd767`)
 
-- 派生 COLD wallet(m/44'/195'/3'/0/0)
-  - service:`get_platform_cold_wallet_address(db)`
-  - admin 頁:COLD card(顯示地址 + USDT 餘額 only,**不存私鑰於系統**,COLD 私鑰人工離線保管)
-- HOT → COLD 自動回流
-  - 設定:`HOT_MAX_USDT`(例如 5000)、`HOT_TARGET_USDT`(例如 2000)
-  - cron 每小時:HOT 超過 max → 推播給 admin「請執行 HOT → COLD 轉移」(因為 COLD 私鑰離線,系統不能自動簽,只能提醒)
-  - admin 頁加按鈕「標記已轉移 X USDT」(寫 audit log)
-- 提領前 HOT 不夠:webhook + 通知 admin 從 COLD 補 HOT
+> 重要修正:原本 ROADMAP 寫「派生 COLD wallet (m/44'/195'/3'/0/0)」其實邏輯上有矛盾 —
+> 從 master seed 派生的話私鑰仍在系統內,失去「冷」的意義。改設計為**地址外包**:
+> 系統只記住地址,私鑰永遠在運營者手上(TronLink / 硬體錢包 / 多簽 / 紙錢包)。
 
-**驗收**:HOT 卡多一個 COLD 區塊、HOT 超過上限時 admin 收到通知、ledger 對帳要加 COLD 那段。
+實作內容:
+- **Settings**(`.env`):`COLD_WALLET_ADDRESS`、`HOT_MAX_USDT` (5000)、`HOT_TARGET_USDT` (2000)
+- **`compute_quota` 加 COLD 維度**:
+  - `cold_balance`:從 Tatum 即時讀 COLD 鏈上 USDT
+  - `cold_rebalance_max = min(HOT - HOT_TARGET, profit)`(雙重保險:不能動到用戶資金)
+  - `total_holdings = (HOT - in_flight) + COLD`
+- **Endpoints**:
+  - `GET /api/admin/platform/cold-wallet` — 地址 + 餘額 + over_max + over_max_amount
+  - `POST /api/admin/platform/cold-rebalance` — `TwoFAAdminDep` 守則 + 走 `send_platform_outbound` (purpose=COLD_REBALANCE)
+  - audit log `platform.cold_rebalance`
+- **Frontend `/admin/platform`**:藍色 COLD card(雪花 icon)— 顯示地址 / 餘額 / 上限 / over_max 警示 / 「移轉到 COLD」按鈕
+  - modal 4 種狀態:未設定 COLD / 沒開 2FA / 無可移額度 / 可送出
+  - 預設建議金額 = `min(HOT - HOT_TARGET, cold_rebalance_max)`
+- **`platform_insolvent` 修正**:從 `HOT < user_ledger` 改成 `total_holdings < user_ledger`,讓 admin 把錢移到 COLD 後不會誤報 insolvency
+- **`overview` KPI**:加 `cold_address` / `cold_usdt_balance` / `total_holdings` / `hot_over_max`
+
+驗收(已通過):
+- 設定 COLD_WALLET_ADDRESS=TronLink → quota 即時讀到 COLD 餘額 3230 USDT
+- HOT 868 > MAX 100 → over_max=true、over_max_amount=768
+- profit=0 時 cold_rebalance_max=0,modal 顯示「目前無可移額度」說明
+
+未做的部分(可以加入後續優化):
+- cron 自動偵測 HOT 超過 MAX → email / push admin(目前只在 admin UI 顯示警示)
+- 用「平台 deposit COLD ledger」精準追蹤(避免混用 COLD 個人原有餘額時 total_holdings 失準)
+- 提領前 HOT 不夠時的 admin 補資流程(現在只會擋住新提領,沒有自動 cross-wallet 補資)
 
 ---
 
@@ -226,13 +260,29 @@ Config:
 | P0 | 6E-1 OAuth 帳號完整化(sessions + export + 刪除) | 2-3 hr | ✅ | ✅ 完成 |
 | P0 | 6E-3 Audit log + Rate limiting + Sentry | 0.5 day | ✅ | ✅ 完成 |
 | P0 | 6E-5 上線 checklist + Mainnet 配置 | 1 day | ✅ | ✅ 完成 |
-| P1 | 6E-2 2FA + 白名單 + 頻率上限 | 0.5 day | 強烈建議 | ⏸ |
-| P1 | 6E-4 冷熱錢包架構 | 1 day | 強烈建議 | ⏸ |
+| P1 | 6E-2 2FA + 白名單 + 頻率上限 + 平台獲利提領 | 0.5 day | 強烈建議 | ✅ 完成 |
+| P1 | 6E-4 冷熱錢包架構 | 1 day | 強烈建議 | ✅ 完成 |
 | P2 | Phase 7A-D Mobile App | 3-4 週 | ❌ | ⏸ |
 | P3 | Phase 8 各子項 | 持續 | ❌ | ⏸ |
 
-**所有 P0 已清掉**。理論上現在可上 mainnet,但 P1 強烈建議補強再上(2FA + 提領白名單對提領安全 / 冷熱錢包對資金安全)。
+**🎉 整個 Phase 6E 完成!**所有 P0 + P1 都清光,程式碼層面該做的上線準備都做完了。
 
-**剩餘工作分布**:
-- code 類:6E-2(0.5 day)、6E-4(1 day)
-- 操作類(needs human):master seed gen / KEK 分發 / mainnet key / Sentry DSN / S3 / 律師 review
+**真正剩餘的工作**(都需要 user 行動,程式碼不能自動化):
+
+| 項目 | 為什麼非你不可 | 何時 |
+|---|---|---|
+| Production master seed 產生 + Shamir 拆 KEK 5 份 | 私鑰必須在 production 機器產生,不交給任何工具 | bootstrap day |
+| Tatum mainnet API key 申請 + 升 paid plan | 帳號實名 + 信用卡 | T-7 |
+| Sentry / S3 + KMS 帳號 | 雲服務帳號設立 | T-7 |
+| 律師 review TOS / Privacy 內容 | 法遵簽核 | T-7 |
+| Google OAuth Production credential | OAuth consent screen 需 Google 驗證 | T-7 |
+| DNS 設定(`api.quiver.io` 等) | 域名你買的 | T-3 |
+| COLD wallet 真實地址(獨立硬體錢包 / 多簽) | 安全考量 — production 不要混用個人錢包 | bootstrap day |
+
+走 `docs/runbook-launch-day.md` 一遍即可。
+
+**接下來的選擇**:
+1. **Phase 7 Mobile App**(Flutter,~3-4 週)— backend 已經就緒
+2. **Phase 8 營運強化**(月對帳單、AML 監控、規模化…)
+3. **Backlog 加分項**(推薦獎勵、多幣種、站內換匯…)
+4. **直接準備上線**(走 launch runbook)
