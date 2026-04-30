@@ -22,6 +22,7 @@ export async function submitTransfer(input: {
   recipient_email: string;
   amount: string;
   note?: string | null;
+  totp_code?: string | null;
 }): Promise<TransferResult> {
   return apiFetch<TransferResult>("/api/transfers", {
     method: "POST",

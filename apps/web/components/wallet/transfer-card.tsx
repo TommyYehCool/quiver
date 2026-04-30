@@ -15,6 +15,7 @@ import {
   submitTransfer,
   type RecipientPreview,
 } from "@/lib/api/transfer";
+import { fetchTwoFAStatus } from "@/lib/api/twofa";
 
 type Stage = "form" | "confirm" | "submitting" | "success";
 
@@ -29,6 +30,20 @@ export function TransferCard() {
   const [recipient, setRecipient] = React.useState<RecipientPreview | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [successInfo, setSuccessInfo] = React.useState<{ amount: string; to: string } | null>(null);
+  const [twofaEnabled, setTwofaEnabled] = React.useState(false);
+  const [totpCode, setTotpCode] = React.useState("");
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetchTwoFAStatus()
+      .then((s) => {
+        if (!cancelled) setTwofaEnabled(s.enabled);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const amountValid = amount.trim().length > 0 && Number(amount) > 0;
   const emailValid = /\S+@\S+\.\S+/.test(email.trim());
@@ -59,6 +74,13 @@ export function TransferCard() {
 
   async function confirmSend() {
     if (!recipient) return;
+    if (twofaEnabled) {
+      const stripped = totpCode.replace(/[-\s]/g, "");
+      if (stripped.length !== 6 && stripped.length !== 8) {
+        setError(t.has("errors.transfer.twofaRequired") ? t("errors.transfer.twofaRequired") : "transfer.twofaRequired");
+        return;
+      }
+    }
     setStage("submitting");
     setError(null);
     try {
@@ -66,6 +88,7 @@ export function TransferCard() {
         recipient_email: recipient.email,
         amount,
         note: note.trim() || null,
+        totp_code: twofaEnabled ? totpCode.trim() : undefined,
       });
       setSuccessInfo({ amount, to: r.recipient_email });
       setStage("success");
@@ -85,6 +108,7 @@ export function TransferCard() {
     setRecipient(null);
     setError(null);
     setSuccessInfo(null);
+    setTotpCode("");
     setStage("form");
   }
 
@@ -156,6 +180,9 @@ export function TransferCard() {
             note={note.trim()}
             busy={stage === "submitting"}
             error={error}
+            twofaEnabled={twofaEnabled}
+            totpCode={totpCode}
+            onTotpCodeChange={setTotpCode}
             onCancel={() => setStage("form")}
             onConfirm={confirmSend}
           />
@@ -191,6 +218,9 @@ function ConfirmModal({
   note,
   busy,
   error,
+  twofaEnabled,
+  totpCode,
+  onTotpCodeChange,
   onCancel,
   onConfirm,
 }: {
@@ -200,6 +230,9 @@ function ConfirmModal({
   note: string;
   busy: boolean;
   error: string | null;
+  twofaEnabled: boolean;
+  totpCode: string;
+  onTotpCodeChange: (s: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -228,6 +261,22 @@ function ConfirmModal({
             </Row>
           ) : null}
         </div>
+
+        {twofaEnabled ? (
+          <div className="mt-4 space-y-1.5">
+            <Label htmlFor="transfer-totp">兩步驟驗證</Label>
+            <Input
+              id="transfer-totp"
+              inputMode="numeric"
+              value={totpCode}
+              onChange={(e) => onTotpCodeChange(e.target.value)}
+              placeholder="6 位驗證碼或 8 位備用碼"
+              maxLength={20}
+              className="font-mono tracking-widest"
+              autoFocus
+            />
+          </div>
+        ) : null}
 
         {error ? <div className="mt-3"><ErrorBox>{error}</ErrorBox></div> : null}
 

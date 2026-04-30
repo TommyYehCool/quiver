@@ -13,6 +13,8 @@ class TransferIn(BaseModel):
     recipient_email: EmailStr
     amount: Decimal = Field(gt=0)
     note: str | None = Field(default=None, max_length=200)
+    # phase 6E-2: 用戶有 2FA 啟用時必填(可以是 6-digit TOTP 或 8-digit backup code)
+    totp_code: str | None = Field(default=None, max_length=20)
 
 
 class TransferOut(BaseModel):

@@ -73,10 +73,30 @@ async def execute_transfer(
     amount: Decimal,
     note: str | None,
     currency: str = CURRENCY,
+    totp_code: str | None = None,
 ) -> TransferResult:
     """執行內部轉帳(完整 atomic)。"""
     if amount <= 0:
         raise TransferError("transfer.amountMustBePositive")
+
+    # ---- 6E-2: 2FA 必驗(若有啟用) ----
+    if sender.totp_enabled_at is not None:
+        from app.services import totp as totp_svc
+
+        if not totp_code:
+            raise TransferError("transfer.twofaRequired")
+        secret = await totp_svc.decrypt_user_secret(
+            db,
+            ciphertext_b64=sender.totp_secret_enc or "",
+            key_version=sender.totp_key_version or 1,
+        )
+        ok = totp_svc.verify_code(secret, totp_code)
+        if not ok:
+            ok = await totp_svc.consume_backup_code(
+                db, user_id=sender.id, code=totp_code
+            )
+        if not ok:
+            raise TransferError("twofa.invalidCode")
 
     # 找收件人(用 email,小寫比對)
     recipient_q = await db.execute(

@@ -62,6 +62,7 @@ async def post_transfer(
             recipient_email=str(payload.recipient_email),
             amount=payload.amount,
             note=payload.note,
+            totp_code=payload.totp_code,
         )
     except TransferError as e:
         raise HTTPException(

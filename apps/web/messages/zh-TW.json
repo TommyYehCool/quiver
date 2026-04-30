@@ -145,7 +145,11 @@
         "recipientSuspended": "對方帳號已停權",
         "amountMustBePositive": "金額必須大於 0",
         "insufficientFunds": "餘額不足",
-        "commitFailed": "送出失敗,請稍後再試"
+        "commitFailed": "送出失敗,請稍後再試",
+        "twofaRequired": "請輸入兩步驟驗證碼(6 位)或備用碼(8 位)"
+      },
+      "twofa": {
+        "invalidCode": "驗證碼錯誤,請重新輸入"
       }
     }
   },

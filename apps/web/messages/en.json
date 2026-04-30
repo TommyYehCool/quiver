@@ -143,7 +143,11 @@
         "recipientSuspended": "Recipient account is suspended",
         "amountMustBePositive": "Amount must be > 0",
         "insufficientFunds": "Insufficient balance",
-        "commitFailed": "Failed to send, please retry"
+        "commitFailed": "Failed to send, please retry",
+        "twofaRequired": "Enter your 6-digit 2FA code or 8-digit backup code"
+      },
+      "twofa": {
+        "invalidCode": "Invalid code, please try again"
       }
     }
   },
