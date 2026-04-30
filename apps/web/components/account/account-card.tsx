@@ -7,6 +7,7 @@ import { Download, Loader2, Trash2, UserMinus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   cancelDeletion,
   downloadMyData,
@@ -18,6 +19,7 @@ import {
 export function AccountCard() {
   const t = useTranslations("settings.account");
   const router = useRouter();
+  const confirm = useConfirm();
   const [status, setStatus] = React.useState<DeletionRequestStatus | null>(null);
   const [busyExport, setBusyExport] = React.useState(false);
   const [busyDel, setBusyDel] = React.useState(false);
@@ -49,7 +51,13 @@ export function AccountCard() {
   }
 
   async function handleRequestDelete() {
-    if (!confirm(t("confirmDelete"))) return;
+    const ok = await confirm({
+      title: t("requestDelete"),
+      body: t("confirmDelete"),
+      variant: "danger",
+      confirmLabel: t("requestDelete"),
+    });
+    if (!ok) return;
     setBusyDel(true);
     setMsg(null);
     try {

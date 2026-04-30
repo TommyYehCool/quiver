@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { approveKyc, rejectKyc } from "@/lib/api/kyc";
 
@@ -17,12 +18,18 @@ export function AdminKycActions({
   locale: string;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [reason, setReason] = React.useState("");
   const [busy, setBusy] = React.useState<"approve" | "reject" | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   async function handleApprove() {
-    if (!confirm("確認核准這筆 KYC 申請?系統會寄通知 email。")) return;
+    const ok = await confirm({
+      title: "核准這筆 KYC 申請?",
+      body: "系統會寄通知 email 給用戶。",
+      confirmLabel: "核准",
+    });
+    if (!ok) return;
     setBusy("approve");
     setError(null);
     try {
@@ -41,7 +48,13 @@ export function AdminKycActions({
       setError("請填寫退回原因");
       return;
     }
-    if (!confirm("確認退回這筆 KYC 申請?系統會寄通知 email。")) return;
+    const ok = await confirm({
+      title: "退回這筆 KYC 申請?",
+      body: "系統會寄通知 email 給用戶。",
+      variant: "danger",
+      confirmLabel: "退回",
+    });
+    if (!ok) return;
     setBusy("reject");
     setError(null);
     try {

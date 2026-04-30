@@ -6,6 +6,7 @@ import { Bookmark, Clock, Loader2, Lock, Plus, Trash2, Unlock } from "lucide-rea
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   addWhitelist,
   fetchWhitelist,
@@ -20,6 +21,7 @@ const TRON_RE = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 
 export function WhitelistCard() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [data, setData] = React.useState<WhitelistList | null>(null);
   const [twofaEnabled, setTwofaEnabled] = React.useState(false);
   const [address, setAddress] = React.useState("");
@@ -65,7 +67,13 @@ export function WhitelistCard() {
   }
 
   async function handleRemove(id: number) {
-    if (!confirm("確定移除這個地址?")) return;
+    const ok = await confirm({
+      title: "移除這個白名單地址?",
+      body: "你之後若還要提到這個地址,需重新加入並等冷靜期。",
+      variant: "danger",
+      confirmLabel: "移除",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await removeWhitelist(id);

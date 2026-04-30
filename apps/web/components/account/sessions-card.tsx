@@ -6,6 +6,7 @@ import { Loader2, Monitor, ShieldOff, BadgeCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   fetchSessions,
   revokeOtherSessions,
@@ -14,6 +15,7 @@ import {
 
 export function SessionsCard() {
   const t = useTranslations("settings.security");
+  const confirm = useConfirm();
   const [items, setItems] = React.useState<LoginSessionItem[] | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -32,7 +34,13 @@ export function SessionsCard() {
   }, [load]);
 
   async function handleRevokeOthers() {
-    if (!confirm(t("confirmRevokeOthers"))) return;
+    const ok = await confirm({
+      title: t("revokeOthers"),
+      body: t("confirmRevokeOthers"),
+      variant: "danger",
+      confirmLabel: t("revokeOthers"),
+    });
+    if (!ok) return;
     setBusy(true);
     setMsg(null);
     try {

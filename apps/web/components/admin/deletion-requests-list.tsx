@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   completeDeletion,
   fetchDeletionRequests,
@@ -13,6 +14,7 @@ import {
 
 export function DeletionRequestsList() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [items, setItems] = React.useState<DeletionRequestRow[] | null>(null);
   const [busyId, setBusyId] = React.useState<number | null>(null);
   const [msg, setMsg] = React.useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -30,15 +32,13 @@ export function DeletionRequestsList() {
   }, [load]);
 
   async function handleComplete(userId: number) {
-    if (
-      !confirm(
-        `確定完成 user #${userId} 的刪除?\n\n` +
-          "會 soft delete:status SUSPENDED + email 改寫 + revoke 所有 sessions。\n" +
-          "ledger 記錄保留(法遵需求)。",
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: `完成 user #${userId} 的刪除?`,
+      body: "會 soft delete:status SUSPENDED + email 改寫 + revoke 所有 sessions。\nledger 記錄保留(法遵需求)。",
+      variant: "danger",
+      confirmLabel: "完成刪除",
+    });
+    if (!ok) return;
     setBusyId(userId);
     setMsg(null);
     try {

@@ -7,6 +7,7 @@ import { QRCodeSVG } from "qrcode.react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   disableTwoFA,
   enableTwoFA,
@@ -20,6 +21,7 @@ type Mode = "loading" | "idle" | "setup" | "enabling" | "disabling" | "show-back
 
 export function TwoFACard() {
   const router = useRouter();
+  const confirmDialog = useConfirm();
   const [status, setStatus] = React.useState<TwoFAStatus | null>(null);
   const [setup, setSetup] = React.useState<TwoFASetup | null>(null);
   const [code, setCode] = React.useState("");
@@ -77,7 +79,13 @@ export function TwoFACard() {
   }
 
   async function handleDisable() {
-    if (!confirm("確定關閉兩步驟驗證?")) return;
+    const ok = await confirmDialog({
+      title: "關閉兩步驟驗證?",
+      body: "關閉後,提領 / 內轉 / 切換白名單模式都不會再要求驗證碼,降低帳戶安全性。",
+      variant: "danger",
+      confirmLabel: "繼續關閉",
+    });
+    if (!ok) return;
     const c = prompt("輸入 6 位驗證碼或備用碼以確認:");
     if (!c) return;
     setBusy(true);

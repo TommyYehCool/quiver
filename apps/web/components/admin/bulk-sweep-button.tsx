@@ -5,23 +5,22 @@ import { useRouter } from "next/navigation";
 import { Loader2, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { bulkSweep } from "@/lib/api/withdrawal";
 
 export function BulkSweepButton() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   async function handleClick() {
-    if (
-      !confirm(
-        "確認對所有 user 執行一鍵歸集?\n\n" +
-          "每個 user 會排一個歸集任務,USDT ≥ 10 才會真的搬。\n" +
-          "搬完 user 鏈上 USDT ≈ 0,集中到 HOT wallet。",
-      )
-    ) {
-      return;
-    }
+    const ok = await confirm({
+      title: "對所有 user 執行一鍵歸集?",
+      body: "每個 user 會排一個歸集任務,USDT ≥ 10 才會真的搬。\n搬完 user 鏈上 USDT ≈ 0,集中到 HOT wallet。",
+      confirmLabel: "開始歸集",
+    });
+    if (!ok) return;
     setBusy(true);
     setMsg(null);
     try {

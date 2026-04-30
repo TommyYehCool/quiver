@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm, type ConfirmOptions } from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
   adminApproveWithdrawal,
@@ -25,6 +26,7 @@ export function AdminWithdrawalActions({
   status: string;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [reason, setReason] = React.useState("");
   const [busy, setBusy] = React.useState<Action | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -33,8 +35,9 @@ export function AdminWithdrawalActions({
   const isApproved = status === "APPROVED";
   const isProcessing = status === "PROCESSING";
 
-  async function run(action: Action, fn: () => Promise<unknown>, confirmMsg: string) {
-    if (!confirm(confirmMsg)) return;
+  async function run(action: Action, fn: () => Promise<unknown>, opts: ConfirmOptions) {
+    const ok = await confirm(opts);
+    if (!ok) return;
     setBusy(action);
     setError(null);
     try {
@@ -52,7 +55,11 @@ export function AdminWithdrawalActions({
     return run(
       "approve",
       () => adminApproveWithdrawal(withdrawalId),
-      "確認核准這筆提領?worker 會立刻自動廣播上鏈。",
+      {
+        title: "核准這筆提領?",
+        body: "worker 會立刻自動廣播上鏈。",
+        confirmLabel: "核准",
+      },
     );
   }
 
@@ -64,7 +71,12 @@ export function AdminWithdrawalActions({
     return run(
       "reject",
       () => adminRejectWithdrawal(withdrawalId, reason.trim()),
-      "確認退回這筆提領?系統會 REVERSE ledger 退款給用戶。",
+      {
+        title: "退回這筆提領?",
+        body: "系統會 REVERSE ledger 退款給用戶。",
+        variant: "danger",
+        confirmLabel: "退回",
+      },
     );
   }
 
@@ -76,7 +88,12 @@ export function AdminWithdrawalActions({
     return run(
       "force_fail",
       () => adminForceFailWithdrawal(withdrawalId, reason.trim()),
-      "⚠️ 危險操作\n\n你應該已經去 Shasta explorer 確認這筆 tx 沒實際送上鏈。\n\nForce-fail 會 REVERSE ledger 把錢退給用戶。\n如果鏈上其實有送出 → 會造成雙花!\n\n確定要繼續嗎?",
+      {
+        title: "強制標 FAILED + REVERSE",
+        body: "你應該已經去 Shasta explorer 確認這筆 tx 沒實際送上鏈。\n\nForce-fail 會 REVERSE ledger 把錢退給用戶。\n如果鏈上其實有送出 → 會造成雙花!",
+        variant: "danger",
+        confirmLabel: "確定強制 FAIL",
+      },
     );
   }
 
