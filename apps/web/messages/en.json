@@ -115,11 +115,12 @@
   },
   "history": {
     "title": "Activity",
-    "subtitle": "All deposits + internal transfers.",
+    "subtitle": "All deposits + internal transfers + withdrawals.",
     "backToDashboard": "Back to home",
     "filterAll": "All",
     "filterDeposit": "Deposits",
     "filterTransfer": "Transfers",
+    "filterWithdrawal": "Withdrawals",
     "listTitle": "Activity log",
     "totalCount": "{n} record(s)",
     "empty": "No records",
@@ -127,7 +128,46 @@
     "statusPosted": "Done",
     "typeDeposit": "Deposit",
     "typeTransferIn": "Received",
-    "typeTransferOut": "Sent"
+    "typeTransferOut": "Sent",
+    "typeWithdrawal": "Withdrawal",
+    "typeRefund": "Refund"
+  },
+  "withdraw": {
+    "title": "Withdraw",
+    "desc": "Send USDT (TRC20) to an external Tron address. 1 USDT fee, on-chain gas paid by platform.",
+    "addressLabel": "Recipient address (Tron Network)",
+    "amountLabel": "Amount",
+    "feeNote": "Minimum 5 USDT; 1 USDT processing fee",
+    "review": "Review",
+    "confirm": {
+      "title": "Confirm withdrawal",
+      "subtitle": "This cannot be cancelled, please double-check.",
+      "to": "Recipient",
+      "amount": "Withdrawal amount",
+      "fee": "Fee",
+      "total": "Total deducted",
+      "largeNotice": "Amounts ≥ 1000 USDT require admin review before broadcast",
+      "cancel": "Cancel",
+      "send": "Confirm & send"
+    },
+    "success": {
+      "title": "Withdrawal request created ✓",
+      "needsReview": "Large amount — waiting for admin review before broadcast",
+      "approved": "Auto-approved — will broadcast shortly",
+      "again": "Submit another"
+    },
+    "errors": {
+      "withdrawal": {
+        "invalidAddress": "Invalid Tron address format",
+        "amountMustBePositive": "Amount must be > 0",
+        "belowMinimum": "Amount below minimum (5 USDT)",
+        "kycRequired": "Please complete identity verification first",
+        "insufficientFunds": "Insufficient balance (including fee)",
+        "commitFailed": "Failed to submit, please retry",
+        "notFound": "Withdrawal request not found",
+        "custodyMissing": "System error, please contact admin"
+      }
+    }
   },
   "wallet": {
     "title": "My receive address",

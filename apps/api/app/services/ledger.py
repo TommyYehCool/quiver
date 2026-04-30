@@ -138,6 +138,23 @@ async def post_deposit(db: AsyncSession, onchain_tx: OnchainTx) -> LedgerTransac
     return ledger_tx
 
 
+async def balance_for_account(db: AsyncSession, account_id: int) -> Decimal:
+    """sum(credit) - sum(debit) for one account。供 transfer / withdrawal 鎖定後計算用。"""
+    credits_q = await db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(
+            LedgerEntry.account_id == account_id,
+            LedgerEntry.direction == EntryDirection.CREDIT.value,
+        )
+    )
+    debits_q = await db.execute(
+        select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(
+            LedgerEntry.account_id == account_id,
+            LedgerEntry.direction == EntryDirection.DEBIT.value,
+        )
+    )
+    return Decimal(credits_q.scalar_one() or 0) - Decimal(debits_q.scalar_one() or 0)
+
+
 async def get_user_balance(
     db: AsyncSession, user_id: int, currency: str = CURRENCY
 ) -> Decimal:

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export interface HistoryItem {
   id: string;
-  type: "DEPOSIT" | "TRANSFER_IN" | "TRANSFER_OUT";
+  type: "DEPOSIT" | "TRANSFER_IN" | "TRANSFER_OUT" | "WITHDRAWAL" | "REFUND";
   amount: string;
   currency: string;
   status: string;
@@ -22,6 +22,8 @@ interface Labels {
   typeDeposit: string;
   typeTransferIn: string;
   typeTransferOut: string;
+  typeWithdrawal: string;
+  typeRefund: string;
   statusPending: string;
   statusPosted: string;
   empty: string;
@@ -52,22 +54,30 @@ export function HistoryTable({ items, t }: { items: HistoryItem[]; t: Labels }) 
 
 function Row({ it, t }: { it: HistoryItem; t: Labels }) {
   const isPending = it.status === "PROVISIONAL";
-  const isOut = it.type === "TRANSFER_OUT";
-  const isIn = it.type === "TRANSFER_IN";
+  const isOut = it.type === "TRANSFER_OUT" || it.type === "WITHDRAWAL";
   const sign = isOut ? "-" : "+";
   const amountColor = isOut
     ? "text-rose-600 dark:text-rose-400"
     : "text-emerald-700 dark:text-emerald-400";
-  const Icon = it.type === "DEPOSIT" ? ArrowDownToLine : isOut ? ArrowUpRight : ArrowDownLeft;
+  const Icon =
+    it.type === "DEPOSIT" || it.type === "REFUND"
+      ? ArrowDownToLine
+      : isOut
+        ? ArrowUpRight
+        : ArrowDownLeft;
   const typeLabel =
     it.type === "DEPOSIT"
       ? t.typeDeposit
-      : isIn
+      : it.type === "TRANSFER_IN"
         ? t.typeTransferIn
-        : t.typeTransferOut;
+        : it.type === "TRANSFER_OUT"
+          ? t.typeTransferOut
+          : it.type === "WITHDRAWAL"
+            ? t.typeWithdrawal
+            : t.typeRefund;
 
   const counterparty =
-    isIn || isOut
+    it.type === "TRANSFER_IN" || it.type === "TRANSFER_OUT"
       ? it.counterparty_display_name ?? it.counterparty_email ?? "—"
       : null;
 

@@ -127,6 +127,22 @@ async def get_tron_transaction(tx_hash: str) -> dict[str, Any] | None:
 USDT_DECIMALS = 6
 
 
+async def get_trx_balance(address: str) -> Decimal:
+    """查 Tron 地址的 TRX(原生)餘額。
+
+    Tatum 回 `balance` 是 sun (1 TRX = 1_000_000 sun)。地址沒啟用會回 0。
+    """
+    async with _client() as client:
+        res = await client.get(f"/v3/tron/account/{address}")
+    if res.status_code == 403:
+        return Decimal("0")
+    if res.status_code >= 400:
+        raise TatumError(f"get_tron_account failed: {res.status_code}")
+    body = res.json()
+    raw = body.get("balance", 0)
+    return Decimal(raw) / Decimal(1_000_000)
+
+
 async def get_trc20_balance(address: str, contract: str) -> Decimal:
     """查指定地址在某 TRC20 合約的餘額。
 

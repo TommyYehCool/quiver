@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +22,6 @@ from app.core.logging import get_logger
 from app.models.kyc import KycStatus, KycSubmission
 from app.models.ledger import (
     Account,
-    AccountKind,
     EntryDirection,
     LedgerEntry,
     LedgerTransaction,
@@ -30,7 +29,7 @@ from app.models.ledger import (
     LedgerTxType,
 )
 from app.models.user import User
-from app.services.ledger import get_or_create_user_account
+from app.services.ledger import balance_for_account, get_or_create_user_account
 
 logger = get_logger(__name__)
 
@@ -64,21 +63,6 @@ async def _user_kyc_approved(db: AsyncSession, user_id: int) -> bool:
     return sub is not None and sub.status == KycStatus.APPROVED.value
 
 
-async def _balance_for_account(db: AsyncSession, account_id: int) -> Decimal:
-    """sum(credit) - sum(debit) for one account。"""
-    credits_q = await db.execute(
-        select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(
-            LedgerEntry.account_id == account_id,
-            LedgerEntry.direction == EntryDirection.CREDIT.value,
-        )
-    )
-    debits_q = await db.execute(
-        select(func.coalesce(func.sum(LedgerEntry.amount), 0)).where(
-            LedgerEntry.account_id == account_id,
-            LedgerEntry.direction == EntryDirection.DEBIT.value,
-        )
-    )
-    return Decimal(credits_q.scalar_one() or 0) - Decimal(debits_q.scalar_one() or 0)
 
 
 async def execute_transfer(
@@ -123,7 +107,7 @@ async def execute_transfer(
     )
 
     # 鎖內檢查 sender 餘額
-    sender_balance = await _balance_for_account(db, sender_acct.id)
+    sender_balance = await balance_for_account(db, sender_acct.id)
     if sender_balance < amount:
         raise TransferError("transfer.insufficientFunds")
 

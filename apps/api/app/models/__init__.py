@@ -14,6 +14,7 @@ from app.models.ledger import (
 from app.models.onchain_tx import OnchainTx, OnchainTxStatus
 from app.models.system_keys import SystemKey, SystemKeyState
 from app.models.user import User, UserStatus
+from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
 
 __all__ = [
     "Account",
@@ -32,4 +33,6 @@ __all__ = [
     "SystemKeyState",
     "User",
     "UserStatus",
+    "WithdrawalRequest",
+    "WithdrawalStatus",
 ]

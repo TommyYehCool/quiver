@@ -28,7 +28,13 @@ from app.models.ledger import (
 from app.models.onchain_tx import OnchainTx, OnchainTxStatus
 from app.models.user import User
 
-ActivityType = Literal["DEPOSIT", "TRANSFER_IN", "TRANSFER_OUT"]
+ActivityType = Literal[
+    "DEPOSIT",
+    "TRANSFER_IN",
+    "TRANSFER_OUT",
+    "WITHDRAWAL",
+    "REFUND",
+]
 
 
 @dataclass
@@ -49,7 +55,7 @@ async def list_user_activity(
     db: AsyncSession,
     *,
     user_id: int,
-    type_filter: str | None = None,  # "all" | "DEPOSIT" | "TRANSFER" | None
+    type_filter: str | None = None,  # "all" | "DEPOSIT" | "TRANSFER" | "WITHDRAWAL" | None
     limit: int = 20,
     offset: int = 0,
     currency: str = "USDT-TRC20",
@@ -59,12 +65,20 @@ async def list_user_activity(
 
     want_deposits = type_filter in (None, "all", "DEPOSIT")
     want_transfers = type_filter in (None, "all", "TRANSFER")
+    want_withdrawals = type_filter in (None, "all", "WITHDRAWAL")
 
     if want_deposits:
         items.extend(await _deposits(db, user_id, currency))
 
     if want_transfers:
-        items.extend(await _transfers(db, user_id, currency))
+        items.extend(await _ledger_activities(db, user_id, currency, [LedgerTxType.TRANSFER.value]))
+
+    if want_withdrawals:
+        items.extend(
+            await _ledger_activities(
+                db, user_id, currency, [LedgerTxType.WITHDRAWAL.value, LedgerTxType.REVERSE.value]
+            )
+        )
 
     items.sort(key=lambda x: x.created_at, reverse=True)
     total = len(items)
@@ -94,15 +108,18 @@ async def _deposits(
     ]
 
 
-async def _transfers(
-    db: AsyncSession, user_id: int, currency: str
+async def _ledger_activities(
+    db: AsyncSession,
+    user_id: int,
+    currency: str,
+    types: list[str],
 ) -> list[ActivityItem]:
-    """從 ledger_transactions WHERE type=TRANSFER 拉,並 join 對方帳戶 + user。
+    """通用查詢 — 撈出 user 在某幾種 ledger_tx type 內的 entries。
 
-    一筆 transfer 在 ledger_entries 有兩列(DR sender / CR recipient)。
     從目前 user 的角度:
-      - 自己那筆是 DEBIT  → TRANSFER_OUT,對方 = CREDIT entry 的 user
-      - 自己那筆是 CREDIT → TRANSFER_IN,對方 = DEBIT entry 的 user
+      - DEBIT  entry → user 錢出去(TRANSFER_OUT / WITHDRAWAL)
+      - CREDIT entry → user 收到錢(TRANSFER_IN / REFUND)
+    對 TRANSFER 用 OUTER JOIN 拉對方帳戶 user(WITHDRAWAL / REVERSE 沒有 counterparty user)。
     """
     MyEntry = aliased(LedgerEntry, name="my_entry")
     MyAcct = aliased(Account, name="my_acct")
@@ -119,11 +136,14 @@ async def _transfers(
         )
         .join(MyEntry, MyEntry.ledger_tx_id == LedgerTransaction.id)
         .join(MyAcct, MyAcct.id == MyEntry.account_id)
-        .join(OtherEntry, (OtherEntry.ledger_tx_id == LedgerTransaction.id) & (OtherEntry.id != MyEntry.id))
-        .join(OtherAcct, OtherAcct.id == OtherEntry.account_id)
+        .outerjoin(
+            OtherEntry,
+            (OtherEntry.ledger_tx_id == LedgerTransaction.id) & (OtherEntry.id != MyEntry.id),
+        )
+        .outerjoin(OtherAcct, OtherAcct.id == OtherEntry.account_id)
         .outerjoin(Counter, Counter.id == OtherAcct.user_id)
         .where(
-            LedgerTransaction.type == LedgerTxType.TRANSFER.value,
+            LedgerTransaction.type.in_(types),
             LedgerTransaction.currency == currency,
             MyAcct.user_id == user_id,
             MyAcct.kind == AccountKind.USER.value,
@@ -134,11 +154,23 @@ async def _transfers(
 
     items: list[ActivityItem] = []
     for ltx, my_direction, counter_email, counter_display_name in result.all():
-        is_out = my_direction == EntryDirection.DEBIT.value
+        is_debit = my_direction == EntryDirection.DEBIT.value
+        if ltx.type == LedgerTxType.TRANSFER.value:
+            atype: ActivityType = "TRANSFER_OUT" if is_debit else "TRANSFER_IN"
+        elif ltx.type == LedgerTxType.WITHDRAWAL.value:
+            atype = "WITHDRAWAL"
+        elif ltx.type == LedgerTxType.REVERSE.value:
+            # REVERSE 對 user 是 CREDIT(退款回來)→ REFUND;若是 DEBIT(罕見)就跳過
+            if is_debit:
+                continue
+            atype = "REFUND"
+        else:
+            continue
+
         items.append(
             ActivityItem(
                 id=f"t:{ltx.id}",
-                type="TRANSFER_OUT" if is_out else "TRANSFER_IN",
+                type=atype,
                 amount=ltx.amount,
                 currency=ltx.currency,
                 status=ltx.status,

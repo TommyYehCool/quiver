@@ -30,7 +30,7 @@ class RecipientPreviewOut(BaseModel):
 
 class ActivityItemOut(BaseModel):
     id: str
-    type: Literal["DEPOSIT", "TRANSFER_IN", "TRANSFER_OUT"]
+    type: Literal["DEPOSIT", "TRANSFER_IN", "TRANSFER_OUT", "WITHDRAWAL", "REFUND"]
     amount: Decimal
     currency: str
     status: str

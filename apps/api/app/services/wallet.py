@@ -52,7 +52,10 @@ async def _load_master_seed(db: AsyncSession) -> bytes:
 
 
 def _derive_tron_address(master_seed: bytes, user_id: int) -> str:
-    """純函式 — 給 master seed 和 user_id,回傳 Tron base58 地址(T 開頭)。"""
+    """純函式 — 給 master seed 和 user_id,回傳 user 的 Tron base58 地址(T 開頭)。
+
+    路徑:m/44'/195'/0'/0/{user_id}
+    """
     bip44_mst = Bip44.FromSeed(master_seed, Bip44Coins.TRON)
     addr_ctx = (
         bip44_mst.Purpose()
@@ -62,6 +65,31 @@ def _derive_tron_address(master_seed: bytes, user_id: int) -> str:
         .AddressIndex(user_id)
     )
     return addr_ctx.PublicKey().ToAddress()
+
+
+def _derive_platform_fee_payer_address(master_seed: bytes) -> str:
+    """平台 FEE_PAYER 地址 — 跟 user 路徑分開,放在 account index 1。
+
+    路徑:m/44'/195'/1'/0/0(account 1,address 0)
+    """
+    bip44_mst = Bip44.FromSeed(master_seed, Bip44Coins.TRON)
+    addr_ctx = (
+        bip44_mst.Purpose()
+        .Coin()
+        .Account(1)
+        .Change(Bip44Changes.CHAIN_EXT)
+        .AddressIndex(0)
+    )
+    return addr_ctx.PublicKey().ToAddress()
+
+
+async def get_platform_fee_payer_address(db: AsyncSession) -> str:
+    """從 master seed 派生 FEE_PAYER 地址。每次呼叫都重新解 + 派生。"""
+    master_seed = await _load_master_seed(db)
+    try:
+        return _derive_platform_fee_payer_address(master_seed)
+    finally:
+        master_seed = b"\x00" * len(master_seed)  # noqa: F841
 
 
 async def get_or_derive_tron_address(db: AsyncSession, user: User) -> str:

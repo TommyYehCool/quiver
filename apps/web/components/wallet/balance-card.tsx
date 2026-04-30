@@ -142,8 +142,8 @@ function HistoryRow({
   t: ReturnType<typeof useTranslations>;
 }) {
   const isPending = it.status === "PROVISIONAL";
-  const isOut = it.type === "TRANSFER_OUT";
-  const isIn = it.type === "TRANSFER_IN";
+  const isOut = it.type === "TRANSFER_OUT" || it.type === "WITHDRAWAL";
+  const isTransferIn = it.type === "TRANSFER_IN";
   const sign = isOut ? "-" : "+";
   const amountColor = isOut
     ? "text-rose-600 dark:text-rose-400"
@@ -152,11 +152,18 @@ function HistoryRow({
   const typeLabel =
     it.type === "DEPOSIT"
       ? t("typeDeposit")
-      : isIn
+      : it.type === "TRANSFER_IN"
         ? t("typeTransferIn")
-        : t("typeTransferOut");
+        : it.type === "TRANSFER_OUT"
+          ? t("typeTransferOut")
+          : it.type === "WITHDRAWAL"
+            ? t("typeWithdrawal")
+            : t("typeRefund");
 
-  const counterparty = isIn || isOut ? it.counterparty_display_name ?? it.counterparty_email : null;
+  const counterparty =
+    isTransferIn || it.type === "TRANSFER_OUT"
+      ? it.counterparty_display_name ?? it.counterparty_email
+      : null;
 
   return (
     <li className="flex items-center justify-between gap-3 rounded-lg border border-cream-edge bg-paper px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800">

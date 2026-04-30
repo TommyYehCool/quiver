@@ -76,7 +76,9 @@
     "statusPosted": "已到帳",
     "typeDeposit": "入金",
     "typeTransferIn": "收到轉帳",
-    "typeTransferOut": "送出轉帳"
+    "typeTransferOut": "送出轉帳",
+    "typeWithdrawal": "提領",
+    "typeRefund": "退款"
   },
   "transfer": {
     "title": "轉帳",
@@ -115,11 +117,12 @@
   },
   "history": {
     "title": "活動紀錄",
-    "subtitle": "包含所有入金 + 內部轉帳。",
+    "subtitle": "包含所有入金 + 內部轉帳 + 提領。",
     "backToDashboard": "回首頁",
     "filterAll": "全部",
     "filterDeposit": "入金",
     "filterTransfer": "轉帳",
+    "filterWithdrawal": "提領",
     "listTitle": "紀錄",
     "totalCount": "共 {n} 筆",
     "empty": "沒有紀錄",
@@ -127,7 +130,46 @@
     "statusPosted": "已完成",
     "typeDeposit": "入金",
     "typeTransferIn": "收到",
-    "typeTransferOut": "送出"
+    "typeTransferOut": "送出",
+    "typeWithdrawal": "提領",
+    "typeRefund": "退款"
+  },
+  "withdraw": {
+    "title": "提領",
+    "desc": "把 USDT (TRC20) 送到外部 Tron 地址。手續費 1 USDT,鏈上 gas 由平台代付。",
+    "addressLabel": "收款地址(Tron Network)",
+    "amountLabel": "金額",
+    "feeNote": "最低 5 USDT;系統會收 1 USDT 手續費",
+    "review": "下一步",
+    "confirm": {
+      "title": "確認提領",
+      "subtitle": "送出後不能取消,請確認資訊正確。",
+      "to": "收款地址",
+      "amount": "提領金額",
+      "fee": "手續費",
+      "total": "總計從餘額扣",
+      "largeNotice": "金額 ≥ 1000 USDT,需管理員人工審核才會送鏈上",
+      "cancel": "取消",
+      "send": "確認送出"
+    },
+    "success": {
+      "title": "提領申請已建立 ✓",
+      "needsReview": "金額較大,等待管理員審核後才會送鏈上",
+      "approved": "已自動核准,稍後會自動送鏈上",
+      "again": "再申請一筆"
+    },
+    "errors": {
+      "withdrawal": {
+        "invalidAddress": "Tron 地址格式不正確",
+        "amountMustBePositive": "金額必須大於 0",
+        "belowMinimum": "金額低於最低提領 5 USDT",
+        "kycRequired": "請先完成身分驗證",
+        "insufficientFunds": "餘額不足(包含手續費)",
+        "commitFailed": "送出失敗,請稍後再試",
+        "notFound": "找不到這筆申請",
+        "custodyMissing": "系統錯誤,請聯絡管理員"
+      }
+    }
   },
   "wallet": {
     "title": "我的收款地址",

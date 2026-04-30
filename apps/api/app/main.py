@@ -12,10 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import auth, kyc, me, transfers, wallet, webhooks
+from app.api import auth, kyc, me, transfers, wallet, webhooks, withdrawals
 from app.api.admin import dev as admin_dev
 from app.api.admin import kyc as admin_kyc
+from app.api.admin import platform as admin_platform
 from app.api.admin import setup as admin_setup
+from app.api.admin import withdrawals as admin_withdrawals
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.schemas.api import ApiResponse
@@ -172,10 +174,13 @@ app.include_router(me.router)
 app.include_router(kyc.router)
 app.include_router(wallet.router)
 app.include_router(transfers.router)
+app.include_router(withdrawals.router)
 app.include_router(webhooks.router)
 app.include_router(admin_kyc.router)
 app.include_router(admin_setup.router)
 app.include_router(admin_dev.router)
+app.include_router(admin_withdrawals.router)
+app.include_router(admin_platform.router)
 
 
 @app.get("/healthz", tags=["health"])

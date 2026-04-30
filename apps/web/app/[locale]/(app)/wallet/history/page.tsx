@@ -74,6 +74,7 @@ export default async function HistoryPage({
     { value: "all", label: t("filterAll") },
     { value: "DEPOSIT", label: t("filterDeposit") },
     { value: "TRANSFER", label: t("filterTransfer") },
+    { value: "WITHDRAWAL", label: t("filterWithdrawal") },
   ];
 
   return (
@@ -124,6 +125,8 @@ export default async function HistoryPage({
               typeDeposit: t("typeDeposit"),
               typeTransferIn: t("typeTransferIn"),
               typeTransferOut: t("typeTransferOut"),
+              typeWithdrawal: t("typeWithdrawal"),
+              typeRefund: t("typeRefund"),
               statusPending: t("statusPending"),
               statusPosted: t("statusPosted"),
               empty: t("empty"),

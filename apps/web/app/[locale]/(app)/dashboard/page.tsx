@@ -11,6 +11,7 @@ import { BalanceCard } from "@/components/wallet/balance-card";
 import { DevSimulator } from "@/components/admin/dev-simulator";
 import { ReceiveCard } from "@/components/wallet/receive-card";
 import { TransferCard } from "@/components/wallet/transfer-card";
+import { WithdrawCard } from "@/components/wallet/withdraw-card";
 import { fetchMeServer } from "@/lib/auth";
 
 interface KycResp {
@@ -150,8 +151,9 @@ export default async function DashboardPage({
       {kyc?.status === "APPROVED" ? (
         <>
           <BalanceCard />
-          <TransferCard />
           <ReceiveCard />
+          <TransferCard />
+          <WithdrawCard />
           {isAdmin ? <DevSimulator userId={user.id} /> : null}
         </>
       ) : null}
@@ -193,10 +195,20 @@ export default async function DashboardPage({
               <CardDescription>{t("adminCard.desc")}</CardDescription>
             </div>
           </CardHeader>
-          <CardContent>
-            <Button asChild>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" size="sm">
               <Link href={`/${locale}/admin/kyc`}>
-                {t("adminCard.cta")} <ArrowRight className="h-4 w-4" />
+                KYC 審核 <ArrowRight className="h-3 w-3" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/${locale}/admin/withdrawals`}>
+                提領審核 <ArrowRight className="h-3 w-3" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/${locale}/admin/platform`}>
+                平台帳戶 <ArrowRight className="h-3 w-3" />
               </Link>
             </Button>
           </CardContent>

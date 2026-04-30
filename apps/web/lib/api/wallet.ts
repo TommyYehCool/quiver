@@ -14,7 +14,12 @@ export interface Balance {
   currency: string;
 }
 
-export type ActivityType = "DEPOSIT" | "TRANSFER_IN" | "TRANSFER_OUT";
+export type ActivityType =
+  | "DEPOSIT"
+  | "TRANSFER_IN"
+  | "TRANSFER_OUT"
+  | "WITHDRAWAL"
+  | "REFUND";
 
 export interface ActivityItem {
   id: string;  // "d:{onchain_id}" 或 "t:{ledger_id}"
