@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+from decimal import Decimal
 from typing import Any
 
 from arq.connections import RedisSettings
@@ -11,16 +13,27 @@ from app.core.config import settings
 from app.core.db import db_session
 from app.core.logging import configure_logging, get_logger
 from app.models.onchain_tx import OnchainTx, OnchainTxStatus
+from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
 from app.services import tatum
 from app.services.email import send_kyc_approved, send_kyc_rejected, send_transfer_received
 from app.services.ledger import post_deposit
 from app.services.tatum import TatumError, TatumNotConfigured
+from app.services.wallet import load_user_signing_keys
+from app.services.withdrawal import (
+    fail_and_reverse_withdrawal,
+    mark_broadcasting,
+    mark_completed,
+    mark_processing,
+)
 
 logger = get_logger(__name__)
 
 # Tron 出塊 ~3 秒,規格要求 19 confirmations
 REQUIRED_CONFIRMATIONS = 19
 TRON_BLOCK_SECONDS = 3
+
+# 提領前要 user 地址有多少 TRX 才送(不夠就從 FEE_PAYER 補足)
+WITHDRAWAL_TRX_BUDGET = Decimal("30")
 
 
 async def noop(ctx: dict[str, Any]) -> str:
@@ -179,9 +192,242 @@ async def confirm_onchain_tx(ctx: dict[str, Any], *, onchain_tx_id: int) -> str:
     return f"waiting_{confirmations}"
 
 
+async def broadcast_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> str:
+    """簽 + 廣播提領上鏈。
+
+    流程:
+      1. APPROVED → PROCESSING(防止 double-broadcast)
+      2. 派生 user + FEE_PAYER private keys
+      3. 若 user 的 TRX 不足 30,從 FEE_PAYER 補足
+      4. 等 TRX top-up 上鏈(~10s)
+      5. 從 user 地址送 USDT 到 to_address
+      6. 寫 tx_hash + status=BROADCASTING + 排程 confirm_withdrawal
+      7. 任何環節 raise → fail_and_reverse_withdrawal
+    """
+    # Step 1: 鎖定 + 改 PROCESSING
+    async with db_session() as session:
+        req = await mark_processing(session, withdrawal_id)
+    if req is None:
+        logger.info("broadcast_skipped_not_approved", withdrawal_id=withdrawal_id)
+        return "not_approved"
+
+    user_priv = ""
+    fp_priv = ""
+    try:
+        # Step 2: 拿 keys
+        async with db_session() as session:
+            user_addr, user_priv, fp_addr, fp_priv = await load_user_signing_keys(
+                session, req.user_id
+            )
+
+        # Step 3-4: TRX top-up if needed
+        try:
+            user_trx = await tatum.get_trx_balance(user_addr)
+        except TatumError as e:
+            raise RuntimeError(f"get_trx_balance failed: {e}") from e
+
+        if user_trx < WITHDRAWAL_TRX_BUDGET:
+            top_up_amount = WITHDRAWAL_TRX_BUDGET - user_trx
+            logger.info(
+                "trx_top_up_starting",
+                withdrawal_id=withdrawal_id,
+                user_addr=user_addr,
+                from_balance=str(user_trx),
+                top_up=str(top_up_amount),
+            )
+            top_up_hash = await tatum.send_trx(fp_priv, user_addr, top_up_amount)
+            logger.info(
+                "trx_top_up_broadcast",
+                withdrawal_id=withdrawal_id,
+                top_up_tx=top_up_hash,
+            )
+            # Tron 出塊 ~3s,等大概 4 個 block 確保 user 看到 TRX
+            await asyncio.sleep(12)
+
+        # Step 5: send USDT
+        logger.info(
+            "withdrawal_send_usdt",
+            withdrawal_id=withdrawal_id,
+            from_addr=user_addr,
+            to_addr=req.to_address,
+            amount=str(req.amount),
+        )
+        usdt_tx_hash = await tatum.send_trc20(
+            user_priv,
+            req.to_address,
+            settings.usdt_contract,
+            req.amount,
+            fee_limit_trx=100,
+        )
+
+    except Exception as e:
+        logger.exception("withdrawal_broadcast_failed", withdrawal_id=withdrawal_id, error=str(e))
+        async with db_session() as session:
+            await fail_and_reverse_withdrawal(session, withdrawal_id, f"broadcast: {e}")
+        return f"failed:{e}"
+    finally:
+        # 盡量縮短 priv key 在記憶體的時間(Python GC 不一定立刻收)
+        user_priv = "0" * 64  # noqa: F841
+        fp_priv = "0" * 64  # noqa: F841
+
+    # Step 6: 寫 tx_hash + 排 confirm
+    async with db_session() as session:
+        await mark_broadcasting(session, withdrawal_id, usdt_tx_hash)
+
+    redis = ctx["redis"]
+    await redis.enqueue_job(
+        "confirm_withdrawal",
+        withdrawal_id=withdrawal_id,
+        _defer_by=15,
+    )
+    logger.info(
+        "withdrawal_broadcast_done",
+        withdrawal_id=withdrawal_id,
+        tx_hash=usdt_tx_hash,
+    )
+    return f"broadcast:{usdt_tx_hash}"
+
+
+async def confirm_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> str:
+    """polling tx confirmations,夠 19 → COMPLETED。"""
+    async with db_session() as session:
+        q = await session.execute(
+            select(WithdrawalRequest).where(WithdrawalRequest.id == withdrawal_id)
+        )
+        req = q.scalar_one_or_none()
+        if req is None:
+            return "not_found"
+        if req.status == WithdrawalStatus.COMPLETED.value:
+            return "already_completed"
+        if req.status != WithdrawalStatus.BROADCASTING.value:
+            return f"unexpected_status_{req.status}"
+        if not req.tx_hash:
+            await fail_and_reverse_withdrawal(session, withdrawal_id, "missing tx_hash")
+            return "missing_tx_hash"
+        tx_hash = req.tx_hash
+
+    try:
+        detail = await tatum.get_tron_transaction(tx_hash)
+    except TatumNotConfigured:
+        return "tatum_not_configured"
+    except TatumError as e:
+        logger.warning("confirm_withdrawal_tatum_error", withdrawal_id=withdrawal_id, error=str(e))
+        await ctx["redis"].enqueue_job(
+            "confirm_withdrawal", withdrawal_id=withdrawal_id, _defer_by=30
+        )
+        return "tatum_error_retry"
+
+    if detail is None:
+        # 還沒被 Tatum index 到,過 10 秒再來
+        await ctx["redis"].enqueue_job(
+            "confirm_withdrawal", withdrawal_id=withdrawal_id, _defer_by=10
+        )
+        return "tx_not_indexed_yet"
+
+    block_number = detail.get("blockNumber")
+    if not block_number:
+        # tx pending(尚未上塊)
+        await ctx["redis"].enqueue_job(
+            "confirm_withdrawal", withdrawal_id=withdrawal_id, _defer_by=15
+        )
+        return "tx_pending"
+
+    # 檢查 contract 執行有沒有失敗
+    ret = detail.get("ret")
+    if isinstance(ret, list) and ret:
+        contract_ret = ret[0].get("contractRet", "SUCCESS")
+        if contract_ret != "SUCCESS":
+            async with db_session() as session:
+                await fail_and_reverse_withdrawal(
+                    session, withdrawal_id, f"chain ret={contract_ret}"
+                )
+            return f"chain_failed_{contract_ret}"
+
+    try:
+        current_block = await tatum.get_tron_block_number()
+    except TatumError as e:
+        logger.warning("confirm_withdrawal_block_height_error", error=str(e))
+        await ctx["redis"].enqueue_job(
+            "confirm_withdrawal", withdrawal_id=withdrawal_id, _defer_by=30
+        )
+        return "tatum_error_retry"
+
+    confirmations = max(0, current_block - block_number)
+    if confirmations >= REQUIRED_CONFIRMATIONS:
+        async with db_session() as session:
+            await mark_completed(session, withdrawal_id)
+        logger.info(
+            "withdrawal_completed",
+            withdrawal_id=withdrawal_id,
+            tx_hash=tx_hash,
+            confirmations=confirmations,
+        )
+        return "completed"
+
+    # 不夠就 reschedule
+    blocks_left = REQUIRED_CONFIRMATIONS - confirmations
+    defer = max(15, blocks_left * TRON_BLOCK_SECONDS + 5)
+    logger.info(
+        "withdrawal_waiting_confirmations",
+        withdrawal_id=withdrawal_id,
+        confirmations=confirmations,
+        blocks_left=blocks_left,
+        next_check_in=defer,
+    )
+    await ctx["redis"].enqueue_job(
+        "confirm_withdrawal", withdrawal_id=withdrawal_id, _defer_by=defer
+    )
+    return f"waiting_{confirmations}"
+
+
+async def _recover_orphan_withdrawals(ctx: dict[str, Any]) -> None:
+    """Worker 啟動時掃 APPROVED + PROCESSING + BROADCASTING 的 withdrawal,重新排程。
+
+    APPROVED:可能是 worker 上次 crash 之前還沒 broadcast 的,直接重排
+    PROCESSING:worker 卡在 broadcast 中間時 crash → 重排,但這段不安全(可能已部分上鏈)
+                phase 5C 會用 idempotency key 處理。phase 5B 簡單版:也直接重排,讓人工檢查
+    BROADCASTING:已上鏈但 confirm task 沒跑到,重排 confirm 即可
+    """
+    redis = ctx["redis"]
+    async with db_session() as session:
+        q = await session.execute(
+            select(WithdrawalRequest).where(
+                WithdrawalRequest.status.in_(
+                    [
+                        WithdrawalStatus.APPROVED.value,
+                        WithdrawalStatus.PROCESSING.value,
+                        WithdrawalStatus.BROADCASTING.value,
+                    ]
+                )
+            )
+        )
+        rows = q.scalars().all()
+
+    for req in rows:
+        if req.status == WithdrawalStatus.BROADCASTING.value:
+            await redis.enqueue_job(
+                "confirm_withdrawal", withdrawal_id=req.id, _defer_by=5
+            )
+            logger.info("orphan_confirm_rescheduled", withdrawal_id=req.id)
+        else:
+            # APPROVED / PROCESSING — 重新進 broadcast 流程
+            await redis.enqueue_job(
+                "broadcast_withdrawal", withdrawal_id=req.id, _defer_by=5
+            )
+            logger.info(
+                "orphan_broadcast_rescheduled",
+                withdrawal_id=req.id,
+                from_status=req.status,
+            )
+
+
 async def startup(ctx: dict[str, Any]) -> None:
     configure_logging("DEBUG" if settings.is_dev else "INFO")
     get_logger(__name__).info("worker_starting")
+    try:
+        await _recover_orphan_withdrawals(ctx)
+    except Exception as e:
+        logger.exception("orphan_recovery_failed", error=str(e))
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
@@ -199,6 +445,8 @@ class WorkerSettings:
         kyc_send_rejected_email,
         transfer_send_received_email,
         confirm_onchain_tx,
+        broadcast_withdrawal,
+        confirm_withdrawal,
     ]
     redis_settings = _redis_settings()
     on_startup = startup

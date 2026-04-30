@@ -143,6 +143,58 @@ async def get_trx_balance(address: str) -> Decimal:
     return Decimal(raw) / Decimal(1_000_000)
 
 
+async def send_trx(from_private_key_hex: str, to_address: str, amount_trx: Decimal) -> str:
+    """送 TRX(原生)— Tatum 後端會 build + sign + broadcast,回 tx_hash。
+
+    `amount_trx` 是 TRX 整數值(會被 Tatum 換成 sun)。
+    """
+    payload = {
+        "fromPrivateKey": from_private_key_hex,
+        "to": to_address,
+        "amount": str(amount_trx),  # Tatum 文件:TRX 數量是字串
+    }
+    async with _client() as client:
+        res = await client.post("/v3/tron/transaction", json=payload)
+    if res.status_code >= 400:
+        logger.error("tatum_send_trx_failed", status=res.status_code, body=res.text[:500])
+        raise TatumError(f"send_trx failed: {res.status_code} {res.text[:200]}")
+    body = res.json()
+    tx_hash = body.get("txId")
+    if not tx_hash:
+        raise TatumError(f"send_trx returned no txId: {body}")
+    return str(tx_hash)
+
+
+async def send_trc20(
+    from_private_key_hex: str,
+    to_address: str,
+    contract_address: str,
+    amount: Decimal,
+    fee_limit_trx: int = 100,
+) -> str:
+    """送 TRC20 token(USDT 等)— from address 必須有足夠 TRX 付 gas。
+
+    `amount` 是 token 整數值(USDT-TRC20 6 位小數,Tatum 文件支援 string 帶小數)。
+    """
+    payload = {
+        "fromPrivateKey": from_private_key_hex,
+        "to": to_address,
+        "tokenAddress": contract_address,
+        "amount": str(amount),
+        "feeLimit": fee_limit_trx,
+    }
+    async with _client() as client:
+        res = await client.post("/v3/tron/trc20/transaction", json=payload)
+    if res.status_code >= 400:
+        logger.error("tatum_send_trc20_failed", status=res.status_code, body=res.text[:500])
+        raise TatumError(f"send_trc20 failed: {res.status_code} {res.text[:200]}")
+    body = res.json()
+    tx_hash = body.get("txId")
+    if not tx_hash:
+        raise TatumError(f"send_trc20 returned no txId: {body}")
+    return str(tx_hash)
+
+
 async def get_trc20_balance(address: str, contract: str) -> Decimal:
     """查指定地址在某 TRC20 合約的餘額。
 

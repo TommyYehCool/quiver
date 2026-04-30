@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
 from app.api.deps import CurrentUserDep, DbDep
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.models.withdrawal import WithdrawalRequest
+from app.core.queue import get_arq_pool
+from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
 from app.schemas.api import ApiResponse
 from app.schemas.withdrawal import (
     WithdrawalOut,
@@ -45,6 +48,7 @@ async def post_withdrawal(
     payload: WithdrawalSubmitIn,
     user: CurrentUserDep,
     db: DbDep,
+    arq: Annotated[object, Depends(get_arq_pool)],
 ) -> ApiResponse[WithdrawalSubmitOut]:
     try:
         result = await submit_withdrawal(
@@ -58,6 +62,12 @@ async def post_withdrawal(
             status_code=e.http_status,
             detail={"code": e.code},
         ) from e
+
+    # 小額直接 APPROVED → enqueue broadcast 立即動工
+    if result.status == WithdrawalStatus.APPROVED.value:
+        await arq.enqueue_job(  # type: ignore[attr-defined]
+            "broadcast_withdrawal", withdrawal_id=result.withdrawal_id, _defer_by=2
+        )
 
     return ApiResponse[WithdrawalSubmitOut].ok(
         WithdrawalSubmitOut(

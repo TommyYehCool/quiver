@@ -92,6 +92,51 @@ async def get_platform_fee_payer_address(db: AsyncSession) -> str:
         master_seed = b"\x00" * len(master_seed)  # noqa: F841
 
 
+def _derive_user_private_key_hex(master_seed: bytes, user_id: int) -> str:
+    """派生 user 的 secp256k1 private key,回 hex(無 0x prefix)— 給 Tatum 用。"""
+    bip44_mst = Bip44.FromSeed(master_seed, Bip44Coins.TRON)
+    addr_ctx = (
+        bip44_mst.Purpose()
+        .Coin()
+        .Account(0)
+        .Change(Bip44Changes.CHAIN_EXT)
+        .AddressIndex(user_id)
+    )
+    return addr_ctx.PrivateKey().Raw().ToHex()
+
+
+def _derive_fee_payer_private_key_hex(master_seed: bytes) -> str:
+    """派生 FEE_PAYER 的 secp256k1 private key hex。"""
+    bip44_mst = Bip44.FromSeed(master_seed, Bip44Coins.TRON)
+    addr_ctx = (
+        bip44_mst.Purpose()
+        .Coin()
+        .Account(1)
+        .Change(Bip44Changes.CHAIN_EXT)
+        .AddressIndex(0)
+    )
+    return addr_ctx.PrivateKey().Raw().ToHex()
+
+
+async def load_user_signing_keys(
+    db: AsyncSession, user_id: int
+) -> tuple[str, str, str, str]:
+    """一次取出簽 transactions 需要的東西:
+        (user_address, user_priv_key_hex, fee_payer_address, fee_payer_priv_key_hex)
+
+    用完 caller 應立即從記憶體拋掉(Python 沒有真正的 zero,但變數 reassign 縮短 GC window)。
+    """
+    master_seed = await _load_master_seed(db)
+    try:
+        user_addr = _derive_tron_address(master_seed, user_id)
+        user_priv = _derive_user_private_key_hex(master_seed, user_id)
+        fp_addr = _derive_platform_fee_payer_address(master_seed)
+        fp_priv = _derive_fee_payer_private_key_hex(master_seed)
+        return user_addr, user_priv, fp_addr, fp_priv
+    finally:
+        master_seed = b"\x00" * len(master_seed)  # noqa: F841
+
+
 async def get_or_derive_tron_address(db: AsyncSession, user: User) -> str:
     """如果 user 已有 tron_address 直接回;否則派生 + 寫 DB + 回。"""
     if user.tron_address:

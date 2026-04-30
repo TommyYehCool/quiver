@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentAdminDep, DbDep
 from app.core.logging import get_logger
+from app.core.queue import get_arq_pool
 from app.models.user import User
 from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
 from app.schemas.api import ApiResponse
@@ -104,6 +107,7 @@ async def approve_withdrawal(
     withdrawal_id: int,
     admin: CurrentAdminDep,
     db: DbDep,
+    arq: Annotated[object, Depends(get_arq_pool)],
 ) -> ApiResponse[AdminWithdrawalOut]:
     try:
         req = await admin_approve(db, admin, withdrawal_id)
@@ -112,6 +116,12 @@ async def approve_withdrawal(
             status_code=e.http_status,
             detail={"code": e.code},
         ) from e
+
+    # 進入 APPROVED → enqueue broadcast
+    await arq.enqueue_job(  # type: ignore[attr-defined]
+        "broadcast_withdrawal", withdrawal_id=req.id, _defer_by=2
+    )
+
     user_q = await db.execute(select(User).where(User.id == req.user_id))
     user = user_q.scalar_one()
     return ApiResponse[AdminWithdrawalOut].ok(_to_admin_out(req, user))

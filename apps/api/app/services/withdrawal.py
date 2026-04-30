@@ -261,6 +261,85 @@ async def admin_approve(
     return req
 
 
+async def mark_processing(db: AsyncSession, withdrawal_id: int) -> WithdrawalRequest | None:
+    """worker 開始處理時把 APPROVED → PROCESSING(防止 double-broadcast)。"""
+    q = await db.execute(
+        select(WithdrawalRequest).where(WithdrawalRequest.id == withdrawal_id).with_for_update()
+    )
+    req = q.scalar_one_or_none()
+    if req is None:
+        return None
+    if req.status != WithdrawalStatus.APPROVED.value:
+        return None  # 已被別的 worker 拿走 / 已處理
+    req.status = WithdrawalStatus.PROCESSING.value
+    await db.commit()
+    await db.refresh(req)
+    return req
+
+
+async def mark_broadcasting(
+    db: AsyncSession, withdrawal_id: int, tx_hash: str
+) -> WithdrawalRequest | None:
+    q = await db.execute(
+        select(WithdrawalRequest).where(WithdrawalRequest.id == withdrawal_id)
+    )
+    req = q.scalar_one_or_none()
+    if req is None:
+        return None
+    req.status = WithdrawalStatus.BROADCASTING.value
+    req.tx_hash = tx_hash
+    await db.commit()
+    await db.refresh(req)
+    return req
+
+
+async def mark_completed(db: AsyncSession, withdrawal_id: int) -> WithdrawalRequest | None:
+    q = await db.execute(
+        select(WithdrawalRequest).where(WithdrawalRequest.id == withdrawal_id)
+    )
+    req = q.scalar_one_or_none()
+    if req is None:
+        return None
+    req.status = WithdrawalStatus.COMPLETED.value
+    req.completed_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(req)
+    return req
+
+
+async def fail_and_reverse_withdrawal(
+    db: AsyncSession, withdrawal_id: int, reason: str
+) -> WithdrawalRequest | None:
+    """廣播失敗 / 上鏈失敗 → 寫 REVERSE 退款 + 標記 FAILED。
+
+    冪等:若 status 已是 FAILED / REJECTED / COMPLETED 不重複處理。
+    """
+    q = await db.execute(
+        select(WithdrawalRequest).where(WithdrawalRequest.id == withdrawal_id).with_for_update()
+    )
+    req = q.scalar_one_or_none()
+    if req is None:
+        return None
+    if req.status in (
+        WithdrawalStatus.FAILED.value,
+        WithdrawalStatus.REJECTED.value,
+        WithdrawalStatus.COMPLETED.value,
+    ):
+        return req
+
+    if req.ledger_tx_id is not None:
+        await _write_reverse_entries(
+            db, req.ledger_tx_id, req.amount + req.fee, req.currency
+        )
+
+    req.status = WithdrawalStatus.FAILED.value
+    req.reject_reason = reason[:1024] if reason else "broadcast or chain failure"
+    await db.commit()
+    await db.refresh(req)
+    logger.warning("withdrawal_failed_and_reversed", withdrawal_id=req.id, reason=req.reject_reason)
+    return req
+
+
 async def admin_reject(
     db: AsyncSession, admin: User, withdrawal_id: int, reason: str
 ) -> WithdrawalRequest:
