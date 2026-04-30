@@ -16,7 +16,7 @@
 | **目前 JustLend USDT supply APY?** | ⚠️ **1.37%** — 比預期低很多 |
 | 抽 15% perf fee 後 net APY? | **1.16%** — 跟台灣定存差不多,**不夠吸引** |
 
-**重大發現**:當下 JustLend USDT yield 太低,商業模式假設要重估。**詳見 § 4 Findings**。
+**重大發現**:**單看 JustLend** yield 太低,**但跨多協議掃**(Phase 1.5 加跑)看到 4-5% USDT yield 選項充足,**B 方向(多協議 aggregator)可行**。
 
 ---
 
@@ -49,6 +49,71 @@
 - ⚠️ **public TronGrid 嚴重 rate-limit**(429 after 2-3 calls 即使加 backoff)
   → production 必須 paid TronGrid key 或我們自己的 Tron node 或 Tatum proxy
 - ⚠️ Tatum 回的 `constant_result[0]` 對 single uint256 method 也是 192 chars(3 個 uint256 concatenated, padded with zeros);**取前 64 chars** 才是真正的值
+
+---
+
+## 1.5 Phase 1.5 — 多平台 USDT yield scanner(關鍵 update)
+
+跑 `apps/api/scripts/poc_yield_scanner.py`,**2026-05-01** 即時掃描 Bitfinex + DefiLlama:
+
+```
+平台                  鏈                APY     TVL       備註
+─────────────────────────────────────────────────────────────────
+Bitfinex Funding      CeFi (USD)    15.44%    —        FRR×365 即時值,實際成交率 ~5.66%
+Fluid Lending         Ethereum       5.13%   $118M     base 3.6% + reward 1.5%
+AAVE V3              Ethereum       4.90%   $126M
+Venus Flux           BSC            4.56%   $41M
+Compound V3          Ethereum       3.05%   $36M      base 2.9% + reward 0.1%
+Spark Savings        Ethereum       3.00%   $1,137M   ← TVL 最大,Maker DAO
+Sparklend            Ethereum       2.69%   $140M
+Venus Core           BSC            1.95%   $95M
+JustLend             Tron           1.37%   $129M     ← 我們之前 PoC 的協議
+```
+
+### 抽 15% perf fee 後用戶 net APY 對比定存(1.6%)
+
+| 協議 | gross | net | vs 定存 |
+|---|---|---|---|
+| Bitfinex Funding (USD) | 15.44% | 13.12% | ✓ 大勝 |
+| Fluid Lending | 5.13% | 4.36% | ✓ |
+| AAVE V3 Ethereum | 4.90% | 4.16% | ✓ |
+| Venus Flux BSC | 4.56% | 3.88% | ✓ |
+| Compound V3 Ethereum | 3.05% | 2.60% | ✓ |
+| Spark Savings | 3.00% | 2.55% | ✓ 略勝 |
+| Sparklend | 2.69% | 2.29% | ✓ 略勝 |
+| Venus Core BSC | 1.95% | 1.66% | ⚠ 邊緣 |
+| JustLend Tron | 1.37% | 1.16% | ✗ 輸 |
+
+**結論:有 8 個選項贏定存,商業可行**。
+
+### Break-even TVL 重新計算
+
+| 假設 | gross APY | 需要 TVL($300/月成本) |
+|---|---|---|
+| 單跑 JustLend(原 PoC) | 1.37% | $1,752,000 |
+| 單跑 AAVE V3 Ethereum | 4.9% | $490,000 |
+| 多協議混合(平均 4-5%) | ~4.5% | **~$534,000** |
+
+→ **B 方向 break-even TVL ≈ 50 萬美金**,250-500 個用戶 × $1-2K 即可達,3-6 個月內合理。
+
+### Bitfinex 的特別性
+
+- API 抓 fUSDT 失敗(500),但 fUSD 抓到 15.44% FRR-annualized。`/v2/ticker/fUSD` 應穩定可用
+- Bitfinex funding rate 高度波動:平淡期 1-5% / 一般 5-15% / 牛市瞬間可達 30%+
+- 但**只能 lend USD,不是 USDT** — 用戶要先把 USDT 換成 USD
+- Bitfinex 帳戶整合 + sub-account 限制(institutional plan)讓技術整合難,先 deprioritize
+
+### 重要警示:跨鏈 bridge 風險
+
+- 我們現在 USDT 都在 Tron(USDT-TRC20)
+- 要部署到 AAVE Polygon / Ethereum / Arbitrum,**必須先 bridge USDT 跨鏈**
+- 跨鏈 bridge 出事的歷史:Wormhole($320M)、Ronin($600M)、Nomad($190M)、PolyNetwork($600M)
+- 主流 bridge 選項:
+  - **Stargate**(LayerZero):USDT 跨鏈最熟、流動性最大、被駭歷史較少
+  - **Axelar**:相對保守,但 USDT 流動性次之
+  - **Wormhole**:跨鏈最廣但被駭過,信任打折扣
+- 推薦:**Stargate** for USDT bridging
+- 用戶體驗:bridge 也要付 gas + 0.06% bridge fee,兩端確認 5-10 分鐘
 
 ---
 
