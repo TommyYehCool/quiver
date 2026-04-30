@@ -63,6 +63,15 @@
       "cta": "進入後台"
     }
   },
+  "balance": {
+    "title": "餘額",
+    "desc": "你的 USDT (TRC20) 可動用餘額。處理中的入金需要約 1 分鐘確認。",
+    "available": "可動用",
+    "pending": "處理中",
+    "history": "最近的收款",
+    "statusPending": "處理中",
+    "statusPosted": "已到帳"
+  },
   "wallet": {
     "title": "我的收款地址",
     "desc": "把這個地址或 QR 給對方,USDT 會直接收到你的 Quiver 帳戶。",

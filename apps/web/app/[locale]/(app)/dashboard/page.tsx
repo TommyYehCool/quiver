@@ -7,6 +7,8 @@ import { AlertTriangle, ArrowRight, CheckCircle2, Key, ShieldCheck, Sparkles, Us
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BalanceCard } from "@/components/wallet/balance-card";
+import { DevSimulator } from "@/components/admin/dev-simulator";
 import { ReceiveCard } from "@/components/wallet/receive-card";
 import { fetchMeServer } from "@/lib/auth";
 
@@ -144,7 +146,13 @@ export default async function DashboardPage({
         </CardContent>
       </Card>
 
-      {kyc?.status === "APPROVED" ? <ReceiveCard /> : null}
+      {kyc?.status === "APPROVED" ? (
+        <>
+          <BalanceCard />
+          <ReceiveCard />
+          {isAdmin ? <DevSimulator userId={user.id} /> : null}
+        </>
+      ) : null}
 
       {needsSetup ? (
         <Card className="bg-macaron-rose dark:bg-slate-900">

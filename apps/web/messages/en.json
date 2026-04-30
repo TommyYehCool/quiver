@@ -63,6 +63,15 @@
       "cta": "Open admin"
     }
   },
+  "balance": {
+    "title": "Balance",
+    "desc": "Your spendable USDT (TRC20) balance. Pending deposits take ~1 minute to confirm.",
+    "available": "Available",
+    "pending": "Pending",
+    "history": "Recent deposits",
+    "statusPending": "Processing",
+    "statusPosted": "Confirmed"
+  },
   "wallet": {
     "title": "My receive address",
     "desc": "Share this address or QR. USDT goes directly to your Quiver account.",
