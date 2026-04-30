@@ -15,15 +15,22 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from starlette import status
 
-from app.api.deps import DbDep
+from app.api.deps import CurrentUserDep, DbDep
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.security import (
+    COOKIE_NAME,
+    TokenError,
     clear_session_cookie,
     create_access_token,
+    decode_access_token,
+    generate_jti,
     set_session_cookie,
 )
+from app.models.login_session import LoginSession
 from app.services.auth import upsert_google_user
+from sqlalchemy import update
+from datetime import UTC, datetime
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 logger = get_logger(__name__)
@@ -82,10 +89,19 @@ async def google_callback(request: Request, db: DbDep) -> RedirectResponse:
         )
 
     user = await upsert_google_user(db, dict(userinfo))
+
+    # 建 LoginSession,讓「登出所有裝置」能精準作用
+    jti = generate_jti()
+    ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    db.add(LoginSession(user_id=user.id, jti=jti, ip=ip, user_agent=user_agent))
+    await db.commit()
+
     jwt_token = create_access_token(
         user_id=user.id,
         email=user.email,
         roles=list(user.roles),
+        jti=jti,
     )
 
     locale = request.session.pop("post_login_locale", "zh-TW")
@@ -94,12 +110,31 @@ async def google_callback(request: Request, db: DbDep) -> RedirectResponse:
         status_code=status.HTTP_302_FOUND,
     )
     set_session_cookie(redirect, jwt_token)
-    logger.info("login_success", user_id=user.id)
+    logger.info("login_success", user_id=user.id, jti=jti)
     return redirect
 
 
 @router.post("/logout")
-async def logout() -> Response:
+async def logout(
+    request: Request,
+    db: DbDep,
+) -> Response:
+    """登出此裝置 — clear cookie + revoke 此 session。"""
+    token = request.cookies.get(COOKIE_NAME)
+    if token:
+        try:
+            payload = decode_access_token(token)
+            jti = payload.get("jti")
+            if jti:
+                await db.execute(
+                    update(LoginSession)
+                    .where(LoginSession.jti == jti, LoginSession.revoked_at.is_(None))
+                    .values(revoked_at=datetime.now(UTC))
+                )
+                await db.commit()
+        except TokenError:
+            pass  # token 已壞,直接清 cookie 就好
+
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     clear_session_cookie(response)
     return response

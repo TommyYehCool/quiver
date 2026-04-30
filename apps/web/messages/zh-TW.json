@@ -78,6 +78,42 @@
     "typeWithdrawal": "提領",
     "typeRefund": "退款"
   },
+  "settings": {
+    "title": "設定",
+    "desc": "管理你的登入裝置、匯出個資、申請刪除帳號。",
+    "security": {
+      "sessionsTitle": "登入裝置",
+      "sessionsDesc": "顯示最近 50 個登入紀錄。如果看到不認識的裝置,立刻按「登出所有其他裝置」。",
+      "loading": "載入中",
+      "noSessions": "目前沒有登入紀錄。",
+      "current": "此裝置",
+      "active": "在線",
+      "revoked": "已登出",
+      "unknownDevice": "未知裝置",
+      "lastSeen": "最後活動",
+      "loginAt": "登入時間",
+      "revokeOthers": "登出所有其他裝置",
+      "confirmRevokeOthers": "確認要登出除此裝置以外所有裝置?\n\n其他裝置會立刻被踢出,需重新登入。",
+      "revokedCount": "已登出 {count} 個裝置"
+    },
+    "account": {
+      "title": "帳號管理",
+      "desc": "個資匯出、刪除帳號(個資法 / GDPR)。",
+      "exportTitle": "匯出我的資料",
+      "exportDesc": "下載個人資料 + 交易紀錄的 JSON 檔(不含 KYC 照片本體)。個資法第 10 條保障的權益。",
+      "exportButton": "下載 JSON",
+      "exportOk": "匯出成功 — 檔案應該已開始下載。",
+      "exportFailed": "匯出失敗,請稍後再試。",
+      "deleteTitle": "刪除帳號",
+      "deleteDesc": "提出申請後由 admin 審核,確認餘額為 0 才會處理。為法遵需求,你的交易紀錄會保留(但個人資料會被遮罩)。",
+      "requestDelete": "申請刪除帳號",
+      "confirmDelete": "確定提出刪除申請?\n\n申請後 admin 會審核。\n申請期間你還可以隨時取消。\n完成後不可逆。",
+      "deleteRequested": "已提出刪除申請,等待 admin 處理。",
+      "pendingNotice": "已於 {date} 提出刪除申請,等待 admin 處理中。",
+      "cancelDelete": "取消申請",
+      "deleteCancelled": "已取消刪除申請。"
+    }
+  },
   "transfer": {
     "title": "轉帳",
     "desc": "用對方的 email 發送 USDT,鏈上不收手續費。",

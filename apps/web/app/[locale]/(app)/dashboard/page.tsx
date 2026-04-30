@@ -211,6 +211,11 @@ export default async function DashboardPage({
                 平台帳戶 <ArrowRight className="h-3 w-3" />
               </Link>
             </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/${locale}/admin/deletion-requests`}>
+                刪除申請 <ArrowRight className="h-3 w-3" />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       ) : null}

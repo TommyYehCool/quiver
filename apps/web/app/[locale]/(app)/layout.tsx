@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { Settings } from "lucide-react";
 
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { NotificationBell } from "@/components/common/notification-bell";
@@ -31,6 +32,13 @@ export default async function AppLayout({
         </Link>
         <div className="flex items-center gap-2">
           <NotificationBell />
+          <Link
+            href={`/${locale}/settings`}
+            aria-label="Settings"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+          >
+            <Settings className="h-5 w-5" />
+          </Link>
           <LocaleSwitcher />
           <ThemeToggle />
           <LogoutButton locale={locale} />

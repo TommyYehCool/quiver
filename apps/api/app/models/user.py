@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import enum
+from datetime import datetime
 
-from sqlalchemy import ARRAY, BigInteger, String
+from sqlalchemy import ARRAY, BigInteger, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -39,6 +40,12 @@ class User(Base, TimestampMixin):
     tron_address: Mapped[str | None] = mapped_column(String(34), unique=True, index=True)
     tatum_sub_id: Mapped[str | None] = mapped_column(String(64))
     tatum_sub_callback_url: Mapped[str | None] = mapped_column(String(512))
+
+    # phase 6E-1: account deletion (GDPR / 個資法)
+    # _requested_at = 用戶提出刪除申請(等 admin 審核)
+    # _completed_at = admin 完成刪除(soft delete:status SUSPENDED + email 改為 deleted-{id}@quiver.deleted)
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deletion_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     @property
     def is_admin(self) -> bool:

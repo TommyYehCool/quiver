@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -17,10 +18,16 @@ class TokenError(Exception):
     """JWT 驗證錯誤。"""
 
 
+def generate_jti() -> str:
+    """產生 JWT ID — 對應 login_sessions.jti。32 hex chars,夠唯一。"""
+    return secrets.token_hex(16)
+
+
 def create_access_token(
     user_id: int,
     email: str,
     roles: list[str],
+    jti: str,
     expires_seconds: int | None = None,
 ) -> str:
     now = datetime.now(UTC)
@@ -29,6 +36,7 @@ def create_access_token(
         "sub": str(user_id),
         "email": email,
         "roles": roles,
+        "jti": jti,
         "iat": int(now.timestamp()),
         "exp": int(expires.timestamp()),
         "iss": "quiver",

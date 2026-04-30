@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import (
+    account,
     auth,
     kyc,
     me,
@@ -23,6 +24,7 @@ from app.api import (
     webhooks,
     withdrawals,
 )
+from app.api.admin import deletions as admin_deletions
 from app.api.admin import dev as admin_dev
 from app.api.admin import kyc as admin_kyc
 from app.api.admin import platform as admin_platform
@@ -181,6 +183,7 @@ async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONRespons
 
 app.include_router(auth.router)
 app.include_router(me.router)
+app.include_router(account.router)
 app.include_router(kyc.router)
 app.include_router(wallet.router)
 app.include_router(transfers.router)
@@ -193,6 +196,7 @@ app.include_router(admin_setup.router)
 app.include_router(admin_dev.router)
 app.include_router(admin_withdrawals.router)
 app.include_router(admin_platform.router)
+app.include_router(admin_deletions.router)
 
 
 @app.get("/healthz", tags=["health"])

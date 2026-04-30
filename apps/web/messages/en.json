@@ -76,6 +76,42 @@
     "typeTransferIn": "Received",
     "typeTransferOut": "Sent"
   },
+  "settings": {
+    "title": "Settings",
+    "desc": "Manage your devices, export your data, request account deletion.",
+    "security": {
+      "sessionsTitle": "Login devices",
+      "sessionsDesc": "Showing up to 50 recent logins. If you see an unfamiliar device, sign out of all others immediately.",
+      "loading": "Loading",
+      "noSessions": "No login records yet.",
+      "current": "This device",
+      "active": "Active",
+      "revoked": "Signed out",
+      "unknownDevice": "Unknown device",
+      "lastSeen": "Last seen",
+      "loginAt": "Logged in",
+      "revokeOthers": "Sign out all other devices",
+      "confirmRevokeOthers": "Sign out all devices except this one?\n\nOther devices will be immediately signed out and need to log in again.",
+      "revokedCount": "Signed out {count} device(s)"
+    },
+    "account": {
+      "title": "Account",
+      "desc": "Data export and account deletion (personal data law / GDPR).",
+      "exportTitle": "Export my data",
+      "exportDesc": "Download a JSON file with your profile + transaction history (KYC photos excluded). Right granted by data protection law.",
+      "exportButton": "Download JSON",
+      "exportOk": "Export started — your download should begin shortly.",
+      "exportFailed": "Export failed, please try again later.",
+      "deleteTitle": "Delete account",
+      "deleteDesc": "After you request deletion, an admin reviews and verifies your balance is 0. For compliance, your transaction history is retained (but personal data is masked).",
+      "requestDelete": "Request account deletion",
+      "confirmDelete": "Confirm deletion request?\n\nAn admin will review. You can cancel any time before they finalize. Once finalized, this is irreversible.",
+      "deleteRequested": "Deletion request submitted, pending admin review.",
+      "pendingNotice": "Deletion requested at {date}, waiting for admin to process.",
+      "cancelDelete": "Cancel request",
+      "deleteCancelled": "Deletion request cancelled."
+    }
+  },
   "transfer": {
     "title": "Send",
     "desc": "Transfer USDT to anyone by email. Internal transfers are free.",
