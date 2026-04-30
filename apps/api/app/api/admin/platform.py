@@ -126,6 +126,7 @@ class FeeWithdrawOut(BaseModel):
 class OutboundQuotaOut(BaseModel):
     hot_usdt_balance: Decimal
     user_balances_total: Decimal
+    in_flight_withdrawal_amount: Decimal
     platform_profit: Decimal
     fee_withdrawal_max: Decimal
 
@@ -145,6 +146,7 @@ async def get_outbound_quota(
         OutboundQuotaOut(
             hot_usdt_balance=q.hot_usdt_balance,
             user_balances_total=q.user_balances_total,
+            in_flight_withdrawal_amount=q.in_flight_withdrawal_amount,
             platform_profit=q.platform_profit,
             fee_withdrawal_max=q.fee_withdrawal_max,
         )

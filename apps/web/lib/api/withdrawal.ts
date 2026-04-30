@@ -151,6 +151,7 @@ export async function fetchHotWallet(): Promise<HotWalletInfo> {
 export interface OutboundQuota {
   hot_usdt_balance: string;
   user_balances_total: string;
+  in_flight_withdrawal_amount: string;
   platform_profit: string;
   fee_withdrawal_max: string;
 }

@@ -24,11 +24,13 @@ import re
 from dataclasses import dataclass
 from decimal import Decimal
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.user import User
+from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
 from app.services import tatum, totp as totp_svc
 from app.services.ledger import get_total_user_balance
 from app.services.tatum import TatumError
@@ -60,7 +62,8 @@ class OutboundError(Exception):
 class OutboundQuota:
     hot_usdt_balance: Decimal
     user_balances_total: Decimal
-    platform_profit: Decimal
+    in_flight_withdrawal_amount: Decimal  # APPROVED/PROCESSING/BROADCASTING 但還沒上鏈的部分
+    platform_profit: Decimal  # 真實 profit:扣掉 in-flight 後算
     fee_withdrawal_max: Decimal
     cold_rebalance_max: Decimal  # phase 6E-4 用,目前等於 platform_profit
 
@@ -74,7 +77,17 @@ class OutboundResult:
 
 
 async def compute_quota(db: AsyncSession) -> OutboundQuota:
-    """看當前 HOT / ledger 算出可送額度。"""
+    """看當前 HOT / ledger 算出可送額度。
+
+    Race-safe: 扣掉「ledger 已扣但 HOT 還沒扣」的提領在途金額,避免 fee-withdraw
+    在 race window 看到虛胖的 profit。
+
+    時序問題:
+      1. 用戶提領 submit 時,ledger 立刻扣 user(amount+fee)
+      2. broadcast worker 跑完前,HOT 鏈上還沒扣 amount
+      3. 這段時間 HOT - user_ledger 會虛增 amount(看起來像獲利,實則之後 HOT 會掉)
+      4. 計算 profit 時要先把 in-flight amount 扣掉
+    """
     hot_addr = await get_platform_hot_wallet_address(db)
     try:
         hot_balance = await tatum.get_trc20_balance(hot_addr, settings.usdt_contract)
@@ -84,12 +97,27 @@ async def compute_quota(db: AsyncSession) -> OutboundQuota:
             params={"error": str(e)},
         ) from e
     user_total = await get_total_user_balance(db)
-    profit = hot_balance - user_total
-    # COLD rebalance 的上限以後 phase 6E-4 設定 HOT_TARGET_USDT 後再改
-    cold_max = max(Decimal(0), profit)  # 保守起見先等於獲利
+
+    # 在途的提領 amount(approved 排到 broadcast、broadcasting 等 confirm 都算)
+    in_flight_q = await db.execute(
+        select(func.coalesce(func.sum(WithdrawalRequest.amount), 0)).where(
+            WithdrawalRequest.status.in_([
+                WithdrawalStatus.APPROVED.value,
+                WithdrawalStatus.PROCESSING.value,
+                WithdrawalStatus.BROADCASTING.value,
+            ])
+        )
+    )
+    in_flight = Decimal(in_flight_q.scalar_one() or 0)
+
+    # 真正穩定的 profit:HOT 鏈上 - 在途提領 - 用戶 ledger
+    # 在途 = 用戶 ledger 已扣但 HOT 還沒扣的部分,所以要先從 HOT 扣掉再比
+    profit = hot_balance - in_flight - user_total
+    cold_max = max(Decimal(0), profit)
     return OutboundQuota(
         hot_usdt_balance=hot_balance,
         user_balances_total=user_total,
+        in_flight_withdrawal_amount=in_flight,
         platform_profit=profit,
         fee_withdrawal_max=max(Decimal(0), profit),
         cold_rebalance_max=cold_max,

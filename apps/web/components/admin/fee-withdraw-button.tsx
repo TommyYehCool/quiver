@@ -184,7 +184,7 @@ export function FeeWithdrawButton() {
                       <span className="text-slate-500">USDT</span>
                     </p>
                     <p className="mt-1 text-[10px] text-slate-400">
-                      = HOT {quota.hot_usdt_balance} − 用戶餘額 {quota.user_balances_total}
+                      = HOT {quota.hot_usdt_balance} − 在途提領 {quota.in_flight_withdrawal_amount} − 用戶餘額 {quota.user_balances_total}
                     </p>
                   </div>
                 ) : null}
