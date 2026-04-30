@@ -13,7 +13,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 
-from app.api.deps import CurrentUserDep, DbDep
+from app.api.deps import CurrentUserDep, DbDep, TosAcceptedUserDep
 from app.core.logging import get_logger
 from app.models.kyc import KycStatus, KycSubmission
 from app.schemas.api import ApiResponse
@@ -48,7 +48,7 @@ async def get_my_submission(
 
 @router.post("/submissions", response_model=ApiResponse[KycSubmissionOut])
 async def create_submission(
-    user: CurrentUserDep,
+    user: TosAcceptedUserDep,
     db: DbDep,
     legal_name: str = Form(min_length=1, max_length=255),
     id_number: str = Form(min_length=1, max_length=64),

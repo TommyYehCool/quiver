@@ -7,6 +7,7 @@ import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { NotificationBell } from "@/components/common/notification-bell";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { LogoutButton } from "@/components/common/logout-button";
+import { TosGate } from "@/components/legal/tos-gate";
 import { fetchMeServer } from "@/lib/auth";
 
 export default async function AppLayout({
@@ -45,6 +46,7 @@ export default async function AppLayout({
         </div>
       </header>
       <main className="container py-8">{children}</main>
+      <TosGate locale={locale} />
     </div>
   );
 }

@@ -102,6 +102,24 @@ async def get_current_jti(
 CurrentJtiDep = Annotated[str | None, Depends(get_current_jti)]
 
 
+async def get_tos_accepted_user(user: CurrentUserDep) -> User:
+    """敏感動作要求 TOS 已同意。
+
+    註:current TOS version 比對在 accept endpoint 做嚴格檢查;這裡只攔
+    `tos_version IS NULL` 的用戶(完全沒同意過任何版本)。如果未來 TOS bump 要
+    強制全用戶重簽,改成 `user.tos_version != TOS_CURRENT_VERSION` 即可。
+    """
+    if user.tos_version is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "tos.notAccepted"},
+        )
+    return user
+
+
+TosAcceptedUserDep = Annotated[User, Depends(get_tos_accepted_user)]
+
+
 async def get_current_admin(user: CurrentUserDep) -> User:
     if UserRole.ADMIN.value not in user.roles:
         raise HTTPException(

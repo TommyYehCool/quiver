@@ -47,6 +47,12 @@ class User(Base, TimestampMixin):
     deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deletion_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+    # phase 6E-5: TOS / Privacy acceptance
+    # NULL = 還沒同意,不能用敏感功能(KYC、轉帳、提領)
+    # tos_version 用於未來 TOS 改版時讓用戶重新同意
+    tos_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    tos_version: Mapped[str | None] = mapped_column(String(16))
+
     @property
     def is_admin(self) -> bool:
         return UserRole.ADMIN.value in self.roles

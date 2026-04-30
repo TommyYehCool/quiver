@@ -9,7 +9,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.deps import CurrentUserDep, DbDep
+from app.api.deps import CurrentUserDep, DbDep, TosAcceptedUserDep
 from app.core.logging import get_logger
 from app.core.queue import get_arq_pool
 from app.schemas.api import ApiResponse
@@ -51,7 +51,7 @@ async def get_recipient_preview(
 @router.post("", response_model=ApiResponse[TransferOut])
 async def post_transfer(
     payload: TransferIn,
-    user: CurrentUserDep,
+    user: TosAcceptedUserDep,
     db: DbDep,
     arq: Annotated[object, Depends(get_arq_pool)],
 ) -> ApiResponse[TransferOut]:

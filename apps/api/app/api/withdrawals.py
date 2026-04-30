@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
-from app.api.deps import CurrentUserDep, DbDep
+from app.api.deps import CurrentUserDep, DbDep, TosAcceptedUserDep
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.queue import get_arq_pool
@@ -51,7 +51,7 @@ async def quote_withdrawal(
 )
 async def post_withdrawal(
     payload: WithdrawalSubmitIn,
-    user: CurrentUserDep,
+    user: TosAcceptedUserDep,
     db: DbDep,
     arq: Annotated[object, Depends(get_arq_pool)],
 ) -> ApiResponse[WithdrawalSubmitOut]:

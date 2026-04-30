@@ -417,19 +417,35 @@ async def sweep_user(ctx: dict[str, Any], *, user_id: int) -> str:
 
 async def cron_sweep_all(ctx: dict[str, Any]) -> str:
     """每 5 分鐘掃所有 user。實際 sweep 與否看 sweep_user_to_hot 內部 threshold 判斷。"""
+    from app.services.heartbeat import write_heartbeat
+
     async with db_session() as session:
         users = await list_sweepable_users(session)
     redis = ctx["redis"]
     for u in users:
         await redis.enqueue_job("sweep_user", user_id=u.id)
+    await write_heartbeat(redis, "sweep_all", expected_interval_s=300)
     logger.info("cron_sweep_dispatched", count=len(users))
     return f"dispatched:{len(users)}"
 
 
+async def cron_heartbeat_watchdog(ctx: dict[str, Any]) -> str:
+    """每 10 分鐘掃 cron heartbeat,stale 就打 Sentry alert。"""
+    from app.services.heartbeat import watchdog_alert_stale
+
+    stale = await watchdog_alert_stale(ctx["redis"])
+    return f"stale:{stale}"
+
+
 async def reconcile_balances(ctx: dict[str, Any]) -> str:
     """每日對帳 cron task — 比對 ledger vs 鏈上,差異 > 0.01 USDT 寄信給 admin。"""
+    from app.services.heartbeat import write_heartbeat
+
     async with db_session() as session:
         report = await run_reconciliation(session)
+
+    # 24 小時間隔 — 跑完馬上 heartbeat
+    await write_heartbeat(ctx["redis"], "reconcile", expected_interval_s=86400)
 
     flagged = [r for r in report.rows if r.flagged]
     if not flagged and report.error_count == 0:
@@ -541,14 +557,21 @@ class WorkerSettings:
         reconcile_balances,
         sweep_user,
         cron_sweep_all,
+        cron_heartbeat_watchdog,
     ]
     # 每日 03:00 (Asia/Taipei) = 19:00 UTC 跑對帳
     # 每 5 分鐘掃一次 user 地址(phase 6D)
+    # 每 10 分鐘檢查 cron 心跳(phase 6E-5)
     cron_jobs = [
         cron(reconcile_balances, hour=19, minute=0, run_at_startup=False),
         cron(
             cron_sweep_all,
             minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55},
+            run_at_startup=False,
+        ),
+        cron(
+            cron_heartbeat_watchdog,
+            minute={0, 10, 20, 30, 40, 50},
             run_at_startup=False,
         ),
     ]

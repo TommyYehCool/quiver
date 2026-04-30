@@ -55,6 +55,21 @@ class DeletionRequestOut(BaseModel):
     completed_at: datetime | None
 
 
+# 當前的 TOS / Privacy 版本字串。改版時 bump 一次,所有人重新同意。
+TOS_CURRENT_VERSION = "2026-04-30-v1"
+
+
+class TosStatusOut(BaseModel):
+    accepted_at: datetime | None
+    accepted_version: str | None
+    current_version: str = TOS_CURRENT_VERSION
+    needs_acceptance: bool
+
+
+class TosAcceptIn(BaseModel):
+    version: str  # 必須 = TOS_CURRENT_VERSION,避免 client cache 同意舊版
+
+
 # ---------- sessions ----------
 
 
@@ -306,5 +321,55 @@ async def get_deletion_request_status(user: CurrentUserDep) -> ApiResponse[Delet
         DeletionRequestOut(
             requested_at=user.deletion_requested_at,
             completed_at=user.deletion_completed_at,
+        )
+    )
+
+
+# ---------- TOS / Privacy ----------
+
+
+@router.get("/tos", response_model=ApiResponse[TosStatusOut])
+async def get_tos_status(user: CurrentUserDep) -> ApiResponse[TosStatusOut]:
+    needs = user.tos_version != TOS_CURRENT_VERSION
+    return ApiResponse[TosStatusOut].ok(
+        TosStatusOut(
+            accepted_at=user.tos_accepted_at,
+            accepted_version=user.tos_version,
+            current_version=TOS_CURRENT_VERSION,
+            needs_acceptance=needs,
+        )
+    )
+
+
+@router.post("/tos", response_model=ApiResponse[TosStatusOut])
+async def accept_tos(
+    payload: TosAcceptIn,
+    request: Request,
+    user: CurrentUserDep,
+    db: DbDep,
+) -> ApiResponse[TosStatusOut]:
+    if payload.version != TOS_CURRENT_VERSION:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "tos.versionMismatch",
+                "params": {"expected": TOS_CURRENT_VERSION, "got": payload.version},
+            },
+        )
+    user.tos_accepted_at = datetime.now(UTC)
+    user.tos_version = TOS_CURRENT_VERSION
+    await write_audit(
+        db, actor=user, action="account.tos_accept",
+        target_kind="USER", target_id=user.id,
+        payload={"version": TOS_CURRENT_VERSION},
+        request=request,
+    )
+    await db.commit()
+    return ApiResponse[TosStatusOut].ok(
+        TosStatusOut(
+            accepted_at=user.tos_accepted_at,
+            accepted_version=user.tos_version,
+            current_version=TOS_CURRENT_VERSION,
+            needs_acceptance=False,
         )
     )
