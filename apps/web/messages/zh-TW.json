@@ -3,13 +3,6 @@
     "name": "Quiver",
     "tagline": "為新手打造的加密貨幣錢包"
   },
-  "nav": {
-    "login": "登入",
-    "logout": "登出",
-    "dashboard": "首頁",
-    "kyc": "身分驗證",
-    "admin": "後台"
-  },
   "marketing": {
     "hero": {
       "title": "把加密貨幣，變成你看得懂的數字",
@@ -43,6 +36,7 @@
     }
   },
   "nav": {
+    "login": "登入",
     "dashboard": "儀表板",
     "wallet": "錢包",
     "kyc": "身分驗證",

@@ -3,13 +3,6 @@
     "name": "Quiver",
     "tagline": "A crypto wallet built for everyone"
   },
-  "nav": {
-    "login": "Sign in",
-    "logout": "Sign out",
-    "dashboard": "Home",
-    "kyc": "Identity verification",
-    "admin": "Admin"
-  },
   "marketing": {
     "hero": {
       "title": "Crypto, in numbers you understand.",
@@ -43,6 +36,7 @@
     }
   },
   "nav": {
+    "login": "Sign in",
     "dashboard": "Dashboard",
     "wallet": "Wallet",
     "kyc": "Verify",
