@@ -42,7 +42,10 @@ export default async function AdminWithdrawalDetailPage({
   const w = await getAdminWithdrawalServer(wId, cookieHeader);
   if (!w) notFound();
 
-  const canActOn = w.status === "PENDING_REVIEW" || w.status === "APPROVED";
+  const canActOn =
+    w.status === "PENDING_REVIEW" ||
+    w.status === "APPROVED" ||
+    w.status === "PROCESSING";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

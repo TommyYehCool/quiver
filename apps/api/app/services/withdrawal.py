@@ -108,6 +108,12 @@ async def submit_withdrawal(
     if not await _kyc_approved(db, user.id):
         raise WithdrawalError("withdrawal.kycRequired", http_status=403)
 
+    # FEE_PAYER 健康檢查 — 沒 TRX 就不接新申請(避免堵在 broadcast)
+    from app.services.platform import is_fee_payer_healthy
+
+    if not await is_fee_payer_healthy(db):
+        raise WithdrawalError("withdrawal.feePayerLow", http_status=503)
+
     fee = settings.withdrawal_fee_usdt
     total = amount + fee
 
@@ -304,6 +310,46 @@ async def mark_completed(db: AsyncSession, withdrawal_id: int) -> WithdrawalRequ
     req.completed_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(req)
+    return req
+
+
+async def admin_force_fail_processing(
+    db: AsyncSession, admin: User, withdrawal_id: int, reason: str
+) -> WithdrawalRequest:
+    """Admin 強制把卡住的 PROCESSING 標 FAILED + REVERSE。
+
+    使用情境:worker crash 在 broadcast 中途,自動 recovery 不敢碰(怕雙花)。
+    Admin 必須先去鏈上 explorer 確認 tx 是否實際送出,如果**沒送**,呼叫這個復原。
+    如果**有送**,應該手動把 tx_hash 寫進 DB 改成 BROADCASTING(目前沒提供 endpoint,要 SQL)。
+    """
+    q = await db.execute(
+        select(WithdrawalRequest).where(WithdrawalRequest.id == withdrawal_id).with_for_update()
+    )
+    req = q.scalar_one_or_none()
+    if req is None:
+        raise WithdrawalError("withdrawal.notFound", http_status=404)
+    if req.status != WithdrawalStatus.PROCESSING.value:
+        raise WithdrawalError(
+            f"withdrawal.cannotForceFailFrom_{req.status}", http_status=409
+        )
+
+    if req.ledger_tx_id is not None:
+        await _write_reverse_entries(
+            db, req.ledger_tx_id, req.amount + req.fee, req.currency
+        )
+
+    req.status = WithdrawalStatus.FAILED.value
+    req.reject_reason = f"admin force-fail: {reason}"[:1024]
+    req.reviewed_by = admin.id
+    req.reviewed_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(req)
+    logger.warning(
+        "withdrawal_force_failed_by_admin",
+        withdrawal_id=req.id,
+        admin_id=admin.id,
+        reason=reason,
+    )
     return req
 
 

@@ -21,6 +21,7 @@ from app.schemas.withdrawal import (
 from app.services.withdrawal import (
     WithdrawalError,
     admin_approve,
+    admin_force_fail_processing,
     admin_reject,
 )
 
@@ -136,6 +137,29 @@ async def reject_withdrawal(
 ) -> ApiResponse[AdminWithdrawalOut]:
     try:
         req = await admin_reject(db, admin, withdrawal_id, payload.reason)
+    except WithdrawalError as e:
+        raise HTTPException(
+            status_code=e.http_status,
+            detail={"code": e.code},
+        ) from e
+    user_q = await db.execute(select(User).where(User.id == req.user_id))
+    user = user_q.scalar_one()
+    return ApiResponse[AdminWithdrawalOut].ok(_to_admin_out(req, user))
+
+
+@router.post("/{withdrawal_id}/force-fail", response_model=ApiResponse[AdminWithdrawalOut])
+async def force_fail_withdrawal(
+    withdrawal_id: int,
+    payload: RejectIn,  # 共用 reason 欄位
+    admin: CurrentAdminDep,
+    db: DbDep,
+) -> ApiResponse[AdminWithdrawalOut]:
+    """卡在 PROCESSING 的 withdrawal,強制標 FAILED + REVERSE。
+
+    使用前 admin 必須先去鏈上 explorer 確認 tx 沒實際送出。
+    """
+    try:
+        req = await admin_force_fail_processing(db, admin, withdrawal_id, payload.reason)
     except WithdrawalError as e:
         raise HTTPException(
             status_code=e.http_status,

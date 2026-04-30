@@ -381,12 +381,13 @@ async def confirm_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> str:
 
 
 async def _recover_orphan_withdrawals(ctx: dict[str, Any]) -> None:
-    """Worker 啟動時掃 APPROVED + PROCESSING + BROADCASTING 的 withdrawal,重新排程。
+    """Worker 啟動時對沒走完的 withdrawal 做安全處理。
 
-    APPROVED:可能是 worker 上次 crash 之前還沒 broadcast 的,直接重排
-    PROCESSING:worker 卡在 broadcast 中間時 crash → 重排,但這段不安全(可能已部分上鏈)
-                phase 5C 會用 idempotency key 處理。phase 5B 簡單版:也直接重排,讓人工檢查
-    BROADCASTING:已上鏈但 confirm task 沒跑到,重排 confirm 即可
+    APPROVED:還沒開始,可安全重排 broadcast
+    BROADCASTING:已拿到 tx_hash,只是 confirm task 沒跑完 → 重排 confirm 安全
+    PROCESSING:worker 在「呼叫 Tatum」過程中 crash。我們不知道是 Tatum 還沒收到、
+                還是 Tatum 已上鏈但我們沒寫 tx_hash。**這段必須 admin 人工處理**,
+                避免雙花。只 log 警告,等 admin force-fail 或 force-complete。
     """
     redis = ctx["redis"]
     async with db_session() as session:
@@ -409,15 +410,18 @@ async def _recover_orphan_withdrawals(ctx: dict[str, Any]) -> None:
                 "confirm_withdrawal", withdrawal_id=req.id, _defer_by=5
             )
             logger.info("orphan_confirm_rescheduled", withdrawal_id=req.id)
-        else:
-            # APPROVED / PROCESSING — 重新進 broadcast 流程
+        elif req.status == WithdrawalStatus.APPROVED.value:
             await redis.enqueue_job(
                 "broadcast_withdrawal", withdrawal_id=req.id, _defer_by=5
             )
-            logger.info(
-                "orphan_broadcast_rescheduled",
+            logger.info("orphan_broadcast_rescheduled", withdrawal_id=req.id)
+        else:
+            # PROCESSING — 不安全自動處理,留給 admin 介入
+            logger.warning(
+                "orphan_processing_needs_admin",
                 withdrawal_id=req.id,
-                from_status=req.status,
+                created_at=str(req.created_at),
+                user_id=req.user_id,
             )
 
 

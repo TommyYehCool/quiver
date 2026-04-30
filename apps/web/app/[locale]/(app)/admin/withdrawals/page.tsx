@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchMeServer } from "@/lib/auth";
-import { listAdminWithdrawalsServer } from "@/lib/api/withdrawal-server";
+import { fetchFeePayerServer, listAdminWithdrawalsServer } from "@/lib/api/withdrawal-server";
 import type { WithdrawalStatus } from "@/lib/api/withdrawal";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -51,7 +52,10 @@ export default async function AdminWithdrawalsPage({
   const page = Number(searchParams.page) || 1;
   const pageSize = 20;
 
-  const data = await listAdminWithdrawalsServer(cookieHeader, { status, page, pageSize });
+  const [data, feePayer] = await Promise.all([
+    listAdminWithdrawalsServer(cookieHeader, { status, page, pageSize }),
+    fetchFeePayerServer(cookieHeader),
+  ]);
   const totalPages = data ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
 
   return (
@@ -62,6 +66,27 @@ export default async function AdminWithdrawalsPage({
           審核大額(≥ $1000)提領申請。小額會自動 APPROVED,直接由 worker 廣播。
         </p>
       </div>
+
+      {feePayer?.low_balance_warning ? (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/30">
+          <AlertTriangle className="mt-0.5 h-5 w-5 flex-none text-amber-700 dark:text-amber-400" />
+          <div className="flex-1 text-sm text-amber-800 dark:text-amber-300">
+            <p className="font-medium">
+              FEE_PAYER 餘額過低 ({feePayer.trx_balance} TRX)— 新提領申請已暫停
+            </p>
+            <p className="mt-0.5 text-xs">
+              系統已自動阻擋使用者送新提領,直到 FEE_PAYER ≥ 100 TRX。
+              請從 Shasta faucet 補 TRX 到{" "}
+              <Link
+                href={`/${locale}/admin/platform`}
+                className="underline"
+              >
+                FEE_PAYER 地址
+              </Link>。
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         {STATUSES.map((s) => (

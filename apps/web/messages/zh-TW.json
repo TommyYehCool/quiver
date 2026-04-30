@@ -167,7 +167,8 @@
         "insufficientFunds": "餘額不足(包含手續費)",
         "commitFailed": "送出失敗,請稍後再試",
         "notFound": "找不到這筆申請",
-        "custodyMissing": "系統錯誤,請聯絡管理員"
+        "custodyMissing": "系統錯誤,請聯絡管理員",
+        "feePayerLow": "平台 FEE_PAYER 餘額暫時過低,提領功能維護中,稍後再試"
       }
     }
   },

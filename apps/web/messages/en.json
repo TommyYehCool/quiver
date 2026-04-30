@@ -165,7 +165,8 @@
         "insufficientFunds": "Insufficient balance (including fee)",
         "commitFailed": "Failed to submit, please retry",
         "notFound": "Withdrawal request not found",
-        "custodyMissing": "System error, please contact admin"
+        "custodyMissing": "System error, please contact admin",
+        "feePayerLow": "Platform FEE_PAYER is temporarily low. Withdrawals are paused, please retry later."
       }
     }
   },

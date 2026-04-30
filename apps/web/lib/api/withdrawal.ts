@@ -109,6 +109,16 @@ export async function adminRejectWithdrawal(id: number, reason: string): Promise
   });
 }
 
+export async function adminForceFailWithdrawal(
+  id: number,
+  reason: string,
+): Promise<AdminWithdrawal> {
+  return apiFetch<AdminWithdrawal>(`/api/admin/withdrawals/${id}/force-fail`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
 export interface FeePayerInfo {
   address: string;
   trx_balance: string;

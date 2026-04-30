@@ -15,14 +15,12 @@ from app.core.logging import get_logger
 from app.schemas.api import ApiResponse
 from app.schemas.withdrawal import FeePayerInfo
 from app.services import tatum
+from app.services.platform import FEE_PAYER_MIN_TRX_FOR_WITHDRAWAL
 from app.services.tatum import TatumError, TatumNotConfigured
 from app.services.wallet import WalletError, get_platform_fee_payer_address
 
 router = APIRouter(prefix="/api/admin/platform", tags=["admin-platform"])
 logger = get_logger(__name__)
-
-# 低於這個 TRX 量就警告 — phase 5C 會用這個阻擋新提領
-LOW_TRX_THRESHOLD = Decimal("100")
 
 
 @router.get("/fee-payer", response_model=ApiResponse[FeePayerInfo])
@@ -48,6 +46,6 @@ async def get_fee_payer(_: CurrentAdminDep, db: DbDep) -> ApiResponse[FeePayerIn
             address=address,
             trx_balance=trx_balance,
             network=settings.env,
-            low_balance_warning=trx_balance < LOW_TRX_THRESHOLD,
+            low_balance_warning=trx_balance < FEE_PAYER_MIN_TRX_FOR_WITHDRAWAL,
         )
     )
