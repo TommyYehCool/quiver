@@ -1,12 +1,17 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, Coins, Flame, Wallet } from "lucide-react";
+import { AlertTriangle, Coins, Flame, Snowflake, Wallet } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchMeServer } from "@/lib/auth";
-import { fetchFeePayerServer, fetchHotWalletServer } from "@/lib/api/withdrawal-server";
+import {
+  fetchColdWalletServer,
+  fetchFeePayerServer,
+  fetchHotWalletServer,
+} from "@/lib/api/withdrawal-server";
 import { BulkSweepButton } from "@/components/admin/bulk-sweep-button";
+import { ColdRebalanceButton } from "@/components/admin/cold-rebalance-button";
 import { FeeWithdrawButton } from "@/components/admin/fee-withdraw-button";
 
 export default async function AdminPlatformPage({
@@ -19,9 +24,10 @@ export default async function AdminPlatformPage({
   if (!user) redirect(`/${locale}/login`);
   if (!user.roles.includes("ADMIN")) redirect(`/${locale}/dashboard`);
 
-  const [fp, hot] = await Promise.all([
+  const [fp, hot, cold] = await Promise.all([
     fetchFeePayerServer(cookieHeader),
     fetchHotWalletServer(cookieHeader),
+    fetchColdWalletServer(cookieHeader),
   ]);
 
   return (
@@ -139,6 +145,91 @@ export default async function AdminPlatformPage({
                   <BulkSweepButton />
                 </div>
               </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* phase 6E-4: COLD wallet card */}
+      <Card className="bg-macaron-sky dark:bg-slate-900">
+        <CardHeader className="flex-row items-start gap-4">
+          <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-sky">
+            <Snowflake className="h-6 w-6 text-sky-700" />
+          </span>
+          <div className="flex-1">
+            <CardTitle>COLD wallet(離線冷儲)</CardTitle>
+            <CardDescription>
+              你掌控、跟系統分離的 Tron 地址(TronLink / 硬體錢包 / 多簽)。系統只讀,不簽。
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {cold === null ? (
+            <p className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              無法載入 — 系統錯誤
+            </p>
+          ) : cold.address === null ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <p className="font-medium">未設定 COLD 地址</p>
+              <p className="mt-1 text-xs">
+                在 <code>.env</code> 設定 <code>COLD_WALLET_ADDRESS</code>(你掌控的 Tron 地址)後重啟 api。
+                也可同時調整 <code>HOT_MAX_USDT</code> / <code>HOT_TARGET_USDT</code> 控制觸發水位。
+              </p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-slate-500">地址</p>
+                <p className="mt-1 break-all rounded-lg border border-cream-edge bg-paper px-3 py-2 font-mono text-sm text-slate-ink dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100">
+                  {cold.address}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-500">
+                    <Coins className="h-3.5 w-3.5" /> COLD USDT 鏈上
+                  </p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums">
+                    {cold.usdt_balance ?? "—"}{" "}
+                    <span className="text-sm font-normal text-slate-500">USDT</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-slate-500">
+                    HOT 上限 / 目標水位
+                  </p>
+                  <p className="mt-1 font-mono text-base">
+                    {cold.hot_max_usdt} / {cold.hot_target_usdt}
+                    <span className="ml-1 text-sm font-normal text-slate-500">USDT</span>
+                  </p>
+                </div>
+              </div>
+
+              {cold.over_max ? (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                  <p className="flex items-center gap-2 font-medium">
+                    <AlertTriangle className="h-4 w-4" />
+                    HOT 已超過 {cold.hot_max_usdt} USDT 上限
+                  </p>
+                  <p className="mt-1 text-xs">
+                    目前超出 <strong>{cold.over_max_amount} USDT</strong> — 建議移到 COLD 提升資金安全。
+                  </p>
+                  <p className="mt-1 text-xs">
+                    可移上限 <strong>{cold.cold_rebalance_max} USDT</strong>(系統強制 ≤ 平台獲利,不會動到用戶資金)。
+                  </p>
+                  <div className="mt-3">
+                    <ColdRebalanceButton />
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-xs text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                  HOT 在 {cold.hot_max_usdt} USDT 上限內,暫無需移轉。
+                </div>
+              )}
+
+              <p className="text-[10px] text-slate-400">
+                ⓘ 顯示的 COLD 餘額是該地址鏈上**全部** USDT(含你個人原有的)。production 建議用一個只給平台用的全新地址。
+              </p>
             </>
           )}
         </CardContent>

@@ -129,6 +129,34 @@ class OutboundQuotaOut(BaseModel):
     in_flight_withdrawal_amount: Decimal
     platform_profit: Decimal
     fee_withdrawal_max: Decimal
+    cold_rebalance_max: Decimal
+    cold_address: str | None
+    cold_usdt_balance: Decimal | None
+    total_holdings: Decimal
+
+
+# ---------- Phase 6E-4: 冷錢包 ----------
+
+
+class ColdWalletInfo(BaseModel):
+    address: str | None  # 未設時為 None
+    usdt_balance: Decimal | None  # 未設或 Tatum 掛時為 None
+    hot_max_usdt: Decimal
+    hot_target_usdt: Decimal
+    over_max: bool  # HOT 鏈上 > hot_max_usdt → 該移到 COLD
+    over_max_amount: Decimal  # HOT 超過 max 多少
+    cold_rebalance_max: Decimal  # 可移到 COLD 的金額(扣 in-flight + safety)
+
+
+class ColdRebalanceIn(BaseModel):
+    amount: Decimal = Field(gt=0)
+    totp_code: str | None = Field(default=None, max_length=20)
+
+
+class ColdRebalanceOut(BaseModel):
+    tx_hash: str
+    amount: Decimal
+    to_address: str
 
 
 @router.get("/fee-withdraw/quota", response_model=ApiResponse[OutboundQuotaOut])
@@ -149,6 +177,10 @@ async def get_outbound_quota(
             in_flight_withdrawal_amount=q.in_flight_withdrawal_amount,
             platform_profit=q.platform_profit,
             fee_withdrawal_max=q.fee_withdrawal_max,
+            cold_rebalance_max=q.cold_rebalance_max,
+            cold_address=q.cold_address,
+            cold_usdt_balance=q.cold_usdt_balance,
+            total_holdings=q.total_holdings,
         )
     )
 
@@ -205,6 +237,104 @@ async def fee_withdraw(
 
     return ApiResponse[FeeWithdrawOut].ok(
         FeeWithdrawOut(
+            tx_hash=result.tx_hash,
+            amount=result.amount,
+            to_address=result.to_address,
+        )
+    )
+
+
+# ---------- Phase 6E-4: 冷錢包 ----------
+
+
+@router.get("/cold-wallet", response_model=ApiResponse[ColdWalletInfo])
+async def get_cold_wallet(
+    _: CurrentAdminDep, db: DbDep,
+) -> ApiResponse[ColdWalletInfo]:
+    """看 COLD 地址 + 鏈上餘額 + HOT 是否超過上限。
+
+    沒設 COLD_WALLET_ADDRESS 時 address/usdt_balance 為 None,但 HOT 預警邏輯仍可用。
+    """
+    try:
+        q = await compute_quota(db)
+    except OutboundError as e:
+        raise HTTPException(
+            status_code=e.http_status, detail={"code": e.code, "params": e.params}
+        ) from e
+
+    over_max = q.hot_usdt_balance > settings.hot_max_usdt
+    over_max_amount = max(Decimal(0), q.hot_usdt_balance - settings.hot_max_usdt)
+
+    return ApiResponse[ColdWalletInfo].ok(
+        ColdWalletInfo(
+            address=q.cold_address,
+            usdt_balance=q.cold_usdt_balance,
+            hot_max_usdt=settings.hot_max_usdt,
+            hot_target_usdt=settings.hot_target_usdt,
+            over_max=over_max,
+            over_max_amount=over_max_amount,
+            cold_rebalance_max=q.cold_rebalance_max,
+        )
+    )
+
+
+@router.post(
+    "/cold-rebalance",
+    response_model=ApiResponse[ColdRebalanceOut],
+    dependencies=[Depends(rate_limit("platform_cold_rebalance", limit=10, window=600))],
+)
+async def cold_rebalance(
+    payload: ColdRebalanceIn,
+    request: Request,
+    admin: TwoFAAdminDep,  # 強制 admin 必須先啟用 2FA(同 fee_withdraw)
+    db: DbDep,
+) -> ApiResponse[ColdRebalanceOut]:
+    """從 HOT 移轉指定金額到 COLD wallet。
+
+    safety:
+      - admin 必驗 + 2FA 必驗(TwoFAAdminDep)
+      - amount ≤ cold_rebalance_max(= min(HOT - hot_target, profit))→ 不會動到用戶資金
+      - cold_wallet_address 必須先設定
+      - 寫 audit log
+      - rate-limit 每 10 分鐘 10 次
+
+    阻塞 ~12-15 秒(等 TRX top-up 上鏈),完成後回 tx_hash。
+    """
+    if not settings.cold_wallet_address:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail={"code": "platform.cold.notConfigured"},
+        )
+
+    try:
+        result = await send_platform_outbound(
+            db,
+            admin=admin,
+            purpose=OutboundPurpose.COLD_REBALANCE,
+            to_address=settings.cold_wallet_address,
+            amount=payload.amount,
+            totp_code=payload.totp_code,
+        )
+    except OutboundError as e:
+        raise HTTPException(
+            status_code=e.http_status, detail={"code": e.code, "params": e.params}
+        ) from e
+
+    await write_audit(
+        db, actor=admin, action="platform.cold_rebalance",
+        target_kind="PLATFORM",
+        payload={
+            "amount": str(result.amount),
+            "to_address": result.to_address,
+            "tx_hash": result.tx_hash,
+            "purpose": result.purpose.value,
+        },
+        request=request,
+    )
+    await db.commit()
+
+    return ApiResponse[ColdRebalanceOut].ok(
+        ColdRebalanceOut(
             tx_hash=result.tx_hash,
             amount=result.amount,
             to_address=result.to_address,

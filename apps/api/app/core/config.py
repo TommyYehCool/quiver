@@ -85,6 +85,15 @@ class Settings(BaseSettings):
     withdrawal_daily_count_limit: int = 3
     withdrawal_daily_amount_limit_usd: Decimal = Decimal("5000")
 
+    # ---- 6E-4:冷熱錢包架構 ----
+    # 你掌控但跟系統分離的 Tron 地址(TronLink、硬體錢包、多簽…),系統只讀,不簽。
+    # 空字串 = 未設,/admin/platform 上的 COLD 卡會顯示「未設定」。
+    cold_wallet_address: str = ""
+    # HOT 鏈上 USDT 超過這個就提醒移到 COLD
+    hot_max_usdt: Decimal = Decimal("5000")
+    # 移完後 HOT 應該回到的水位(必須 < hot_max_usdt)
+    hot_target_usdt: Decimal = Decimal("2000")
+
     @field_validator("admin_emails", mode="before")
     @classmethod
     def parse_admin_emails(cls, v: object) -> object:

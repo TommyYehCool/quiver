@@ -147,13 +147,48 @@ export async function fetchHotWallet(): Promise<HotWalletInfo> {
   return apiFetch<HotWalletInfo>("/api/admin/platform/hot-wallet");
 }
 
-// phase 6E-2.5: 提領平台獲利
+// phase 6E-2.5 + 6E-4: 平台 outbound quota
 export interface OutboundQuota {
   hot_usdt_balance: string;
   user_balances_total: string;
   in_flight_withdrawal_amount: string;
   platform_profit: string;
   fee_withdrawal_max: string;
+  cold_rebalance_max: string;
+  cold_address: string | null;
+  cold_usdt_balance: string | null;
+  total_holdings: string;
+}
+
+// phase 6E-4: 冷錢包
+export interface ColdWalletInfo {
+  address: string | null;
+  usdt_balance: string | null;
+  hot_max_usdt: string;
+  hot_target_usdt: string;
+  over_max: boolean;
+  over_max_amount: string;
+  cold_rebalance_max: string;
+}
+
+export interface ColdRebalanceResult {
+  tx_hash: string;
+  amount: string;
+  to_address: string;
+}
+
+export async function fetchColdWallet(): Promise<ColdWalletInfo> {
+  return apiFetch<ColdWalletInfo>("/api/admin/platform/cold-wallet");
+}
+
+export async function coldRebalance(input: {
+  amount: string;
+  totp_code?: string | null;
+}): Promise<ColdRebalanceResult> {
+  return apiFetch<ColdRebalanceResult>("/api/admin/platform/cold-rebalance", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export interface FeeWithdrawResult {

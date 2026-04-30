@@ -65,7 +65,12 @@ class OutboundQuota:
     in_flight_withdrawal_amount: Decimal  # APPROVED/PROCESSING/BROADCASTING 但還沒上鏈的部分
     platform_profit: Decimal  # 真實 profit:扣掉 in-flight 後算
     fee_withdrawal_max: Decimal
-    cold_rebalance_max: Decimal  # phase 6E-4 用,目前等於 platform_profit
+    cold_rebalance_max: Decimal
+    # 6E-4:COLD 鏈上 USDT(若 cold_wallet_address 設定)
+    cold_address: str | None
+    cold_usdt_balance: Decimal | None
+    # 真正持有 USDT = HOT - 在途 + COLD,跟 user ledger 比才看得出真實獲利
+    total_holdings: Decimal
 
 
 @dataclass
@@ -113,7 +118,26 @@ async def compute_quota(db: AsyncSession) -> OutboundQuota:
     # 真正穩定的 profit:HOT 鏈上 - 在途提領 - 用戶 ledger
     # 在途 = 用戶 ledger 已扣但 HOT 還沒扣的部分,所以要先從 HOT 扣掉再比
     profit = hot_balance - in_flight - user_total
-    cold_max = max(Decimal(0), profit)
+
+    # 6E-4: COLD wallet 鏈上餘額(只讀,系統不存私鑰)
+    cold_addr: str | None = settings.cold_wallet_address or None
+    cold_balance: Decimal | None = None
+    if cold_addr:
+        try:
+            cold_balance = await tatum.get_trc20_balance(cold_addr, settings.usdt_contract)
+        except TatumError as e:
+            logger.warning("cold_balance_unavailable", error=str(e))
+            cold_balance = None
+
+    # cold_rebalance_max = HOT 高於 target 的可移金額,但不能超過 profit(避免動到用戶資金)
+    intent = max(Decimal(0), hot_balance - settings.hot_target_usdt)
+    safety = max(Decimal(0), profit)
+    cold_max = min(intent, safety)
+
+    # 真正持有 = HOT(扣掉在途的部分,因為那馬上要送出去) + COLD
+    held_hot = hot_balance - in_flight
+    total_holdings = held_hot + (cold_balance if cold_balance is not None else Decimal(0))
+
     return OutboundQuota(
         hot_usdt_balance=hot_balance,
         user_balances_total=user_total,
@@ -121,6 +145,9 @@ async def compute_quota(db: AsyncSession) -> OutboundQuota:
         platform_profit=profit,
         fee_withdrawal_max=max(Decimal(0), profit),
         cold_rebalance_max=cold_max,
+        cold_address=cold_addr,
+        cold_usdt_balance=cold_balance,
+        total_holdings=total_holdings,
     )
 
 

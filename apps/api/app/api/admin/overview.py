@@ -47,6 +47,11 @@ class AdminOverviewOut(BaseModel):
     user_balances_total: Decimal
     in_flight_withdrawal_amount: Decimal
     platform_profit: Decimal
+    # phase 6E-4: 冷錢包
+    cold_address: str | None
+    cold_usdt_balance: Decimal | None
+    total_holdings: Decimal  # = HOT(扣在途) + COLD,跟 user ledger 比看真實獲利
+    hot_over_max: bool  # HOT > hot_max_usdt → 該移到 COLD 了
     # health 指示
     fee_payer_low: bool
     platform_insolvent: bool
@@ -105,7 +110,8 @@ async def get_admin_overview(_: CurrentAdminDep, db: DbDep) -> ApiResponse[Admin
         logger.warning("overview_hot_trx_unavailable", error=str(e))
 
     fee_payer_low = fp_trx < Decimal("100")  # 跟 platform.is_fee_payer_healthy 同 threshold
-    platform_insolvent = quota.platform_profit < 0
+    platform_insolvent = quota.total_holdings < quota.user_balances_total
+    hot_over_max = quota.hot_usdt_balance > settings.hot_max_usdt
 
     return ApiResponse[AdminOverviewOut].ok(
         AdminOverviewOut(
@@ -121,6 +127,10 @@ async def get_admin_overview(_: CurrentAdminDep, db: DbDep) -> ApiResponse[Admin
             user_balances_total=quota.user_balances_total,
             in_flight_withdrawal_amount=quota.in_flight_withdrawal_amount,
             platform_profit=quota.platform_profit,
+            cold_address=quota.cold_address,
+            cold_usdt_balance=quota.cold_usdt_balance,
+            total_holdings=quota.total_holdings,
+            hot_over_max=hot_over_max,
             fee_payer_low=fee_payer_low,
             platform_insolvent=platform_insolvent,
         )

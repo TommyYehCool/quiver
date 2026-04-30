@@ -4,6 +4,7 @@
 
 import type {
   AdminWithdrawal,
+  ColdWalletInfo,
   FeePayerInfo,
   HotWalletInfo,
   WithdrawalListResp,
@@ -47,4 +48,8 @@ export async function fetchFeePayerServer(cookieHeader: string): Promise<FeePaye
 
 export async function fetchHotWalletServer(cookieHeader: string): Promise<HotWalletInfo | null> {
   return get<HotWalletInfo>("/api/admin/platform/hot-wallet", cookieHeader);
+}
+
+export async function fetchColdWalletServer(cookieHeader: string): Promise<ColdWalletInfo | null> {
+  return get<ColdWalletInfo>("/api/admin/platform/cold-wallet", cookieHeader);
 }
