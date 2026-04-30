@@ -190,7 +190,10 @@
     },
     "success": {
       "title": "Withdrawal request created ✓",
-      "needsReview": "Large amount — waiting for admin review before broadcast",
+      "needsReview": "Waiting for admin review before broadcast",
+      "needsReviewLarge": "Large amount — waiting for admin review before broadcast",
+      "needsReviewVelocityCount": "You've submitted multiple withdrawals in the past 24h — admin review required before broadcast",
+      "needsReviewVelocityAmount": "Your 24h cumulative withdrawal amount is high — admin review required before broadcast",
       "approved": "Auto-approved — will broadcast shortly",
       "again": "Submit another"
     },

@@ -39,11 +39,14 @@ export async function quoteWithdrawal(amount: string): Promise<WithdrawalQuote> 
   });
 }
 
+export type ReviewReason = "LARGE_AMOUNT" | "VELOCITY_COUNT" | "VELOCITY_AMOUNT";
+
 export interface WithdrawalSubmitResult {
   withdrawal_id: number;
   status: WithdrawalStatus;
   fee: string;
   needs_admin_review: boolean;
+  review_reason: ReviewReason | null;
 }
 
 export async function submitWithdrawal(input: {

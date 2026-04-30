@@ -192,7 +192,10 @@
     },
     "success": {
       "title": "提領申請已建立 ✓",
-      "needsReview": "金額較大,等待管理員審核後才會送鏈上",
+      "needsReview": "需要管理員審核後才會送鏈上",
+      "needsReviewLarge": "金額較大,需要管理員審核後才會送鏈上",
+      "needsReviewVelocityCount": "你 24 小時內已送出多筆提領,需管理員審核後才會送鏈上",
+      "needsReviewVelocityAmount": "你 24 小時內累計提領金額較大,需管理員審核後才會送鏈上",
       "approved": "已自動核准,稍後會自動送鏈上",
       "again": "再申請一筆"
     },

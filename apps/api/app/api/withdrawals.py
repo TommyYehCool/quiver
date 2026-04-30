@@ -81,6 +81,7 @@ async def post_withdrawal(
             status=result.status,
             fee=result.fee,
             needs_admin_review=result.needs_admin_review,
+            review_reason=result.review_reason,
         )
     )
 

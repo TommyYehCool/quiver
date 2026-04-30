@@ -23,7 +23,11 @@ export function WithdrawCard() {
   const [amount, setAmount] = React.useState("");
   const [quote, setQuote] = React.useState<WithdrawalQuote | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState<{ status: string; needsReview: boolean } | null>(null);
+  const [success, setSuccess] = React.useState<{
+    status: string;
+    needsReview: boolean;
+    reviewReason: string | null;
+  } | null>(null);
   const [twofaEnabled, setTwofaEnabled] = React.useState(false);
   const [totpCode, setTotpCode] = React.useState("");
 
@@ -64,7 +68,11 @@ export function WithdrawCard() {
         amount,
         totp_code: twofaEnabled ? totpCode.trim() : undefined,
       });
-      setSuccess({ status: r.status, needsReview: r.needs_admin_review });
+      setSuccess({
+        status: r.status,
+        needsReview: r.needs_admin_review,
+        reviewReason: r.review_reason,
+      });
       setStage("success");
       router.refresh();
     } catch (e) {
@@ -158,7 +166,13 @@ export function WithdrawCard() {
               <div className="flex-1 text-sm text-emerald-700 dark:text-emerald-300">
                 <p className="font-medium">{t("success.title")}</p>
                 <p className="mt-0.5">
-                  {success.needsReview ? t("success.needsReview") : t("success.approved")}
+                  {success.needsReview
+                    ? success.reviewReason === "VELOCITY_COUNT"
+                      ? t("success.needsReviewVelocityCount")
+                      : success.reviewReason === "VELOCITY_AMOUNT"
+                        ? t("success.needsReviewVelocityAmount")
+                        : t("success.needsReviewLarge")
+                    : t("success.approved")}
                 </p>
               </div>
             </div>

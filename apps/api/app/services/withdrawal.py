@@ -55,6 +55,12 @@ class WithdrawalCreated:
     status: str
     fee: Decimal
     needs_admin_review: bool
+    # 為何進審核(phase 6E-2):
+    # - "LARGE_AMOUNT" — 金額 ≥ withdrawal_large_threshold_usd
+    # - "VELOCITY_COUNT" — 24h 內筆數達上限
+    # - "VELOCITY_AMOUNT" — 24h 內累計金額(含本次)超過上限
+    # 多條都中時依優先序回最具體的(VELOCITY 比 LARGE 更精確)
+    review_reason: str | None = None
 
 
 def _validate_tron_address(addr: str) -> None:
@@ -176,7 +182,11 @@ async def submit_withdrawal(
         raise WithdrawalError("withdrawal.insufficientFunds")
 
     # 大額判斷(USDT ≈ USD 在 phase 5A 直接比)
-    needs_review = amount >= settings.withdrawal_large_threshold_usd
+    review_reason: str | None = None
+    needs_review = False
+    if amount >= settings.withdrawal_large_threshold_usd:
+        needs_review = True
+        review_reason = "LARGE_AMOUNT"
 
     # ---- 6E-2: velocity check — 24h 內筆數 / 金額超上限 → 進 review ----
     since = datetime.now(UTC) - timedelta(hours=24)
@@ -196,8 +206,13 @@ async def submit_withdrawal(
     vel = vel_q.one()
     over_count = (vel.cnt or 0) >= settings.withdrawal_daily_count_limit
     over_amount = (Decimal(vel.sum_amt or 0) + amount) > settings.withdrawal_daily_amount_limit_usd
-    if over_count or over_amount:
+    # velocity 比大額更具體,優先覆寫 reason
+    if over_count:
         needs_review = True
+        review_reason = "VELOCITY_COUNT"
+    elif over_amount:
+        needs_review = True
+        review_reason = "VELOCITY_AMOUNT"
 
     initial_status = (
         WithdrawalStatus.PENDING_REVIEW.value if needs_review else WithdrawalStatus.APPROVED.value
@@ -266,6 +281,7 @@ async def submit_withdrawal(
         status=initial_status,
         fee=fee,
         needs_admin_review=needs_review,
+        review_reason=review_reason,
     )
 
 

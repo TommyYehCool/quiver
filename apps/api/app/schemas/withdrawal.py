@@ -34,6 +34,9 @@ class WithdrawalSubmitOut(BaseModel):
     status: str
     fee: Decimal
     needs_admin_review: bool
+    # phase 6E-2: 為什麼要審 — 讓前端顯示合適訊息
+    # "LARGE_AMOUNT" | "VELOCITY_COUNT" | "VELOCITY_AMOUNT" | None
+    review_reason: str | None = None
 
 
 class WithdrawalOut(BaseModel):
