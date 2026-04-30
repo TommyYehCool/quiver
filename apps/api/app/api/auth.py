@@ -11,13 +11,14 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from starlette import status
 
 from app.api.deps import CurrentUserDep, DbDep
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.rate_limit import rate_limit
 from app.core.security import (
     COOKIE_NAME,
     TokenError,
@@ -57,7 +58,10 @@ def _frontend_redirect(path: str = "/", error: str | None = None) -> str:
     return f"{base}{path}"
 
 
-@router.get("/google/login")
+@router.get(
+    "/google/login",
+    dependencies=[Depends(rate_limit("auth_login", limit=10, window=60))],
+)
 async def google_login(request: Request, locale: str = "zh-TW") -> RedirectResponse:
     """把 user 導到 Google OAuth consent。
 
@@ -95,6 +99,15 @@ async def google_callback(request: Request, db: DbDep) -> RedirectResponse:
     ip = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
     db.add(LoginSession(user_id=user.id, jti=jti, ip=ip, user_agent=user_agent))
+
+    from app.models.audit_log import ActorKind
+    from app.services.audit import write_audit
+    await write_audit(
+        db, actor=user, action="auth.login_success",
+        target_kind="USER", target_id=user.id,
+        payload={"jti": jti}, request=request,
+        actor_kind_override=ActorKind.ADMIN if "ADMIN" in list(user.roles) else ActorKind.USER,
+    )
     await db.commit()
 
     jwt_token = create_access_token(

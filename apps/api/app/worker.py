@@ -512,6 +512,8 @@ async def _recover_orphan_withdrawals(ctx: dict[str, Any]) -> None:
 
 async def startup(ctx: dict[str, Any]) -> None:
     configure_logging("DEBUG" if settings.is_dev else "INFO")
+    from app.core.sentry import init_sentry
+    init_sentry(component="worker")
     get_logger(__name__).info("worker_starting")
     try:
         await _recover_orphan_withdrawals(ctx)

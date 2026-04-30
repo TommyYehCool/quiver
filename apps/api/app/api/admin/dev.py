@@ -9,7 +9,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentAdminDep, DbDep
@@ -34,15 +34,26 @@ class TatumSyncOut(BaseModel):
 
 
 @router.post("/sync-tatum", response_model=ApiResponse[TatumSyncOut])
-async def sync_tatum(_: CurrentAdminDep, db: DbDep) -> ApiResponse[TatumSyncOut]:
+async def sync_tatum(
+    request: Request,
+    admin: CurrentAdminDep,
+    db: DbDep,
+) -> ApiResponse[TatumSyncOut]:
     """重新偵測 ngrok URL → 對所有用戶同步 Tatum 訂閱。
 
     用途:
     - ngrok 重啟後 URL 變了,點這個按鈕重新訂閱
     - 新增了 user 但 lifespan 同步漏掉
     """
+    from app.services.audit import write_audit
+
     callback_url = await resolve_callback_url()
     if not callback_url:
+        await write_audit(
+            db, actor=admin, action="platform.sync_tatum",
+            target_kind="PLATFORM", payload={"callback_url": None}, request=request,
+        )
+        await db.commit()
         return ApiResponse[TatumSyncOut].ok(
             TatumSyncOut(
                 callback_url=None, created=0, refreshed=0, skipped=0, failed=0
@@ -50,6 +61,17 @@ async def sync_tatum(_: CurrentAdminDep, db: DbDep) -> ApiResponse[TatumSyncOut]
         )
 
     stats = await sync_all_subscriptions(db, callback_url)
+    await write_audit(
+        db, actor=admin, action="platform.sync_tatum",
+        target_kind="PLATFORM",
+        payload={
+            "callback_url": callback_url,
+            "created": stats.created, "refreshed": stats.refreshed,
+            "skipped": stats.skipped, "failed": stats.failed,
+        },
+        request=request,
+    )
+    await db.commit()
     return ApiResponse[TatumSyncOut].ok(
         TatumSyncOut(
             callback_url=callback_url,
@@ -71,6 +93,7 @@ class ReplayOnchainIn(BaseModel):
 @router.post("/replay-onchain-tx", response_model=ApiResponse[OnchainTxOut])
 async def replay_onchain_tx(
     payload: ReplayOnchainIn,
+    request: Request,
     admin: CurrentAdminDep,
     db: DbDep,
     arq: Annotated[object, Depends(get_arq_pool)],
@@ -104,6 +127,19 @@ async def replay_onchain_tx(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "replay.alreadyRecordedOrInvalid"},
         )
+
+    from app.services.audit import write_audit
+    await write_audit(
+        db, actor=admin, action="onchain.replay",
+        target_kind="ONCHAIN_TX", target_id=onchain_tx.id,
+        payload={
+            "tx_hash": payload.tx_hash,
+            "to_address": payload.to_address,
+            "amount": str(payload.amount),
+        },
+        request=request,
+    )
+    await db.commit()
 
     await arq.enqueue_job(  # type: ignore[attr-defined]
         "confirm_onchain_tx",
@@ -145,7 +181,8 @@ class BulkSweepOut(BaseModel):
 
 @router.post("/bulk-sweep", response_model=ApiResponse[BulkSweepOut])
 async def bulk_sweep(
-    _: CurrentAdminDep,
+    request: Request,
+    admin: CurrentAdminDep,
     db: DbDep,
     arq: Annotated[object, Depends(get_arq_pool)],
 ) -> ApiResponse[BulkSweepOut]:
@@ -153,12 +190,20 @@ async def bulk_sweep(
 
     每個 user 排一個 sweep_user 任務,具體會不會 sweep 看 service 內 threshold(10 USDT)。
     """
+    from app.services.audit import write_audit
     from app.services.sweep import list_sweepable_users
 
     users = await list_sweepable_users(db)
     user_ids = [u.id for u in users]
     for uid in user_ids:
         await arq.enqueue_job("sweep_user", user_id=uid)  # type: ignore[attr-defined]
+    await write_audit(
+        db, actor=admin, action="platform.bulk_sweep",
+        target_kind="PLATFORM",
+        payload={"dispatched": len(user_ids), "user_ids": user_ids},
+        request=request,
+    )
+    await db.commit()
     logger.info("bulk_sweep_dispatched", count=len(user_ids))
     return ApiResponse[BulkSweepOut].ok(
         BulkSweepOut(dispatched=len(user_ids), user_ids=user_ids)
@@ -166,11 +211,27 @@ async def bulk_sweep(
 
 
 @router.post("/reconcile", response_model=ApiResponse[ReconReportOut])
-async def trigger_reconciliation(_: CurrentAdminDep, db: DbDep) -> ApiResponse[ReconReportOut]:
+async def trigger_reconciliation(
+    request: Request,
+    admin: CurrentAdminDep,
+    db: DbDep,
+) -> ApiResponse[ReconReportOut]:
     """手動觸發對帳(平常會在每日 03:00 Asia/Taipei 自動跑)。"""
+    from app.services.audit import write_audit
     from app.services.reconciliation import run_reconciliation
 
     report = await run_reconciliation(db)
+    await write_audit(
+        db, actor=admin, action="platform.reconcile",
+        target_kind="PLATFORM",
+        payload={
+            "total_users": report.total_users,
+            "flagged_count": report.flagged_count,
+            "error_count": report.error_count,
+        },
+        request=request,
+    )
+    await db.commit()
     return ApiResponse[ReconReportOut].ok(
         ReconReportOut(
             rows=[

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentAdminDep, DbDep
@@ -106,10 +106,12 @@ async def get_withdrawal(
 @router.post("/{withdrawal_id}/approve", response_model=ApiResponse[AdminWithdrawalOut])
 async def approve_withdrawal(
     withdrawal_id: int,
+    request: Request,
     admin: CurrentAdminDep,
     db: DbDep,
     arq: Annotated[object, Depends(get_arq_pool)],
 ) -> ApiResponse[AdminWithdrawalOut]:
+    from app.services.audit import write_audit
     try:
         req = await admin_approve(db, admin, withdrawal_id)
     except WithdrawalError as e:
@@ -117,6 +119,17 @@ async def approve_withdrawal(
             status_code=e.http_status,
             detail={"code": e.code},
         ) from e
+
+    await write_audit(
+        db,
+        actor=admin,
+        action="withdrawal.approve",
+        target_kind="WITHDRAWAL",
+        target_id=req.id,
+        payload={"user_id": req.user_id, "amount": str(req.amount), "to": req.to_address},
+        request=request,
+    )
+    await db.commit()
 
     # 進入 APPROVED → enqueue broadcast
     await arq.enqueue_job(  # type: ignore[attr-defined]
@@ -132,9 +145,11 @@ async def approve_withdrawal(
 async def reject_withdrawal(
     withdrawal_id: int,
     payload: RejectIn,
+    request: Request,
     admin: CurrentAdminDep,
     db: DbDep,
 ) -> ApiResponse[AdminWithdrawalOut]:
+    from app.services.audit import write_audit
     try:
         req = await admin_reject(db, admin, withdrawal_id, payload.reason)
     except WithdrawalError as e:
@@ -142,6 +157,16 @@ async def reject_withdrawal(
             status_code=e.http_status,
             detail={"code": e.code},
         ) from e
+    await write_audit(
+        db,
+        actor=admin,
+        action="withdrawal.reject",
+        target_kind="WITHDRAWAL",
+        target_id=req.id,
+        payload={"user_id": req.user_id, "amount": str(req.amount), "reason": payload.reason},
+        request=request,
+    )
+    await db.commit()
     user_q = await db.execute(select(User).where(User.id == req.user_id))
     user = user_q.scalar_one()
     return ApiResponse[AdminWithdrawalOut].ok(_to_admin_out(req, user))
@@ -151,6 +176,7 @@ async def reject_withdrawal(
 async def force_fail_withdrawal(
     withdrawal_id: int,
     payload: RejectIn,  # 共用 reason 欄位
+    request: Request,
     admin: CurrentAdminDep,
     db: DbDep,
 ) -> ApiResponse[AdminWithdrawalOut]:
@@ -158,6 +184,7 @@ async def force_fail_withdrawal(
 
     使用前 admin 必須先去鏈上 explorer 確認 tx 沒實際送出。
     """
+    from app.services.audit import write_audit
     try:
         req = await admin_force_fail_processing(db, admin, withdrawal_id, payload.reason)
     except WithdrawalError as e:
@@ -165,6 +192,16 @@ async def force_fail_withdrawal(
             status_code=e.http_status,
             detail={"code": e.code},
         ) from e
+    await write_audit(
+        db,
+        actor=admin,
+        action="withdrawal.force_fail",
+        target_kind="WITHDRAWAL",
+        target_id=req.id,
+        payload={"user_id": req.user_id, "reason": payload.reason},
+        request=request,
+    )
+    await db.commit()
     user_q = await db.execute(select(User).where(User.id == req.user_id))
     user = user_q.scalar_one()
     return ApiResponse[AdminWithdrawalOut].ok(_to_admin_out(req, user))

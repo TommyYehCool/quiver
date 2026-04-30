@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select, update
 
@@ -24,6 +24,7 @@ from app.models.login_session import LoginSession
 from app.models.user import User
 from app.models.withdrawal import WithdrawalRequest
 from app.schemas.api import ApiResponse
+from app.services.audit import write_audit
 
 router = APIRouter(prefix="/api/me", tags=["account"])
 logger = get_logger(__name__)
@@ -88,6 +89,7 @@ async def list_sessions(
 
 @router.post("/sessions/revoke-others", response_model=ApiResponse[RevokeResultOut])
 async def revoke_other_sessions(
+    request: Request,
     user: CurrentUserDep,
     current_jti: CurrentJtiDep,
     db: DbDep,
@@ -103,8 +105,14 @@ async def revoke_other_sessions(
     result = await db.execute(
         update(LoginSession).where(*where).values(revoked_at=datetime.now(UTC))
     )
-    await db.commit()
     revoked = result.rowcount or 0
+    await write_audit(
+        db, actor=user, action="sessions.revoke_others",
+        target_kind="USER", target_id=user.id,
+        payload={"revoked": revoked},
+        request=request,
+    )
+    await db.commit()
     logger.info("sessions_revoke_others", user_id=user.id, revoked=revoked)
     return ApiResponse[RevokeResultOut].ok(RevokeResultOut(revoked=revoked))
 
@@ -230,6 +238,7 @@ async def export_my_data(user: CurrentUserDep, db: DbDep) -> Response:
 
 @router.post("/deletion-request", response_model=ApiResponse[DeletionRequestOut])
 async def request_account_deletion(
+    request: Request,
     user: CurrentUserDep,
     db: DbDep,
 ) -> ApiResponse[DeletionRequestOut]:
@@ -246,6 +255,11 @@ async def request_account_deletion(
         )
 
     user.deletion_requested_at = datetime.now(UTC)
+    await write_audit(
+        db, actor=user, action="account.deletion_request",
+        target_kind="USER", target_id=user.id,
+        request=request,
+    )
     await db.commit()
     logger.info("account_deletion_requested", user_id=user.id)
     return ApiResponse[DeletionRequestOut].ok(
@@ -258,6 +272,7 @@ async def request_account_deletion(
 
 @router.delete("/deletion-request", response_model=ApiResponse[DeletionRequestOut])
 async def cancel_deletion_request(
+    request: Request,
     user: CurrentUserDep,
     db: DbDep,
 ) -> ApiResponse[DeletionRequestOut]:
@@ -273,6 +288,11 @@ async def cancel_deletion_request(
             detail={"code": "account.deletionAlreadyCompleted"},
         )
     user.deletion_requested_at = None
+    await write_audit(
+        db, actor=user, action="account.deletion_cancel",
+        target_kind="USER", target_id=user.id,
+        request=request,
+    )
     await db.commit()
     logger.info("account_deletion_cancelled", user_id=user.id)
     return ApiResponse[DeletionRequestOut].ok(

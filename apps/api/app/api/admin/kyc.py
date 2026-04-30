@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentAdminDep, DbDep
@@ -151,6 +151,7 @@ async def _load_pending(db: DbDep, submission_id: int) -> tuple[KycSubmission, U
 @router.post("/{submission_id}/approve", response_model=ApiResponse[KycAdminDetailOut])
 async def approve_submission(
     submission_id: int,
+    request: Request,
     admin: CurrentAdminDep,
     db: DbDep,
     arq: Annotated[object, Depends(get_arq_pool)],
@@ -162,9 +163,20 @@ async def approve_submission(
     submission.reject_reason = None
 
     from app.models.notification import NotificationType
+    from app.services.audit import write_audit
     from app.services.notifications import create_notification
 
     create_notification(db, user.id, NotificationType.KYC_APPROVED, params={})
+
+    await write_audit(
+        db,
+        actor=admin,
+        action="kyc.approve",
+        target_kind="KYC",
+        target_id=submission.id,
+        payload={"user_id": user.id},
+        request=request,
+    )
 
     await db.commit()
     await db.refresh(submission)
@@ -183,6 +195,7 @@ async def approve_submission(
 async def reject_submission(
     submission_id: int,
     payload: KycRejectIn,
+    request: Request,
     admin: CurrentAdminDep,
     db: DbDep,
     arq: Annotated[object, Depends(get_arq_pool)],
@@ -194,6 +207,7 @@ async def reject_submission(
     submission.reject_reason = payload.reason
 
     from app.models.notification import NotificationType
+    from app.services.audit import write_audit
     from app.services.notifications import create_notification
 
     create_notification(
@@ -201,6 +215,16 @@ async def reject_submission(
         user.id,
         NotificationType.KYC_REJECTED,
         params={"reason": payload.reason},
+    )
+
+    await write_audit(
+        db,
+        actor=admin,
+        action="kyc.reject",
+        target_kind="KYC",
+        target_id=submission.id,
+        payload={"user_id": user.id, "reason": payload.reason},
+        request=request,
     )
 
     await db.commit()

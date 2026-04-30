@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select, update
 
@@ -14,6 +14,7 @@ from app.core.logging import get_logger
 from app.models.login_session import LoginSession
 from app.models.user import User, UserStatus
 from app.schemas.api import ApiResponse
+from app.services.audit import write_audit
 from app.services.ledger import get_user_balance
 
 router = APIRouter(prefix="/api/admin/deletion-requests", tags=["admin-deletions"])
@@ -60,7 +61,8 @@ async def list_deletion_requests(_: CurrentAdminDep, db: DbDep) -> ApiResponse[D
 @router.post("/{user_id}/complete", response_model=ApiResponse[dict])
 async def complete_deletion(
     user_id: int,
-    _: CurrentAdminDep,
+    request: Request,
+    admin: CurrentAdminDep,
     db: DbDep,
 ) -> ApiResponse[dict]:
     """完成刪除 — soft delete:
@@ -111,6 +113,13 @@ async def complete_deletion(
         update(LoginSession)
         .where(LoginSession.user_id == user.id, LoginSession.revoked_at.is_(None))
         .values(revoked_at=now)
+    )
+
+    await write_audit(
+        db, actor=admin, action="user.complete_deletion",
+        target_kind="USER", target_id=user.id,
+        payload={"completed_at": now.isoformat()},
+        request=request,
     )
     await db.commit()
 

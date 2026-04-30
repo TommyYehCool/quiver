@@ -11,6 +11,7 @@ from app.api.deps import CurrentUserDep, DbDep
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.queue import get_arq_pool
+from app.core.rate_limit import rate_limit
 from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
 from app.schemas.api import ApiResponse
 from app.schemas.withdrawal import (
@@ -43,7 +44,11 @@ async def quote_withdrawal(
     )
 
 
-@router.post("", response_model=ApiResponse[WithdrawalSubmitOut])
+@router.post(
+    "",
+    response_model=ApiResponse[WithdrawalSubmitOut],
+    dependencies=[Depends(rate_limit("withdrawal_submit", limit=10, window=300))],
+)
 async def post_withdrawal(
     payload: WithdrawalSubmitIn,
     user: CurrentUserDep,

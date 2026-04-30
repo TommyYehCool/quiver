@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     # ---- BitoPro (Phase 6+) ----
     bitopro_base_url: str = "https://api.bitopro.com/v3"
 
+    # ---- Sentry (Phase 6E) ----
+    sentry_dsn: str = ""  # 空字串 → Sentry 不啟用
+    sentry_traces_sample_rate: float = 0.0
+    sentry_release: str = ""  # 通常用 git sha
+
     # ---- 業務參數 ----
     admin_emails: Annotated[list[EmailStr], NoDecode] = Field(default_factory=list)
     withdrawal_fee_usdt: Decimal = Decimal("1")

@@ -1,5 +1,6 @@
 """SQLAlchemy ORM models."""
 
+from app.models.audit_log import ActorKind, AuditLog, TargetKind
 from app.models.base import Base
 from app.models.kyc import KycStatus, KycSubmission
 from app.models.ledger import (
@@ -21,6 +22,8 @@ from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
 __all__ = [
     "Account",
     "AccountKind",
+    "ActorKind",
+    "AuditLog",
     "Base",
     "EntryDirection",
     "KycStatus",
@@ -36,6 +39,7 @@ __all__ = [
     "OnchainTxStatus",
     "SystemKey",
     "SystemKeyState",
+    "TargetKind",
     "User",
     "UserStatus",
     "WithdrawalRequest",

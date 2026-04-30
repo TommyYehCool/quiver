@@ -24,6 +24,7 @@ from app.api import (
     webhooks,
     withdrawals,
 )
+from app.api.admin import audit as admin_audit
 from app.api.admin import deletions as admin_deletions
 from app.api.admin import dev as admin_dev
 from app.api.admin import kyc as admin_kyc
@@ -122,6 +123,8 @@ async def _sync_tatum_subscriptions_best_effort() -> None:
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     configure_logging("DEBUG" if settings.is_dev else "INFO")
     logger = get_logger(__name__)
+    from app.core.sentry import init_sentry
+    init_sentry(component="api")
     await _verify_kek_consistency()
     logger.info("api_starting", env=settings.env)
     # ngrok 容器可能還沒起好,稍等一下再去抓 tunnel URL
@@ -197,6 +200,7 @@ app.include_router(admin_dev.router)
 app.include_router(admin_withdrawals.router)
 app.include_router(admin_platform.router)
 app.include_router(admin_deletions.router)
+app.include_router(admin_audit.router)
 
 
 @app.get("/healthz", tags=["health"])

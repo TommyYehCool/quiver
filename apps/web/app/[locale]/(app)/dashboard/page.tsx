@@ -216,6 +216,11 @@ export default async function DashboardPage({
                 刪除申請 <ArrowRight className="h-3 w-3" />
               </Link>
             </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/${locale}/admin/audit`}>
+                Audit log <ArrowRight className="h-3 w-3" />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       ) : null}
