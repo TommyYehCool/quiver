@@ -16,8 +16,10 @@ from app.models.login_session import LoginSession
 from app.models.notification import Notification, NotificationType
 from app.models.onchain_tx import OnchainTx, OnchainTxStatus
 from app.models.system_keys import SystemKey, SystemKeyState
+from app.models.totp_backup_code import TotpBackupCode
 from app.models.user import User, UserStatus
 from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
+from app.models.withdrawal_whitelist import WithdrawalWhitelist
 
 __all__ = [
     "Account",
@@ -40,8 +42,10 @@ __all__ = [
     "SystemKey",
     "SystemKeyState",
     "TargetKind",
+    "TotpBackupCode",
     "User",
     "UserStatus",
     "WithdrawalRequest",
     "WithdrawalStatus",
+    "WithdrawalWhitelist",
 ]

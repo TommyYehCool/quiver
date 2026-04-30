@@ -200,7 +200,12 @@
         "commitFailed": "Failed to submit, please retry",
         "notFound": "Withdrawal request not found",
         "custodyMissing": "System error, please contact admin",
-        "feePayerLow": "Platform FEE_PAYER is temporarily low. Withdrawals are paused, please retry later."
+        "feePayerLow": "Platform FEE_PAYER is temporarily low. Withdrawals are paused, please retry later.",
+        "twofaRequired": "Enter your 6-digit 2FA code or 8-digit backup code",
+        "notInWhitelist": "Whitelist-only mode is on. This address is not on your active whitelist."
+      },
+      "twofa": {
+        "invalidCode": "Invalid code, please try again"
       }
     }
   },

@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 
 import { AccountCard } from "@/components/account/account-card";
 import { SessionsCard } from "@/components/account/sessions-card";
+import { TwoFACard } from "@/components/account/twofa-card";
+import { WhitelistCard } from "@/components/account/whitelist-card";
 
 export default async function SettingsPage({
   params: { locale },
@@ -16,6 +18,8 @@ export default async function SettingsPage({
         <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("desc")}</p>
       </div>
+      <TwoFACard />
+      <WhitelistCard />
       <SessionsCard />
       <AccountCard />
     </div>

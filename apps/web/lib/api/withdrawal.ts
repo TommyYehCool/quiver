@@ -49,6 +49,7 @@ export interface WithdrawalSubmitResult {
 export async function submitWithdrawal(input: {
   to_address: string;
   amount: string;
+  totp_code?: string | null;
 }): Promise<WithdrawalSubmitResult> {
   return apiFetch<WithdrawalSubmitResult>("/api/withdrawals", {
     method: "POST",

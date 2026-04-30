@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { quoteWithdrawal, submitWithdrawal, type WithdrawalQuote } from "@/lib/api/withdrawal";
+import { fetchTwoFAStatus } from "@/lib/api/twofa";
 import { fmtTwd, useUsdtTwdRate } from "@/lib/api/rates";
 
 type Stage = "form" | "confirm" | "submitting" | "success";
@@ -23,6 +24,16 @@ export function WithdrawCard() {
   const [quote, setQuote] = React.useState<WithdrawalQuote | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<{ status: string; needsReview: boolean } | null>(null);
+  const [twofaEnabled, setTwofaEnabled] = React.useState(false);
+  const [totpCode, setTotpCode] = React.useState("");
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void fetchTwoFAStatus().then((s) => {
+      if (!cancelled) setTwofaEnabled(s.enabled);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Tron 地址 Base58Check:T + 33 base58 字元(排除 0OIl)。Case-sensitive。
   const addressValid = /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address.trim());
@@ -41,10 +52,18 @@ export function WithdrawCard() {
   }
 
   async function confirmSend() {
+    if (twofaEnabled && totpCode.replace(/\D/g, "").length < 6 && totpCode.replace(/-/g, "").length !== 8) {
+      setError("withdrawal.twofaRequired");
+      return;
+    }
     setStage("submitting");
     setError(null);
     try {
-      const r = await submitWithdrawal({ to_address: address.trim(), amount });
+      const r = await submitWithdrawal({
+        to_address: address.trim(),
+        amount,
+        totp_code: twofaEnabled ? totpCode.trim() : undefined,
+      });
       setSuccess({ status: r.status, needsReview: r.needs_admin_review });
       setStage("success");
       router.refresh();
@@ -60,6 +79,7 @@ export function WithdrawCard() {
     setQuote(null);
     setError(null);
     setSuccess(null);
+    setTotpCode("");
     setStage("form");
   }
 
@@ -123,6 +143,9 @@ export function WithdrawCard() {
             quote={quote}
             busy={stage === "submitting"}
             error={error}
+            twofaEnabled={twofaEnabled}
+            totpCode={totpCode}
+            onTotpCodeChange={setTotpCode}
             onCancel={() => setStage("form")}
             onConfirm={confirmSend}
           />
@@ -155,6 +178,9 @@ function ConfirmModalWithRate({
   quote,
   busy,
   error,
+  twofaEnabled,
+  totpCode,
+  onTotpCodeChange,
   onCancel,
   onConfirm,
 }: {
@@ -163,6 +189,9 @@ function ConfirmModalWithRate({
   quote: WithdrawalQuote;
   busy: boolean;
   error: string | null;
+  twofaEnabled: boolean;
+  totpCode: string;
+  onTotpCodeChange: (s: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -210,6 +239,25 @@ function ConfirmModalWithRate({
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-100 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-none" />
             <p>{t("confirm.largeNotice")}</p>
+          </div>
+        ) : null}
+
+        {twofaEnabled ? (
+          <div className="mt-4 space-y-1.5">
+            <Label htmlFor="totp">兩步驟驗證</Label>
+            <Input
+              id="totp"
+              inputMode="numeric"
+              value={totpCode}
+              onChange={(e) => onTotpCodeChange(e.target.value)}
+              placeholder="6 位驗證碼或 8 位備用碼"
+              maxLength={20}
+              className="font-mono tracking-widest"
+              autoFocus
+            />
+            <p className="text-[11px] text-slate-500">
+              開 Google Authenticator / Authy 看當前 6 位數字。沒辦法存取的話可以用備用碼。
+            </p>
           </div>
         ) : null}
 

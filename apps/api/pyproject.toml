@@ -24,6 +24,7 @@ dependencies = [
   "slowapi>=0.1.9",
   "bip-utils>=2.9",
   "sentry-sdk[fastapi]>=2.18",
+  "pyotp>=2.9",
 ]
 
 [dependency-groups]

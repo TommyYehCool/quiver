@@ -25,6 +25,8 @@ class WithdrawalQuoteOut(BaseModel):
 class WithdrawalSubmitIn(BaseModel):
     to_address: str = Field(min_length=34, max_length=34)
     amount: Decimal = Field(gt=0)
+    # phase 6E-2: 用戶有 2FA 啟用時必填(可以是 6-digit TOTP 或 backup code)
+    totp_code: str | None = Field(default=None, max_length=20)
 
 
 class WithdrawalSubmitOut(BaseModel):

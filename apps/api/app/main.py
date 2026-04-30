@@ -20,8 +20,10 @@ from app.api import (
     notifications,
     rates,
     transfers,
+    twofa,
     wallet,
     webhooks,
+    whitelist,
     withdrawals,
 )
 from app.api.admin import audit as admin_audit
@@ -187,6 +189,8 @@ async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONRespons
 app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(account.router)
+app.include_router(twofa.router)
+app.include_router(whitelist.router)
 app.include_router(kyc.router)
 app.include_router(wallet.router)
 app.include_router(transfers.router)

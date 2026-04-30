@@ -202,7 +202,12 @@
         "commitFailed": "送出失敗,請稍後再試",
         "notFound": "找不到這筆申請",
         "custodyMissing": "系統錯誤,請聯絡管理員",
-        "feePayerLow": "平台 FEE_PAYER 餘額暫時過低,提領功能維護中,稍後再試"
+        "feePayerLow": "平台 FEE_PAYER 餘額暫時過低,提領功能維護中,稍後再試",
+        "twofaRequired": "請輸入兩步驟驗證碼(6 位)或備用碼(8 位)",
+        "notInWhitelist": "你已開啟「白名單模式」,此地址不在已啟用的白名單上"
+      },
+      "twofa": {
+        "invalidCode": "驗證碼錯誤,請重新輸入"
       }
     }
   },

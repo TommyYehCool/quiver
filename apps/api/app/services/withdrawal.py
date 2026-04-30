@@ -96,8 +96,19 @@ async def submit_withdrawal(
     to_address: str,
     amount: Decimal,
     currency: str = CURRENCY,
+    totp_code: str | None = None,
 ) -> WithdrawalCreated:
-    """User 送出提領申請。"""
+    """User 送出提領申請。
+
+    phase 6E-2 加的關卡(在 `_validate_tron_address` / KYC 之後執行):
+      - 用戶有開 2FA 必驗 totp_code(或 backup code)
+      - 白名單 only mode 開啟時,to_address 必須是已啟用(冷靜期過)的白名單地址
+      - 單日提領數 / 金額超上限 → 自動進 PENDING_REVIEW
+    """
+    from app.services import totp as totp_svc
+    from datetime import UTC, datetime, timedelta
+    from sqlalchemy import func
+
     if amount <= 0:
         raise WithdrawalError("withdrawal.amountMustBePositive")
     if amount < settings.min_withdrawal_usdt:
@@ -107,6 +118,39 @@ async def submit_withdrawal(
 
     if not await _kyc_approved(db, user.id):
         raise WithdrawalError("withdrawal.kycRequired", http_status=403)
+
+    # ---- 6E-2: 2FA verification ----
+    if user.totp_enabled_at is not None:
+        if not totp_code:
+            raise WithdrawalError("withdrawal.twofaRequired", http_status=400)
+        secret = await totp_svc.decrypt_user_secret(
+            db,
+            ciphertext_b64=user.totp_secret_enc or "",
+            key_version=user.totp_key_version or 1,
+        )
+        ok = totp_svc.verify_code(secret, totp_code)
+        if not ok:
+            ok = await totp_svc.consume_backup_code(
+                db, user_id=user.id, code=totp_code
+            )
+        if not ok:
+            raise WithdrawalError("twofa.invalidCode", http_status=400)
+
+    # ---- 6E-2: whitelist only mode ----
+    if user.withdrawal_whitelist_only:
+        from app.models.withdrawal_whitelist import WithdrawalWhitelist
+
+        now = datetime.now(UTC)
+        wl_q = await db.execute(
+            select(WithdrawalWhitelist).where(
+                WithdrawalWhitelist.user_id == user.id,
+                WithdrawalWhitelist.address == to_address,
+                WithdrawalWhitelist.removed_at.is_(None),
+                WithdrawalWhitelist.activated_at <= now,
+            )
+        )
+        if wl_q.scalar_one_or_none() is None:
+            raise WithdrawalError("withdrawal.notInWhitelist", http_status=400)
 
     # FEE_PAYER 健康檢查 — 沒 TRX 就不接新申請(避免堵在 broadcast)
     from app.services.platform import is_fee_payer_healthy
@@ -133,6 +177,28 @@ async def submit_withdrawal(
 
     # 大額判斷(USDT ≈ USD 在 phase 5A 直接比)
     needs_review = amount >= settings.withdrawal_large_threshold_usd
+
+    # ---- 6E-2: velocity check — 24h 內筆數 / 金額超上限 → 進 review ----
+    since = datetime.now(UTC) - timedelta(hours=24)
+    vel_q = await db.execute(
+        select(
+            func.count().label("cnt"),
+            func.coalesce(func.sum(WithdrawalRequest.amount), 0).label("sum_amt"),
+        ).where(
+            WithdrawalRequest.user_id == user.id,
+            WithdrawalRequest.created_at >= since,
+            # 已被拒絕/失敗的不計入頻率(只算實際扣到 ledger 的)
+            WithdrawalRequest.status.notin_(
+                [WithdrawalStatus.REJECTED.value, WithdrawalStatus.FAILED.value]
+            ),
+        )
+    )
+    vel = vel_q.one()
+    over_count = (vel.cnt or 0) >= settings.withdrawal_daily_count_limit
+    over_amount = (Decimal(vel.sum_amt or 0) + amount) > settings.withdrawal_daily_amount_limit_usd
+    if over_count or over_amount:
+        needs_review = True
+
     initial_status = (
         WithdrawalStatus.PENDING_REVIEW.value if needs_review else WithdrawalStatus.APPROVED.value
     )

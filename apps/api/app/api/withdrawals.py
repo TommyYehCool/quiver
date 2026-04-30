@@ -61,6 +61,7 @@ async def post_withdrawal(
             user=user,
             to_address=payload.to_address,
             amount=payload.amount,
+            totp_code=payload.totp_code,
         )
     except WithdrawalError as e:
         raise HTTPException(

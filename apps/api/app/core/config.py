@@ -77,6 +77,14 @@ class Settings(BaseSettings):
     min_withdrawal_usdt: Decimal = Decimal("5")
     reconciliation_tolerance_usdt: Decimal = Decimal("0.01")
 
+    # ---- 6E-2:提領安全 ----
+    totp_issuer: str = "Quiver"
+    # 白名單地址加入後的冷靜期(小時)
+    whitelist_cooldown_hours: int = 24
+    # 單日提領上限(超過自動進 PENDING_REVIEW)
+    withdrawal_daily_count_limit: int = 3
+    withdrawal_daily_amount_limit_usd: Decimal = Decimal("5000")
+
     @field_validator("admin_emails", mode="before")
     @classmethod
     def parse_admin_emails(cls, v: object) -> object:
