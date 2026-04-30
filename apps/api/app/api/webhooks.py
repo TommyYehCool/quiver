@@ -62,10 +62,13 @@ async def tatum_webhook(
     if payload.type and payload.type.lower() == "native":
         return WebhookAck(received=True, note="ignored_native_trx")
 
-    # 跳過非 USDT 的 TRC20(其他穩定幣 / 一般 token)
-    asset_upper = (payload.asset or "").upper()
-    if asset_upper and asset_upper != "USDT":
-        return WebhookAck(received=True, note=f"ignored_asset_{asset_upper}")
+    # Tatum 對 TRC20 把合約地址放在 `asset` 欄,我們用 env 設定的 USDT contract 比對
+    expected_contract = settings.usdt_contract
+    if payload.asset != expected_contract:
+        return WebhookAck(
+            received=True,
+            note=f"ignored_contract_{payload.asset}",
+        )
 
     onchain_tx = await record_provisional_deposit(
         db,

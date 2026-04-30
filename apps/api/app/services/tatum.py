@@ -4,6 +4,7 @@
 - subscription CRUD(訂閱地址收款通知)
 - tron/info(取得當前 block height,計算 confirmations)
 - tron/transaction/{hash}(查 tx 細節,確認 block_number)
+- tron/account/{address}(查 USDT-TRC20 餘額,Phase 3C dashboard 顯示用)
 
 env 自動切 testnet/mainnet api key(`settings.tatum_api_key` property)。
 key 為空時所有方法 raise TatumNotConfigured —上層 catch 後決定要 skip 還是報錯。
@@ -11,6 +12,7 @@ key 為空時所有方法 raise TatumNotConfigured —上層 catch 後決定要 
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any
 
 import httpx
@@ -119,3 +121,32 @@ async def get_tron_transaction(tx_hash: str) -> dict[str, Any] | None:
     if res.status_code >= 400:
         raise TatumError(f"get_tron_transaction failed: {res.status_code}")
     return res.json()  # type: ignore[no-any-return]
+
+
+# USDT TRC20 用 6 位小數
+USDT_DECIMALS = 6
+
+
+async def get_trc20_balance(address: str, contract: str) -> Decimal:
+    """查指定地址在某 TRC20 合約的餘額。
+
+    Tatum 回 `trc20: [{contract: raw_balance_str}, ...]`,raw 是「smallest unit」字串。
+    USDT 6 位小數 → 1000000000 = 1000 USDT。
+
+    地址沒在鏈上(沒被啟用 / 找不到)會回 0。
+    """
+    async with _client() as client:
+        res = await client.get(f"/v3/tron/account/{address}")
+    if res.status_code == 403:
+        # tron.account.not.found — 還沒收到任何 tx,當 0
+        return Decimal("0")
+    if res.status_code >= 400:
+        raise TatumError(f"get_tron_account failed: {res.status_code}")
+
+    body = res.json()
+    raw = "0"
+    for entry in body.get("trc20", []) or []:
+        if isinstance(entry, dict) and contract in entry:
+            raw = entry[contract]
+            break
+    return Decimal(raw) / Decimal(10**USDT_DECIMALS)

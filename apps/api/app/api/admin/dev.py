@@ -1,105 +1,28 @@
 """Admin dev endpoints。
 
-simulate-deposit 只在 testnet 開放,for development e2e 測試,不在 mainnet 啟用。
-sync-tatum 兩邊都可用,讓 admin 在 ngrok URL 變動後手動再來一次同步。
+- sync-tatum 兩邊都可用,讓 admin 在 ngrok URL 變動後手動再來一次同步
+- replay-onchain-tx 兩邊都可用,救回被 filter 擋掉 / webhook 漏接的真鏈交易
 """
 
 from __future__ import annotations
 
-import secrets
 from decimal import Decimal
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 
 from app.api.deps import CurrentAdminDep, DbDep
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.models.user import User
+from app.core.queue import get_arq_pool
 from app.schemas.api import ApiResponse
 from app.schemas.wallet import OnchainTxOut
-from app.services.ledger import post_deposit
 from app.services.onchain import record_provisional_deposit
 from app.services.subscription import resolve_callback_url, sync_all_subscriptions
 
 router = APIRouter(prefix="/api/admin/dev", tags=["admin-dev"])
 logger = get_logger(__name__)
-
-
-class SimulateDepositIn(BaseModel):
-    user_id: int = Field(gt=0)
-    amount: Decimal = Field(gt=0)
-
-
-def _require_dev_env() -> None:
-    if settings.env != "testnet":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "dev.disabledOnMainnet"},
-        )
-
-
-@router.post("/simulate-deposit", response_model=ApiResponse[OnchainTxOut])
-async def simulate_deposit(
-    payload: SimulateDepositIn,
-    admin: CurrentAdminDep,
-    db: DbDep,
-) -> ApiResponse[OnchainTxOut]:
-    _require_dev_env()
-
-    user_q = await db.execute(select(User).where(User.id == payload.user_id))
-    target_user = user_q.scalar_one_or_none()
-    if target_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "dev.userNotFound"},
-        )
-    if not target_user.tron_address:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "dev.userHasNoAddress"},
-        )
-
-    fake_tx_hash = secrets.token_hex(32)  # 64 hex chars,模擬 Tron tx hash
-    fake_payload = {
-        "txId": fake_tx_hash,
-        "address": target_user.tron_address,
-        "amount": str(payload.amount),
-        "asset": "USDT",
-        "blockNumber": None,
-        "_simulated": True,
-        "_simulated_by_admin": admin.id,
-    }
-
-    onchain_tx = await record_provisional_deposit(
-        db,
-        tx_hash=fake_tx_hash,
-        to_address=target_user.tron_address,
-        amount=payload.amount,
-        currency="USDT-TRC20",
-        block_number=None,
-        raw_payload=fake_payload,
-    )
-    if onchain_tx is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"code": "dev.simulationFailed"},
-        )
-
-    # 假 tx_hash 不存在於鏈上,confirm_onchain_tx 會永遠等不到 — 直接 mock confirm
-    onchain_tx.confirmations = 19
-    await post_deposit(db, onchain_tx)
-
-    logger.info(
-        "dev_deposit_simulated",
-        admin_id=admin.id,
-        target_user_id=payload.user_id,
-        amount=str(payload.amount),
-        onchain_tx_id=onchain_tx.id,
-    )
-
-    return ApiResponse[OnchainTxOut].ok(OnchainTxOut.model_validate(onchain_tx))
 
 
 class TatumSyncOut(BaseModel):
@@ -136,3 +59,63 @@ async def sync_tatum(_: CurrentAdminDep, db: DbDep) -> ApiResponse[TatumSyncOut]
             failed=stats.failed,
         )
     )
+
+
+class ReplayOnchainIn(BaseModel):
+    tx_hash: str = Field(min_length=10, max_length=80)
+    to_address: str = Field(min_length=34, max_length=34)
+    amount: Decimal = Field(gt=0)
+    block_number: int | None = None
+
+
+@router.post("/replay-onchain-tx", response_model=ApiResponse[OnchainTxOut])
+async def replay_onchain_tx(
+    payload: ReplayOnchainIn,
+    admin: CurrentAdminDep,
+    db: DbDep,
+    arq: Annotated[object, Depends(get_arq_pool)],
+) -> ApiResponse[OnchainTxOut]:
+    """補錄被 filter 擋掉 / webhook 漏接的真鏈交易。
+
+    流程跟正常 webhook 一樣:插 PROVISIONAL → 排 confirm 任務 → 任務查 block_number 算 confirmations。
+    冪等:tx_hash unique,重複呼叫會 409。
+    """
+    raw_payload = {
+        "txId": payload.tx_hash,
+        "address": payload.to_address,
+        "amount": str(payload.amount),
+        "asset": settings.usdt_contract,
+        "blockNumber": payload.block_number,
+        "_replayed": True,
+        "_replayed_by_admin": admin.id,
+    }
+
+    onchain_tx = await record_provisional_deposit(
+        db,
+        tx_hash=payload.tx_hash,
+        to_address=payload.to_address,
+        amount=payload.amount,
+        currency="USDT-TRC20",
+        block_number=payload.block_number,
+        raw_payload=raw_payload,
+    )
+    if onchain_tx is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "replay.alreadyRecordedOrInvalid"},
+        )
+
+    await arq.enqueue_job(  # type: ignore[attr-defined]
+        "confirm_onchain_tx",
+        onchain_tx_id=onchain_tx.id,
+        _defer_by=5,
+    )
+
+    logger.info(
+        "onchain_tx_replayed",
+        admin_id=admin.id,
+        tx_hash=payload.tx_hash,
+        amount=str(payload.amount),
+        onchain_tx_id=onchain_tx.id,
+    )
+    return ApiResponse[OnchainTxOut].ok(OnchainTxOut.model_validate(onchain_tx))

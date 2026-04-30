@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     webhook_callback_url: str = ""
     webhook_path_token: SecretStr = SecretStr("")
 
+    # ---- USDT TRC20 contract per network ----
+    # Tatum webhook 的 `asset` 欄位帶的是合約地址(不是 symbol),所以要用合約對比
+    # Mainnet: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t (Tether USD)
+    # Shasta testnet: TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs (測試版 USDT,Tether 部署的)
+    usdt_contract_testnet: str = "TG3XXyExBkPp9nzdajDZsozEu4BkaSJozs"
+    usdt_contract_mainnet: str = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+
     # ---- Resend (Phase 2+) ----
     resend_api_key: SecretStr = SecretStr("")
     resend_from_email: str = "noreply@quiver.local"
@@ -83,6 +90,10 @@ class Settings(BaseSettings):
     @property
     def tatum_api_key(self) -> SecretStr:
         return self.tatum_api_key_mainnet if self.env == "mainnet" else self.tatum_api_key_testnet
+
+    @property
+    def usdt_contract(self) -> str:
+        return self.usdt_contract_mainnet if self.env == "mainnet" else self.usdt_contract_testnet
 
 
 @lru_cache

@@ -37,13 +37,6 @@ export async function fetchMyHistory(limit = 20): Promise<OnchainTx[]> {
   return apiFetch<OnchainTx[]>(`/api/wallet/history?limit=${limit}`);
 }
 
-export async function devSimulateDeposit(userId: number, amount: string): Promise<OnchainTx> {
-  return apiFetch<OnchainTx>("/api/admin/dev/simulate-deposit", {
-    method: "POST",
-    body: JSON.stringify({ user_id: userId, amount }),
-  });
-}
-
 export interface TatumSyncResult {
   callback_url: string | null;
   created: number;
