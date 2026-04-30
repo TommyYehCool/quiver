@@ -9,17 +9,44 @@
 
 > 真錢上線之前必做。建議按子 phase 順序進行,每完成一個都可獨立驗收。
 
-### 6E-1 — 用戶 Auth 完整化(預估 2-3 hr)
-- Email 驗證
-  - 註冊後寄驗證信(Resend),點連結啟用
-  - 未驗證信箱不能 KYC、不能提領
-  - schema:`users.email_verified_at` (timestamptz nullable)
-- 密碼重設
-  - 「忘記密碼」連結 → 寄重設信(15 分鐘 TTL)
-  - 重設頁:新密碼兩次輸入
-  - schema:`password_reset_tokens` (token, user_id, expires_at, used_at)
+### 6E-1 — OAuth 帳號完整化 ✅(已完成,commit `91d4e3a`)
 
-**驗收**:新註冊帳號收到驗證信 + 點連結後狀態變 `verified` + 未驗證帳號跳提示。
+> 原訂規劃為「Email 驗證 + 密碼重設」,但本系統是 Google OAuth-only:
+> - Email 已由 Google 驗證(callback 已檢查 `userinfo.email_verified`)
+> - 沒密碼可重設
+>
+> 實際做的是更務實的「OAuth 友善」三件事:登入裝置管理、個資匯出、帳號刪除流程。
+
+實作內容:
+
+- **登入裝置管理**
+  - schema:`login_sessions` (user_id, jti, ip, user_agent, created_at, last_seen_at, revoked_at)
+  - JWT 帶 `jti` claim,中介層每 request 驗證 session 沒被 revoke
+  - `last_seen_at` 限流(每分鐘最多寫一次,避免熱 row)
+  - `POST /api/auth/logout` 改成會 revoke 當前 session
+  - `GET /api/me/sessions` 列出最近 50 個 session
+  - `POST /api/me/sessions/revoke-others` 登出除當前外所有裝置
+- **個資匯出**(個資法第 10 條 / GDPR right to access)
+  - `GET /api/me/export` 回 JSON download
+  - 含 profile + KYC metadata + ledger entries + withdrawals
+  - 不含 KYC 照片本體(避免檔案過大,需聯絡客服)
+- **帳號刪除**(個資法第 11 條 / GDPR right to erasure)
+  - schema:`users.deletion_requested_at`、`users.deletion_completed_at`
+  - 用戶端:`POST/DELETE/GET /api/me/deletion-request`
+  - admin 端:`GET /api/admin/deletion-requests`、`POST .../{user_id}/complete`
+  - **餘額必須 = 0** 才能完成(避免用戶失去資產)
+  - **soft delete**(法遵需要保留交易紀錄):status → SUSPENDED、email → `deleted-{id}@quiver.deleted`、display_name + avatar 清除、所有 sessions revoke、ledger entries 保留
+- **前端**
+  - `/settings` 頁面:登入裝置卡 + 帳號管理卡(匯出 + 刪除)
+  - `/admin/deletion-requests` 頁面:列出申請、餘額檢查、完成按鈕
+  - app header 加齒輪 icon、Dashboard admin card 加「刪除申請」入口
+  - i18n zh-TW + en
+
+驗收(已通過):
+- 登出再登入後 settings 看到 1 個 session 標「此裝置」
+- 開無痕另登一次 → 看到 2 個 session → 「登出所有其他裝置」→ 無痕被踢出
+- 「下載 JSON」拿到 export 檔(profile + KYC + ledger + withdrawals)
+- 申請刪除 → admin 列表看到 + 餘額 ≠ 0 被擋 → 取消 / 完成 都通
 
 ---
 
@@ -177,15 +204,15 @@
 
 ## 建議實作順序(由投入產出比排)
 
-| 優先 | 項目 | 預估 | 阻擋上線? |
-|---|---|---|---|
-| P0 | 6E-1 Email 驗證 + 密碼重設 | 2-3 hr | ✅ |
-| P0 | 6E-3 Audit log + Rate limiting + Sentry | 0.5 day | ✅ |
-| P0 | 6E-5 上線 checklist + Mainnet | 1 day | ✅ |
-| P1 | 6E-2 2FA + 白名單 + 頻率上限 | 0.5 day | 強烈建議 |
-| P1 | 6E-4 冷熱錢包架構 | 1 day | 強烈建議 |
-| P2 | Phase 7A-D Mobile App | 3-4 週 | ❌ |
-| P3 | Phase 8 各子項 | 持續 | ❌ |
+| 優先 | 項目 | 預估 | 阻擋上線? | 狀態 |
+|---|---|---|---|---|
+| P0 | 6E-1 OAuth 帳號完整化(sessions + export + 刪除) | 2-3 hr | ✅ | ✅ 完成 |
+| P0 | 6E-3 Audit log + Rate limiting + Sentry | 0.5 day | ✅ | ⏸ |
+| P0 | 6E-5 上線 checklist + Mainnet | 1 day | ✅ | ⏸ |
+| P1 | 6E-2 2FA + 白名單 + 頻率上限 | 0.5 day | 強烈建議 | ⏸ |
+| P1 | 6E-4 冷熱錢包架構 | 1 day | 強烈建議 | ⏸ |
+| P2 | Phase 7A-D Mobile App | 3-4 週 | ❌ | ⏸ |
+| P3 | Phase 8 各子項 | 持續 | ❌ | ⏸ |
 
-**最短上線路徑**:6E-1 → 6E-3 → 6E-5 → 上線(~3 天)。
-**完整上線路徑**:全部 6E → 上線(~3-4 天工作日)。
+**最短上線路徑**:~~6E-1~~ → 6E-3 → 6E-5 → 上線(~2 天剩)。
+**完整上線路徑**:全部 6E → 上線(~3 天剩)。
