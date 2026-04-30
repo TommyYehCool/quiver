@@ -115,10 +115,10 @@ export default async function AdminPlatformPage({
                 </div>
               ) : null}
               <div className="rounded-lg border border-cream-edge bg-paper/50 p-3 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-                <p className="font-medium text-slate-600 dark:text-slate-300">Bulk sweep — 一次性 migration</p>
+                <p className="font-medium text-slate-600 dark:text-slate-300">一鍵歸集 — 一次性遷移</p>
                 <p className="mt-1">
                   Phase 6D 啟用後,既有 user 鏈上的 USDT 還在 user 各自的派生地址。
-                  點下面按鈕一次性 sweep 到 HOT。每個 user 排一個任務,只有 ≥ 10 USDT 才會真送。
+                  點下面按鈕一次性歸集到 HOT。每個 user 排一個任務,只有 ≥ 10 USDT 才會真送。
                 </p>
                 <div className="mt-3">
                   <BulkSweepButton />

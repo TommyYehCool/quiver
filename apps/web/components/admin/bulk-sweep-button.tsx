@@ -15,8 +15,8 @@ export function BulkSweepButton() {
   async function handleClick() {
     if (
       !confirm(
-        "確認一次性 sweep 所有 user?\n\n" +
-          "每個 user 會排一個 sweep 任務,USDT ≥ 10 才會真的搬。\n" +
+        "確認對所有 user 執行一鍵歸集?\n\n" +
+          "每個 user 會排一個歸集任務,USDT ≥ 10 才會真的搬。\n" +
           "搬完 user 鏈上 USDT ≈ 0,集中到 HOT wallet。",
       )
     ) {
@@ -28,7 +28,7 @@ export function BulkSweepButton() {
       const r = await bulkSweep();
       setMsg({
         kind: "ok",
-        text: `已派發 ${r.dispatched} 個 sweep 任務 (user_ids=${r.user_ids.join(",")})。\n` +
+        text: `已派發 ${r.dispatched} 個歸集任務 (user_ids=${r.user_ids.join(",")})。\n` +
           `每個任務需 ~15 秒(TRX top-up + USDT 上鏈),完成後刷新看 HOT 餘額。`,
       });
       // 30 秒後 refresh,讓任務有時間完成
@@ -44,7 +44,7 @@ export function BulkSweepButton() {
     <div className="space-y-2">
       <Button onClick={handleClick} disabled={busy} variant="outline" size="sm">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-        Bulk sweep
+        一鍵歸集
       </Button>
       {msg ? (
         <p
