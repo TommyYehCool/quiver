@@ -43,3 +43,15 @@ export async function devSimulateDeposit(userId: number, amount: string): Promis
     body: JSON.stringify({ user_id: userId, amount }),
   });
 }
+
+export interface TatumSyncResult {
+  callback_url: string | null;
+  created: number;
+  refreshed: number;
+  skipped: number;
+  failed: number;
+}
+
+export async function syncTatumSubscriptions(): Promise<TatumSyncResult> {
+  return apiFetch<TatumSyncResult>("/api/admin/dev/sync-tatum", { method: "POST" });
+}
