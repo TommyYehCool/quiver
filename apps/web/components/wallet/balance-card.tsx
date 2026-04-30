@@ -19,6 +19,7 @@ import {
   type ActivityItem,
   type Balance,
 } from "@/lib/api/wallet";
+import { fmtTwd, useUsdtTwdRate } from "@/lib/api/rates";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 5_000;
@@ -28,6 +29,7 @@ export function BalanceCard() {
   const locale = useLocale();
   const [balance, setBalance] = React.useState<Balance | null>(null);
   const [history, setHistory] = React.useState<ActivityItem[]>([]);
+  const { rate } = useUsdtTwdRate();
 
   React.useEffect(() => {
     let cancelled = false;
@@ -85,6 +87,12 @@ export function BalanceCard() {
               {fmt(available)}{" "}
               <span className="text-sm font-normal text-slate-500">USDT</span>
             </p>
+            {rate !== null ? (
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                ≈ {fmtTwd(available, rate)}{" "}
+                <span className="text-[10px]">@ {rate.toFixed(2)}</span>
+              </p>
+            ) : null}
           </div>
           {showPending ? (
             <div>

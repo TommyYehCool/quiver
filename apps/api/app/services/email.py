@@ -101,6 +101,61 @@ async def send_transfer_received(
     return await _send(to, f"[Quiver] 收到 {amount} {currency}", html)
 
 
+async def send_reconciliation_digest(
+    to_emails: list[str],
+    *,
+    flagged_rows: list[dict[str, str]],  # 已 stringify
+    total_users: int,
+    error_count: int,
+) -> bool:
+    """寄對帳告警給 admin。"""
+    if not to_emails:
+        return False
+
+    rows_html = "".join(
+        f"<tr>"
+        f"<td style='padding:6px 10px;border:1px solid #e2e8f0'>{r['email']}</td>"
+        f"<td style='padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:12px'>{r['address']}</td>"
+        f"<td style='padding:6px 10px;border:1px solid #e2e8f0;text-align:right'>{r['ledger']}</td>"
+        f"<td style='padding:6px 10px;border:1px solid #e2e8f0;text-align:right'>{r['chain']}</td>"
+        f"<td style='padding:6px 10px;border:1px solid #e2e8f0;text-align:right;color:{'#dc2626' if float(r['diff']) > 0 else '#7c3aed'}'>"
+        f"{r['diff']}</td>"
+        f"</tr>"
+        for r in flagged_rows
+    )
+    html = f"""
+    <div style="font-family:system-ui,sans-serif;max-width:760px;margin:auto">
+      <h2>每日對帳告警 — {len(flagged_rows)} 筆需要關注</h2>
+      <p>
+        共掃 {total_users} 個 user,差異 > 0.01 USDT 的有 {len(flagged_rows)} 個,
+        Tatum 拉取失敗 {error_count} 個。
+      </p>
+      <table style="border-collapse:collapse;width:100%;font-size:14px">
+        <thead style="background:#f1f5f9">
+          <tr>
+            <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:left">Email</th>
+            <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:left">Address</th>
+            <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">Ledger</th>
+            <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">Chain</th>
+            <th style="padding:6px 10px;border:1px solid #e2e8f0;text-align:right">Chain − Ledger</th>
+          </tr>
+        </thead>
+        <tbody>{rows_html}</tbody>
+      </table>
+      <p style="color:#64748b;font-size:12px;margin-top:16px">
+        Phase 6A 注意:目前架構下,部分 diff 是合理的(內部轉帳、提領手續費 USDT、in-flight 提領、PROVISIONAL 入金)。
+        Phase 6 加 sweep + 細分 ledger 後 diff 應自然歸零。
+      </p>
+    </div>
+    """
+    # 一次寄給所有 admin
+    success = True
+    for to in to_emails:
+        ok = await _send(to, f"[Quiver] 每日對帳 — {len(flagged_rows)} 筆告警", html)
+        success = success and ok
+    return success
+
+
 async def send_kyc_rejected(to: str, display_name: str | None, reason: str) -> bool:
     name = display_name or to
     html = f"""

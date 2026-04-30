@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import auth, kyc, me, transfers, wallet, webhooks, withdrawals
+from app.api import auth, kyc, me, rates, transfers, wallet, webhooks, withdrawals
 from app.api.admin import dev as admin_dev
 from app.api.admin import kyc as admin_kyc
 from app.api.admin import platform as admin_platform
@@ -175,6 +175,7 @@ app.include_router(kyc.router)
 app.include_router(wallet.router)
 app.include_router(transfers.router)
 app.include_router(withdrawals.router)
+app.include_router(rates.router)
 app.include_router(webhooks.router)
 app.include_router(admin_kyc.router)
 app.include_router(admin_setup.router)

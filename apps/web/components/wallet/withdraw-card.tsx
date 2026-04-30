@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { quoteWithdrawal, submitWithdrawal, type WithdrawalQuote } from "@/lib/api/withdrawal";
+import { fmtTwd, useUsdtTwdRate } from "@/lib/api/rates";
 
 type Stage = "form" | "confirm" | "submitting" | "success";
 
@@ -116,7 +117,7 @@ export function WithdrawCard() {
         )}
 
         {(stage === "confirm" || stage === "submitting") && quote && (
-          <ConfirmModal
+          <ConfirmModalWithRate
             t={t}
             address={address}
             quote={quote}
@@ -148,7 +149,7 @@ export function WithdrawCard() {
   );
 }
 
-function ConfirmModal({
+function ConfirmModalWithRate({
   t,
   address,
   quote,
@@ -165,6 +166,7 @@ function ConfirmModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { rate } = useUsdtTwdRate();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-cream-edge bg-paper p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
@@ -176,9 +178,14 @@ function ConfirmModal({
             <p className="break-all font-mono text-xs">{address}</p>
           </Row>
           <Row label={t("confirm.amount")}>
-            <p className="font-semibold tabular-nums">
-              {quote.amount} <span className="text-xs font-normal text-slate-500">USDT</span>
-            </p>
+            <div>
+              <p className="font-semibold tabular-nums">
+                {quote.amount} <span className="text-xs font-normal text-slate-500">USDT</span>
+              </p>
+              {rate ? (
+                <p className="text-[10px] text-slate-500">≈ {fmtTwd(quote.amount, rate)}</p>
+              ) : null}
+            </div>
           </Row>
           <Row label={t("confirm.fee")}>
             <p className="text-rose-600 tabular-nums dark:text-rose-400">
@@ -187,9 +194,14 @@ function ConfirmModal({
           </Row>
           <div className="border-t border-cream-edge pt-2 dark:border-slate-700">
             <Row label={t("confirm.total")}>
-              <p className="text-lg font-semibold tabular-nums">
-                {quote.total} <span className="text-xs font-normal text-slate-500">USDT</span>
-              </p>
+              <div>
+                <p className="text-lg font-semibold tabular-nums">
+                  {quote.total} <span className="text-xs font-normal text-slate-500">USDT</span>
+                </p>
+                {rate ? (
+                  <p className="text-[10px] text-slate-500">≈ {fmtTwd(quote.total, rate)}</p>
+                ) : null}
+              </div>
             </Row>
           </div>
         </div>

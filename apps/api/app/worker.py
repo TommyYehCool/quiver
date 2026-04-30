@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import Any
 
 from arq.connections import RedisSettings
+from arq.cron import cron
 from sqlalchemy import select
 
 from app.core.config import settings
@@ -15,8 +16,14 @@ from app.core.logging import configure_logging, get_logger
 from app.models.onchain_tx import OnchainTx, OnchainTxStatus
 from app.models.withdrawal import WithdrawalRequest, WithdrawalStatus
 from app.services import tatum
-from app.services.email import send_kyc_approved, send_kyc_rejected, send_transfer_received
+from app.services.email import (
+    send_kyc_approved,
+    send_kyc_rejected,
+    send_reconciliation_digest,
+    send_transfer_received,
+)
 from app.services.ledger import post_deposit
+from app.services.reconciliation import run_reconciliation
 from app.services.tatum import TatumError, TatumNotConfigured
 from app.services.wallet import load_user_signing_keys
 from app.services.withdrawal import (
@@ -380,6 +387,45 @@ async def confirm_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> str:
     return f"waiting_{confirmations}"
 
 
+async def reconcile_balances(ctx: dict[str, Any]) -> str:
+    """每日對帳 cron task — 比對 ledger vs 鏈上,差異 > 0.01 USDT 寄信給 admin。"""
+    async with db_session() as session:
+        report = await run_reconciliation(session)
+
+    flagged = [r for r in report.rows if r.flagged]
+    if not flagged and report.error_count == 0:
+        logger.info("reconcile_no_alerts", total=report.total_users)
+        return "no_alerts"
+
+    admin_emails = settings.admin_emails
+    if not admin_emails:
+        logger.warning("reconcile_no_admin_emails_configured")
+        return "no_admin_emails"
+
+    flagged_payload = [
+        {
+            "email": r.email,
+            "address": r.address,
+            "ledger": str(r.ledger),
+            "chain": str(r.chain),
+            "diff": str(r.diff),
+        }
+        for r in flagged
+    ]
+    await send_reconciliation_digest(
+        admin_emails,
+        flagged_rows=flagged_payload,
+        total_users=report.total_users,
+        error_count=report.error_count,
+    )
+    logger.info(
+        "reconcile_digest_sent",
+        flagged=len(flagged),
+        recipients=len(admin_emails),
+    )
+    return f"sent:{len(flagged)}"
+
+
 async def _recover_orphan_withdrawals(ctx: dict[str, Any]) -> None:
     """Worker 啟動時對沒走完的 withdrawal 做安全處理。
 
@@ -451,6 +497,11 @@ class WorkerSettings:
         confirm_onchain_tx,
         broadcast_withdrawal,
         confirm_withdrawal,
+        reconcile_balances,
+    ]
+    # 每日 03:00 (Asia/Taipei) = 19:00 UTC 跑對帳
+    cron_jobs = [
+        cron(reconcile_balances, hour=19, minute=0, run_at_startup=False),
     ]
     redis_settings = _redis_settings()
     on_startup = startup

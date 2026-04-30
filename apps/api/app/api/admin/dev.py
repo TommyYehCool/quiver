@@ -119,3 +119,47 @@ async def replay_onchain_tx(
         onchain_tx_id=onchain_tx.id,
     )
     return ApiResponse[OnchainTxOut].ok(OnchainTxOut.model_validate(onchain_tx))
+
+
+class ReconRowOut(BaseModel):
+    user_id: int
+    email: str
+    address: str
+    ledger: Decimal
+    chain: Decimal
+    diff: Decimal
+    flagged: bool
+
+
+class ReconReportOut(BaseModel):
+    rows: list[ReconRowOut]
+    total_users: int
+    flagged_count: int
+    error_count: int
+
+
+@router.post("/reconcile", response_model=ApiResponse[ReconReportOut])
+async def trigger_reconciliation(_: CurrentAdminDep, db: DbDep) -> ApiResponse[ReconReportOut]:
+    """手動觸發對帳(平常會在每日 03:00 Asia/Taipei 自動跑)。"""
+    from app.services.reconciliation import run_reconciliation
+
+    report = await run_reconciliation(db)
+    return ApiResponse[ReconReportOut].ok(
+        ReconReportOut(
+            rows=[
+                ReconRowOut(
+                    user_id=r.user_id,
+                    email=r.email,
+                    address=r.address,
+                    ledger=r.ledger,
+                    chain=r.chain,
+                    diff=r.diff,
+                    flagged=r.flagged,
+                )
+                for r in report.rows
+            ],
+            total_users=report.total_users,
+            flagged_count=report.flagged_count,
+            error_count=report.error_count,
+        )
+    )
