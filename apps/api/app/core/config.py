@@ -108,6 +108,15 @@ class Settings(BaseSettings):
     def usdt_contract(self) -> str:
         return self.usdt_contract_mainnet if self.env == "mainnet" else self.usdt_contract_testnet
 
+    @property
+    def totp_display_issuer(self) -> str:
+        """掃 QR 後在 Authenticator app 顯示的名字。
+        testnet 強制加 "(Dev)" 後綴,避免跟正式環境條目搞混。
+        """
+        if self.env == "mainnet":
+            return self.totp_issuer
+        return f"{self.totp_issuer} (Dev)"
+
 
 @lru_cache
 def get_settings() -> Settings:

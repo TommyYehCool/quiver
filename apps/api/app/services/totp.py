@@ -57,9 +57,14 @@ def generate_secret() -> str:
 
 
 def provisioning_uri(secret: str, account_email: str) -> str:
-    """產 otpauth:// URI 給用戶用 Authenticator app 掃 QR。"""
-    issuer = quote(settings.totp_issuer)
-    label = quote(f"{settings.totp_issuer}:{account_email}")
+    """產 otpauth:// URI 給用戶用 Authenticator app 掃 QR。
+
+    issuer / label 用 `totp_display_issuer`(testnet 會自動加 (Dev) 後綴),
+    讓用戶 Authenticator app 上能直接區分 dev / production 條目。
+    """
+    display = settings.totp_display_issuer
+    issuer = quote(display)
+    label = quote(f"{display}:{account_email}")
     return f"otpauth://totp/{label}?secret={secret}&issuer={issuer}&algorithm=SHA1&digits=6&period=30"
 
 
