@@ -3,15 +3,12 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CheckCircle2, Key, ShieldCheck, UserCog } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Key, ShieldCheck, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BalanceCard } from "@/components/wallet/balance-card";
 import { DevSimulator } from "@/components/admin/dev-simulator";
-import { ReceiveCard } from "@/components/wallet/receive-card";
-import { TransferCard } from "@/components/wallet/transfer-card";
-import { WithdrawCard } from "@/components/wallet/withdraw-card";
 import { fetchMeServer } from "@/lib/auth";
 
 interface KycResp {
@@ -60,13 +57,16 @@ export default async function DashboardPage({
   const setupStatus = isAdmin ? await fetchSetupStatus(cookieHeader) : null;
   const needsSetup = isAdmin && setupStatus !== null && !setupStatus.initialized;
 
+  const isApproved = kyc?.status === "APPROVED";
+
+  // KYC card 只在「未通過」時顯示;已通過就不再佔位,改在右上 nav 看得到
   const kycCard = (() => {
+    if (isApproved) return null;
     if (!kyc) {
       return {
         desc: t("kycCard.descNew"),
         cta: t("kycCard.ctaNew"),
         href: `/${locale}/kyc`,
-        disabled: false,
       };
     }
     if (kyc.status === "PENDING") {
@@ -74,22 +74,12 @@ export default async function DashboardPage({
         desc: t("kycCard.descPending"),
         cta: t("kycCard.ctaPending"),
         href: `/${locale}/kyc`,
-        disabled: false,
-      };
-    }
-    if (kyc.status === "APPROVED") {
-      return {
-        desc: t("kycCard.descApproved"),
-        cta: t("kycCard.ctaApproved"),
-        href: `/${locale}/kyc`,
-        disabled: true,
       };
     }
     return {
       desc: t("kycCard.descRejected"),
       cta: t("kycCard.ctaRejected"),
       href: `/${locale}/kyc`,
-      disabled: false,
     };
   })();
 
@@ -122,38 +112,61 @@ export default async function DashboardPage({
         </CardHeader>
       </Card>
 
-      <Card className="bg-macaron-mint dark:bg-slate-900">
-        <CardHeader className="flex-row items-start gap-4">
-          <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-mint">
-            <ShieldCheck className="h-6 w-6 text-emerald-700" />
-          </span>
-          <div className="flex-1">
-            <CardTitle>{t("kycCard.title")}</CardTitle>
-            <CardDescription>{kycCard.desc}</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {kycCard.disabled ? (
-            <span className="inline-flex h-11 items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-100/60 px-5 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
-              {kycCard.cta}
-              <CheckCircle2 className="h-4 w-4" />
+      {kycCard ? (
+        <Card className="bg-macaron-mint dark:bg-slate-900">
+          <CardHeader className="flex-row items-start gap-4">
+            <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-mint">
+              <ShieldCheck className="h-6 w-6 text-emerald-700" />
             </span>
-          ) : (
+            <div className="flex-1">
+              <CardTitle>{t("kycCard.title")}</CardTitle>
+              <CardDescription>{kycCard.desc}</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
             <Button asChild>
               <Link href={kycCard.href}>
                 {kycCard.cta} <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      {kyc?.status === "APPROVED" ? (
+      {isApproved ? (
         <>
           <BalanceCard />
-          <ReceiveCard />
-          <TransferCard />
-          <WithdrawCard />
+
+          {/* Wallet 操作入口 — 卡內按鈕導去 /wallet 子頁(tabs:收款 / 轉帳 / 提領) */}
+          <Card className="bg-macaron-cream dark:bg-slate-900">
+            <CardHeader className="flex-row items-start gap-4">
+              <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-cream">
+                <Wallet className="h-6 w-6 text-amber-700" />
+              </span>
+              <div className="flex-1">
+                <CardTitle>{t("walletCard.title")}</CardTitle>
+                <CardDescription>{t("walletCard.desc")}</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Button asChild variant="outline">
+                <Link href={`/${locale}/wallet?tab=receive`}>
+                  {t("walletCard.receive")} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/${locale}/wallet?tab=send`}>
+                  {t("walletCard.send")} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/${locale}/wallet?tab=withdraw`}>
+                  {t("walletCard.withdraw")} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
           {isAdmin ? <DevSimulator userId={user.id} /> : null}
         </>
       ) : null}
@@ -183,48 +196,6 @@ export default async function DashboardPage({
           </CardContent>
         </Card>
       ) : null}
-
-      {isAdmin ? (
-        <Card className="bg-macaron-lavender dark:bg-slate-900">
-          <CardHeader className="flex-row items-start gap-4">
-            <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-lavender">
-              <UserCog className="h-6 w-6 text-violet-700" />
-            </span>
-            <div className="flex-1">
-              <CardTitle>{t("adminCard.title")}</CardTitle>
-              <CardDescription>{t("adminCard.desc")}</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${locale}/admin/kyc`}>
-                KYC 審核 <ArrowRight className="h-3 w-3" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${locale}/admin/withdrawals`}>
-                提領審核 <ArrowRight className="h-3 w-3" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${locale}/admin/platform`}>
-                平台帳戶 <ArrowRight className="h-3 w-3" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${locale}/admin/deletion-requests`}>
-                刪除申請 <ArrowRight className="h-3 w-3" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${locale}/admin/audit`}>
-                Audit log <ArrowRight className="h-3 w-3" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : null}
-
     </div>
   );
 }

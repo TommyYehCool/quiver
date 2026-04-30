@@ -42,6 +42,21 @@
       "email_unverified": "Your Google email is not verified."
     }
   },
+  "nav": {
+    "dashboard": "Dashboard",
+    "wallet": "Wallet",
+    "kyc": "Verify",
+    "switchToAdmin": "Switch to Admin",
+    "backToUser": "Back to User",
+    "adminModeBanner": "ADMIN MODE — actions affect platform / user funds",
+    "adminOverview": "Overview",
+    "adminKyc": "KYC Review",
+    "adminWithdrawals": "Withdrawals",
+    "adminPlatform": "Platform",
+    "adminAudit": "Audit Log",
+    "adminDeletions": "Deletions",
+    "adminSetup": "System Setup"
+  },
   "dashboard": {
     "greeting": "Hi, {name}",
     "phaseNotice": "Phase 2 — Complete identity verification (KYC) to unlock wallet features.",
@@ -61,6 +76,13 @@
       "title": "Admin console",
       "desc": "Review user KYC submissions",
       "cta": "Open admin"
+    },
+    "walletCard": {
+      "title": "Wallet operations",
+      "desc": "Receive, send, withdraw — pick one to open the wallet page.",
+      "receive": "Receive",
+      "send": "Send",
+      "withdraw": "Withdraw"
     }
   },
   "balance": {
@@ -217,6 +239,12 @@
     }
   },
   "wallet": {
+    "pageTitle": "Wallet",
+    "pageDesc": "Receive, send, withdraw — switch tabs above.",
+    "tabsLabel": "Wallet tabs",
+    "tabReceive": "Receive",
+    "tabSend": "Send",
+    "tabWithdraw": "Withdraw",
     "title": "My receive address",
     "desc": "Share this address or QR. USDT goes directly to your Quiver account.",
     "addressLabel": "Receive address (TRON Network)",

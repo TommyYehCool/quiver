@@ -42,6 +42,21 @@
       "email_unverified": "你的 Google 信箱尚未驗證，無法登入"
     }
   },
+  "nav": {
+    "dashboard": "儀表板",
+    "wallet": "錢包",
+    "kyc": "身分驗證",
+    "switchToAdmin": "切換到管理員",
+    "backToUser": "返回用戶介面",
+    "adminModeBanner": "ADMIN MODE — 操作會直接影響平台 / 用戶資金",
+    "adminOverview": "概覽",
+    "adminKyc": "KYC 審核",
+    "adminWithdrawals": "提領審核",
+    "adminPlatform": "平台帳戶",
+    "adminAudit": "Audit log",
+    "adminDeletions": "刪除申請",
+    "adminSetup": "系統初始化"
+  },
   "dashboard": {
     "greeting": "嗨，{name}",
     "phaseNotice": "Phase 2 — 接下來請完成身分驗證 (KYC)，之後才能使用錢包功能。",
@@ -61,6 +76,13 @@
       "title": "管理員後台",
       "desc": "審核用戶 KYC 申請",
       "cta": "進入後台"
+    },
+    "walletCard": {
+      "title": "錢包操作",
+      "desc": "收款、轉帳、提領 — 點任一選項進入錢包頁。",
+      "receive": "收款",
+      "send": "轉帳",
+      "withdraw": "提領"
     }
   },
   "balance": {
@@ -219,6 +241,12 @@
     }
   },
   "wallet": {
+    "pageTitle": "錢包",
+    "pageDesc": "收款、轉帳、提領 — 切換上方分頁進行對應操作。",
+    "tabsLabel": "錢包功能分頁",
+    "tabReceive": "收款",
+    "tabSend": "轉帳",
+    "tabWithdraw": "提領",
     "title": "我的收款地址",
     "desc": "把這個地址或 QR 給對方,USDT 會直接收到你的 Quiver 帳戶。",
     "addressLabel": "收款地址 (TRON Network)",
