@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Coins, Send, Zap } from "lucide-react";
+import { ArrowRight, Coins, Send, Sparkles, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
@@ -12,12 +12,30 @@ export default function LandingPage({
   params: { locale: string };
 }) {
   return (
-    <main className="min-h-screen">
-      <Header locale={locale} />
-      <Hero locale={locale} />
-      <Features />
-      <Footer />
+    // 用 paper(暖白)蓋掉 globals 的 cream(偏冷淡紫),並加馬卡龍 blob 暈染
+    <main className="relative min-h-screen overflow-hidden bg-paper dark:bg-slate-950">
+      <MacaronBlobs />
+      <div className="relative">
+        <Header locale={locale} />
+        <Hero locale={locale} />
+        <Features />
+        <Footer />
+      </div>
     </main>
+  );
+}
+
+/**
+ * 三顆模糊色塊充當背景裝飾,呼應後台 dashboard 的多彩馬卡龍。
+ * pointer-events-none 確保不擋滑鼠互動。
+ */
+function MacaronBlobs() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <div className="absolute -left-24 top-0 h-96 w-96 rounded-full bg-macaron-peach opacity-60 blur-3xl dark:opacity-20" />
+      <div className="absolute right-0 top-32 h-80 w-80 rounded-full bg-macaron-mint opacity-50 blur-3xl dark:opacity-15" />
+      <div className="absolute -bottom-32 left-1/3 h-96 w-96 rounded-full bg-macaron-lavender opacity-50 blur-3xl dark:opacity-20" />
+    </div>
   );
 }
 
@@ -45,7 +63,13 @@ function Hero({ locale }: { locale: string }) {
   return (
     <section className="container py-20 md:py-28">
       <div className="mx-auto max-w-2xl text-center">
-        <h1 className="text-balance text-4xl font-bold tracking-tight md:text-6xl">
+        {/* 軟質地的 mint badge,加一點品牌氣質 */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-macaron-mint px-4 py-1.5 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <Sparkles className="h-3.5 w-3.5" />
+          {t("badge")}
+        </div>
+
+        <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight md:text-6xl">
           {t("title")}
         </h1>
         <p className="mt-6 text-balance text-lg text-slate-600 dark:text-slate-300 md:text-xl">
@@ -66,22 +90,46 @@ function Hero({ locale }: { locale: string }) {
   );
 }
 
+/**
+ * 三張卡片各一個馬卡龍色,呼應登入後 dashboard 的多彩風格。
+ * - peach + amber → 收款 / 餘額(同登入後 BalanceCard 旁邊的元素)
+ * - mint + emerald → 轉帳(同登入後 BalanceCard)
+ * - lavender + violet → gas 代付(同登入後 admin lavender)
+ */
 function Features() {
   const t = useTranslations("marketing.features");
   const items = [
-    { icon: Coins, key: "f1" },
-    { icon: Send, key: "f2" },
-    { icon: Zap, key: "f3" },
+    {
+      icon: Coins,
+      key: "f1",
+      cardClass: "bg-macaron-peach dark:bg-slate-900",
+      iconBgClass: "bg-bubble-peach text-amber-700",
+    },
+    {
+      icon: Send,
+      key: "f2",
+      cardClass: "bg-macaron-mint dark:bg-slate-900",
+      iconBgClass: "bg-bubble-mint text-emerald-700",
+    },
+    {
+      icon: Zap,
+      key: "f3",
+      cardClass: "bg-macaron-lavender dark:bg-slate-900",
+      iconBgClass: "bg-bubble-lavender text-violet-700",
+    },
   ] as const;
+
   return (
     <section id="features" className="container py-16">
       <div className="grid gap-6 md:grid-cols-3">
-        {items.map(({ icon: Icon, key }) => (
+        {items.map(({ icon: Icon, key, cardClass, iconBgClass }) => (
           <div
             key={key}
-            className="rounded-2xl border border-cream-edge bg-paper p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            className={`rounded-2xl border border-cream-edge p-6 shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-slate-800 ${cardClass}`}
           >
-            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient text-white">
+            <div
+              className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl dark:bg-slate-800 dark:text-slate-200 ${iconBgClass}`}
+            >
               <Icon className="h-5 w-5" />
             </div>
             <h3 className="text-lg font-semibold">{t(`${key}.title`)}</h3>
