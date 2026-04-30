@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CheckCircle2, Key, ShieldCheck, Sparkles, UserCog } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Key, ShieldCheck, UserCog } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -215,14 +215,6 @@ export default async function DashboardPage({
         </Card>
       ) : null}
 
-      <Card className="bg-macaron-sky dark:bg-slate-900">
-        <CardContent className="flex items-center gap-4 pt-6">
-          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-bubble-sky">
-            <Sparkles className="h-5 w-5 text-sky-700" />
-          </span>
-          <p className="text-sm text-slate-600 dark:text-slate-400">{t("phaseNotice")}</p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

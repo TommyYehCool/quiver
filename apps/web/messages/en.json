@@ -68,8 +68,6 @@
     "desc": "Your spendable USDT (TRC20) balance. Pending deposits take ~1 minute to confirm.",
     "available": "Available",
     "pending": "Pending",
-    "onchain": "On-chain",
-    "onchainDifferNote": "(includes internally transferred)",
     "history": "Recent activity",
     "viewAll": "View all",
     "statusPending": "Processing",

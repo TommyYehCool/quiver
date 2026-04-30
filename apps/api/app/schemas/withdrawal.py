@@ -85,3 +85,10 @@ class FeePayerInfo(BaseModel):
     trx_balance: Decimal
     network: str  # "testnet" / "mainnet"
     low_balance_warning: bool
+
+
+class HotWalletInfo(BaseModel):
+    address: str
+    usdt_balance: Decimal
+    trx_balance: Decimal
+    network: str

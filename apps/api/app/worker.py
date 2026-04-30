@@ -24,8 +24,9 @@ from app.services.email import (
 )
 from app.services.ledger import post_deposit
 from app.services.reconciliation import run_reconciliation
+from app.services.sweep import list_sweepable_users, sweep_user_to_hot
 from app.services.tatum import TatumError, TatumNotConfigured
-from app.services.wallet import load_user_signing_keys
+from app.services.wallet import load_hot_signing_keys, load_user_signing_keys
 from app.services.withdrawal import (
     fail_and_reverse_withdrawal,
     mark_broadcasting,
@@ -181,6 +182,10 @@ async def confirm_onchain_tx(ctx: dict[str, Any], *, onchain_tx_id: int) -> str:
                 onchain_tx_id=onchain_tx_id,
                 confirmations=confirmations,
             )
+            # 入金 POSTED 後立即排 sweep,把鏈上 USDT 移到 HOT(phase 6D)
+            await ctx["redis"].enqueue_job(
+                "sweep_user", user_id=onchain_tx.user_id, _defer_by=10
+            )
             return "posted"
 
         await session.commit()
@@ -200,16 +205,21 @@ async def confirm_onchain_tx(ctx: dict[str, Any], *, onchain_tx_id: int) -> str:
 
 
 async def broadcast_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> str:
-    """簽 + 廣播提領上鏈。
+    """簽 + 廣播提領上鏈(phase 6D 起從 HOT wallet 出,不從 user)。
 
     流程:
       1. APPROVED → PROCESSING(防止 double-broadcast)
-      2. 派生 user + FEE_PAYER private keys
-      3. 若 user 的 TRX 不足 30,從 FEE_PAYER 補足
-      4. 等 TRX top-up 上鏈(~10s)
-      5. 從 user 地址送 USDT 到 to_address
-      6. 寫 tx_hash + status=BROADCASTING + 排程 confirm_withdrawal
-      7. 任何環節 raise → fail_and_reverse_withdrawal
+      2. 派生 HOT + FEE_PAYER private keys
+      3. 若 HOT TRX 不足 30,從 FEE_PAYER 補足(順便啟用 HOT 帳戶)
+      4. 等 TRX top-up 上鏈(~12s)
+      5. 預檢:HOT 鏈上 USDT ≥ 提領金額(否則 fail + REVERSE,讓 admin 補資 / 等 sweep)
+      6. 從 HOT 送 USDT 到 to_address
+      7. 寫 tx_hash + status=BROADCASTING + 排程 confirm_withdrawal
+      8. 任何環節 raise → fail_and_reverse_withdrawal
+
+    注意:TRX top-up 必須在 USDT pre-check 之前 — 新 HOT 沒收過 TRX 時,
+    Tron 帳戶尚未啟用,Tatum /tron/account/{addr} 會回 403,USDT 餘額查不到 (回 0)。
+    先 top-up 一筆 TRX 啟用帳戶後,USDT 餘額才查得到。
     """
     # Step 1: 鎖定 + 改 PROCESSING
     async with db_session() as session:
@@ -218,49 +228,58 @@ async def broadcast_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> st
         logger.info("broadcast_skipped_not_approved", withdrawal_id=withdrawal_id)
         return "not_approved"
 
-    user_priv = ""
+    hot_priv = ""
     fp_priv = ""
     try:
-        # Step 2: 拿 keys
+        # Step 2: 拿 HOT + FEE_PAYER keys
         async with db_session() as session:
-            user_addr, user_priv, fp_addr, fp_priv = await load_user_signing_keys(
-                session, req.user_id
-            )
+            hot_addr, hot_priv, fp_addr, fp_priv = await load_hot_signing_keys(session)
 
-        # Step 3-4: TRX top-up if needed
+        # Step 3-4: HOT 的 TRX top-up if needed (放在 USDT 查餘額之前 — 順便啟用帳戶)
         try:
-            user_trx = await tatum.get_trx_balance(user_addr)
+            hot_trx = await tatum.get_trx_balance(hot_addr)
         except TatumError as e:
-            raise RuntimeError(f"get_trx_balance failed: {e}") from e
+            raise RuntimeError(f"hot_get_trx_balance_failed: {e}") from e
 
-        if user_trx < WITHDRAWAL_TRX_BUDGET:
-            top_up_amount = WITHDRAWAL_TRX_BUDGET - user_trx
+        if hot_trx < WITHDRAWAL_TRX_BUDGET:
+            top_up_amount = WITHDRAWAL_TRX_BUDGET - hot_trx
             logger.info(
-                "trx_top_up_starting",
+                "withdrawal_hot_trx_top_up",
                 withdrawal_id=withdrawal_id,
-                user_addr=user_addr,
-                from_balance=str(user_trx),
+                hot_addr=hot_addr,
+                from_balance=str(hot_trx),
                 top_up=str(top_up_amount),
             )
-            top_up_hash = await tatum.send_trx(fp_priv, user_addr, top_up_amount)
+            top_up_hash = await tatum.send_trx(fp_priv, hot_addr, top_up_amount)
             logger.info(
-                "trx_top_up_broadcast",
+                "withdrawal_hot_trx_top_up_broadcast",
                 withdrawal_id=withdrawal_id,
                 top_up_tx=top_up_hash,
             )
-            # Tron 出塊 ~3s,等大概 4 個 block 確保 user 看到 TRX
             await asyncio.sleep(12)
 
-        # Step 5: send USDT
+        # Step 5: 預檢 HOT 鏈上 USDT(top-up 後帳戶確定已啟用)
+        try:
+            hot_usdt = await tatum.get_trc20_balance(hot_addr, settings.usdt_contract)
+        except TatumError as e:
+            raise RuntimeError(f"hot_balance_check_failed: {e}") from e
+
+        if hot_usdt < req.amount:
+            raise RuntimeError(
+                f"hot_wallet_insufficient: have {hot_usdt} USDT, need {req.amount}. "
+                f"等下次 sweep 或 admin 手動補 USDT 到 HOT。"
+            )
+
+        # Step 6: send USDT from HOT
         logger.info(
-            "withdrawal_send_usdt",
+            "withdrawal_send_usdt_from_hot",
             withdrawal_id=withdrawal_id,
-            from_addr=user_addr,
+            from_addr=hot_addr,
             to_addr=req.to_address,
             amount=str(req.amount),
         )
         usdt_tx_hash = await tatum.send_trc20(
-            user_priv,
+            hot_priv,
             req.to_address,
             settings.usdt_contract,
             req.amount,
@@ -273,8 +292,8 @@ async def broadcast_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> st
             await fail_and_reverse_withdrawal(session, withdrawal_id, f"broadcast: {e}")
         return f"failed:{e}"
     finally:
-        # 盡量縮短 priv key 在記憶體的時間(Python GC 不一定立刻收)
-        user_priv = "0" * 64  # noqa: F841
+        # 盡量縮短 priv key 在記憶體的時間
+        hot_priv = "0" * 64  # noqa: F841
         fp_priv = "0" * 64  # noqa: F841
 
     # Step 6: 寫 tx_hash + 排 confirm
@@ -385,6 +404,26 @@ async def confirm_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> str:
         "confirm_withdrawal", withdrawal_id=withdrawal_id, _defer_by=defer
     )
     return f"waiting_{confirmations}"
+
+
+async def sweep_user(ctx: dict[str, Any], *, user_id: int) -> str:
+    """掃一個 user 鏈上 USDT 到 HOT。"""
+    async with db_session() as session:
+        result = await sweep_user_to_hot(session, user_id)
+    if result.tx_hash:
+        return f"swept:{result.swept_amount}:{result.tx_hash}"
+    return f"skipped:{result.skipped_reason}"
+
+
+async def cron_sweep_all(ctx: dict[str, Any]) -> str:
+    """每 5 分鐘掃所有 user。實際 sweep 與否看 sweep_user_to_hot 內部 threshold 判斷。"""
+    async with db_session() as session:
+        users = await list_sweepable_users(session)
+    redis = ctx["redis"]
+    for u in users:
+        await redis.enqueue_job("sweep_user", user_id=u.id)
+    logger.info("cron_sweep_dispatched", count=len(users))
+    return f"dispatched:{len(users)}"
 
 
 async def reconcile_balances(ctx: dict[str, Any]) -> str:
@@ -498,10 +537,18 @@ class WorkerSettings:
         broadcast_withdrawal,
         confirm_withdrawal,
         reconcile_balances,
+        sweep_user,
+        cron_sweep_all,
     ]
     # 每日 03:00 (Asia/Taipei) = 19:00 UTC 跑對帳
+    # 每 5 分鐘掃一次 user 地址(phase 6D)
     cron_jobs = [
         cron(reconcile_balances, hour=19, minute=0, run_at_startup=False),
+        cron(
+            cron_sweep_all,
+            minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55},
+            run_at_startup=False,
+        ),
     ]
     redis_settings = _redis_settings()
     on_startup = startup

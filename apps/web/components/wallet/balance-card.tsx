@@ -9,7 +9,6 @@ import {
   ArrowUpRight,
   Clock,
   Coins,
-  Wallet,
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,10 +60,8 @@ export function BalanceCard() {
   }, []);
 
   const available = balance?.available ?? "0";
-  const onchain = balance?.onchain ?? "0";
   const pending = balance?.pending ?? "0";
   const showPending = Number(pending) > 0;
-  const onchainDiffers = balance && Number(onchain) !== Number(available);
 
   return (
     <Card className="bg-macaron-mint dark:bg-slate-900">
@@ -104,16 +101,6 @@ export function BalanceCard() {
                 <span className="text-sm font-normal">USDT</span>
               </p>
             </div>
-          ) : null}
-        </div>
-
-        {/* on-chain reference (smaller, only show if it differs from ledger or always for clarity) */}
-        <div className="flex items-center gap-2 rounded-lg border border-cream-edge bg-paper/50 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
-          <Wallet className="h-3.5 w-3.5" />
-          <span>{t("onchain")}</span>
-          <span className="font-mono tabular-nums">{fmt(onchain)} USDT</span>
-          {onchainDiffers ? (
-            <span className="ml-auto text-[10px] italic">{t("onchainDifferNote")}</span>
           ) : null}
         </div>
 

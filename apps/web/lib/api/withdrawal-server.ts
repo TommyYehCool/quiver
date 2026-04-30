@@ -5,6 +5,7 @@
 import type {
   AdminWithdrawal,
   FeePayerInfo,
+  HotWalletInfo,
   WithdrawalListResp,
   WithdrawalStatus,
 } from "@/lib/api/withdrawal";
@@ -42,4 +43,8 @@ export async function getAdminWithdrawalServer(
 
 export async function fetchFeePayerServer(cookieHeader: string): Promise<FeePayerInfo | null> {
   return get<FeePayerInfo>("/api/admin/platform/fee-payer", cookieHeader);
+}
+
+export async function fetchHotWalletServer(cookieHeader: string): Promise<HotWalletInfo | null> {
+  return get<HotWalletInfo>("/api/admin/platform/hot-wallet", cookieHeader);
 }

@@ -13,11 +13,15 @@ from app.api.deps import CurrentAdminDep, DbDep
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.schemas.api import ApiResponse
-from app.schemas.withdrawal import FeePayerInfo
+from app.schemas.withdrawal import FeePayerInfo, HotWalletInfo
 from app.services import tatum
 from app.services.platform import FEE_PAYER_MIN_TRX_FOR_WITHDRAWAL
 from app.services.tatum import TatumError, TatumNotConfigured
-from app.services.wallet import WalletError, get_platform_fee_payer_address
+from app.services.wallet import (
+    WalletError,
+    get_platform_fee_payer_address,
+    get_platform_hot_wallet_address,
+)
 
 router = APIRouter(prefix="/api/admin/platform", tags=["admin-platform"])
 logger = get_logger(__name__)
@@ -47,5 +51,38 @@ async def get_fee_payer(_: CurrentAdminDep, db: DbDep) -> ApiResponse[FeePayerIn
             trx_balance=trx_balance,
             network=settings.env,
             low_balance_warning=trx_balance < FEE_PAYER_MIN_TRX_FOR_WITHDRAWAL,
+        )
+    )
+
+
+@router.get("/hot-wallet", response_model=ApiResponse[HotWalletInfo])
+async def get_hot_wallet(_: CurrentAdminDep, db: DbDep) -> ApiResponse[HotWalletInfo]:
+    """HOT wallet 地址 + USDT/TRX 餘額。
+    所有提領從這裡出,所有 sweep 把 user 鏈上 USDT 集中到這裡。
+    """
+    try:
+        address = await get_platform_hot_wallet_address(db)
+    except WalletError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "wallet.systemNotReady", "message": str(e)},
+        ) from e
+
+    usdt_balance: Decimal = Decimal("0")
+    trx_balance: Decimal = Decimal("0")
+    try:
+        usdt_balance = await tatum.get_trc20_balance(address, settings.usdt_contract)
+        trx_balance = await tatum.get_trx_balance(address)
+    except TatumNotConfigured:
+        logger.warning("hot_wallet_tatum_not_configured")
+    except TatumError as e:
+        logger.warning("hot_wallet_tatum_error", error=str(e))
+
+    return ApiResponse[HotWalletInfo].ok(
+        HotWalletInfo(
+            address=address,
+            usdt_balance=usdt_balance,
+            trx_balance=trx_balance,
+            network=settings.env,
         )
     )

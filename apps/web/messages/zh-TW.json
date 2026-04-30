@@ -68,8 +68,6 @@
     "desc": "你的 USDT (TRC20) 可動用餘額。處理中的入金需要約 1 分鐘確認。",
     "available": "可動用",
     "pending": "處理中",
-    "onchain": "鏈上保管",
-    "onchainDifferNote": "(包含內部已轉出的部分)",
     "history": "最近活動",
     "viewAll": "看全部",
     "statusPending": "處理中",

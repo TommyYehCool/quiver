@@ -138,6 +138,33 @@ class ReconReportOut(BaseModel):
     error_count: int
 
 
+class BulkSweepOut(BaseModel):
+    dispatched: int
+    user_ids: list[int]
+
+
+@router.post("/bulk-sweep", response_model=ApiResponse[BulkSweepOut])
+async def bulk_sweep(
+    _: CurrentAdminDep,
+    db: DbDep,
+    arq: Annotated[object, Depends(get_arq_pool)],
+) -> ApiResponse[BulkSweepOut]:
+    """一次性把所有 user 鏈上 USDT sweep 到 HOT(phase 6D 啟用 / migration)。
+
+    每個 user 排一個 sweep_user 任務,具體會不會 sweep 看 service 內 threshold(10 USDT)。
+    """
+    from app.services.sweep import list_sweepable_users
+
+    users = await list_sweepable_users(db)
+    user_ids = [u.id for u in users]
+    for uid in user_ids:
+        await arq.enqueue_job("sweep_user", user_id=uid)  # type: ignore[attr-defined]
+    logger.info("bulk_sweep_dispatched", count=len(user_ids))
+    return ApiResponse[BulkSweepOut].ok(
+        BulkSweepOut(dispatched=len(user_ids), user_ids=user_ids)
+    )
+
+
 @router.post("/reconcile", response_model=ApiResponse[ReconReportOut])
 async def trigger_reconciliation(_: CurrentAdminDep, db: DbDep) -> ApiResponse[ReconReportOut]:
     """手動觸發對帳(平常會在每日 03:00 Asia/Taipei 自動跑)。"""

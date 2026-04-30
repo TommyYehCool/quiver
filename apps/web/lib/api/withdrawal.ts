@@ -129,3 +129,23 @@ export interface FeePayerInfo {
 export async function fetchFeePayer(): Promise<FeePayerInfo> {
   return apiFetch<FeePayerInfo>("/api/admin/platform/fee-payer");
 }
+
+export interface HotWalletInfo {
+  address: string;
+  usdt_balance: string;
+  trx_balance: string;
+  network: string;
+}
+
+export async function fetchHotWallet(): Promise<HotWalletInfo> {
+  return apiFetch<HotWalletInfo>("/api/admin/platform/hot-wallet");
+}
+
+export interface BulkSweepResult {
+  dispatched: number;
+  user_ids: number[];
+}
+
+export async function bulkSweep(): Promise<BulkSweepResult> {
+  return apiFetch<BulkSweepResult>("/api/admin/dev/bulk-sweep", { method: "POST" });
+}

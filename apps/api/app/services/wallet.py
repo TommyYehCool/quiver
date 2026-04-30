@@ -137,6 +137,57 @@ async def load_user_signing_keys(
         master_seed = b"\x00" * len(master_seed)  # noqa: F841
 
 
+# ---- HOT wallet (phase 6D) — 持有 sweep 完的 USDT,所有提領從這裡出 ----
+
+
+def _derive_platform_hot_wallet_address(master_seed: bytes) -> str:
+    """HOT wallet 路徑:m/44'/195'/2'/0/0(account 2,跟 user/FEE_PAYER 都隔開)。"""
+    bip44_mst = Bip44.FromSeed(master_seed, Bip44Coins.TRON)
+    addr_ctx = (
+        bip44_mst.Purpose()
+        .Coin()
+        .Account(2)
+        .Change(Bip44Changes.CHAIN_EXT)
+        .AddressIndex(0)
+    )
+    return addr_ctx.PublicKey().ToAddress()
+
+
+def _derive_hot_wallet_private_key_hex(master_seed: bytes) -> str:
+    bip44_mst = Bip44.FromSeed(master_seed, Bip44Coins.TRON)
+    addr_ctx = (
+        bip44_mst.Purpose()
+        .Coin()
+        .Account(2)
+        .Change(Bip44Changes.CHAIN_EXT)
+        .AddressIndex(0)
+    )
+    return addr_ctx.PrivateKey().Raw().ToHex()
+
+
+async def get_platform_hot_wallet_address(db: AsyncSession) -> str:
+    master_seed = await _load_master_seed(db)
+    try:
+        return _derive_platform_hot_wallet_address(master_seed)
+    finally:
+        master_seed = b"\x00" * len(master_seed)  # noqa: F841
+
+
+async def load_hot_signing_keys(
+    db: AsyncSession,
+) -> tuple[str, str, str, str]:
+    """提領用 — 回 (hot_addr, hot_priv, fee_payer_addr, fee_payer_priv)。"""
+    master_seed = await _load_master_seed(db)
+    try:
+        hot_addr = _derive_platform_hot_wallet_address(master_seed)
+        hot_priv = _derive_hot_wallet_private_key_hex(master_seed)
+        fp_addr = _derive_platform_fee_payer_address(master_seed)
+        fp_priv = _derive_fee_payer_private_key_hex(master_seed)
+        return hot_addr, hot_priv, fp_addr, fp_priv
+    finally:
+        master_seed = b"\x00" * len(master_seed)  # noqa: F841
+
+
 async def get_or_derive_tron_address(db: AsyncSession, user: User) -> str:
     """如果 user 已有 tron_address 直接回;否則派生 + 寫 DB + 回。"""
     if user.tron_address:
