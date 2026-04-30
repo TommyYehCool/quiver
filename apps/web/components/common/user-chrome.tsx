@@ -55,6 +55,14 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
 
   return (
     <>
+      {/* 馬卡龍背景暈染 — fixed 跟著 viewport 不隨滾動,opacity 低不打擾閱讀
+           不放 -z 避免被 body bg 蓋掉,改靠 pointer-events-none + 後續 header/main 自然疊在上面 */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -left-32 top-20 h-[28rem] w-[28rem] rounded-full bg-macaron-peach opacity-50 blur-3xl dark:opacity-15" />
+        <div className="absolute -right-24 top-1/3 h-96 w-96 rounded-full bg-macaron-mint opacity-40 blur-3xl dark:opacity-10" />
+        <div className="absolute -bottom-32 left-1/4 h-[28rem] w-[28rem] rounded-full bg-macaron-lavender opacity-40 blur-3xl dark:opacity-15" />
+      </div>
+
       <header className="sticky top-0 z-30 border-b border-cream-edge bg-paper/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
         <div className="container flex h-16 items-center justify-between gap-3">
           {/* Logo + primary nav */}

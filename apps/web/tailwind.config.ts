@@ -24,11 +24,13 @@ const config: Config = {
         },
         mint: "#10B981",
         amber: "#F59E0B",
+        // 全站背景暖色化:把偏冷淡紫換成奶油色,讓卡片之間的留白也有溫度,
+        // 跟 macaron 卡片更協調(原本 #F2ECF8 偏紫所以整頁感覺白白冷冷)
         cream: {
-          DEFAULT: "#F2ECF8",
-          edge: "#DDD3EC",
+          DEFAULT: "#F7F1EA",
+          edge: "#E8DECE",
         },
-        paper: "#FAF7FE",
+        paper: "#FCF8F1",
         macaron: {
           rose: "#FBE4E8",
           mint: "#E5F1E5",
