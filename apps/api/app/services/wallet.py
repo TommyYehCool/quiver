@@ -81,4 +81,19 @@ async def get_or_derive_tron_address(db: AsyncSession, user: User) -> str:
     await db.refresh(user)
 
     logger.info("tron_address_derived", user_id=user.id, address=address)
+
+    # Best-effort lazy Tatum subscription:現在就訂,日後 ngrok URL 變了
+    # 會由 lifespan / admin 手動 sync 來修正。失敗不影響地址派生。
+    try:
+        from app.services.subscription import (
+            resolve_callback_url,
+            sync_user_subscription,
+        )
+
+        callback_url = await resolve_callback_url()
+        if callback_url:
+            await sync_user_subscription(db, user, callback_url)
+    except Exception as e:
+        logger.warning("tatum_lazy_subscription_failed", user_id=user.id, error=str(e))
+
     return address

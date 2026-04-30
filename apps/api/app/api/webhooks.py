@@ -48,30 +48,44 @@ async def tatum_webhook(
 ) -> WebhookAck:
     _verify_token(token)
 
-    # Tatum 會同時送 INCOMING / OUTGOING 通知,我們只關心 incoming
-    if payload.type and payload.type.upper() not in ("", "INCOMING_FUNGIBLE_TX", "INCOMING"):
-        return WebhookAck(received=True, note=f"ignored type={payload.type}")
+    # 記下原始 payload 方便 debug(Tatum 真實 payload shape 跟文件描述常有出入)
+    logger.info(
+        "tatum_webhook_received",
+        tx_id=payload.txId,
+        type=payload.type,
+        asset=payload.asset,
+        amount=str(payload.amount),
+        token_id=payload.tokenId,
+    )
+
+    # 跳過 native TRX(我們只計 USDT-TRC20)— pipeline 驗證可以靠這個 log line
+    if payload.type and payload.type.lower() == "native":
+        return WebhookAck(received=True, note="ignored_native_trx")
+
+    # 跳過非 USDT 的 TRC20(其他穩定幣 / 一般 token)
+    asset_upper = (payload.asset or "").upper()
+    if asset_upper and asset_upper != "USDT":
+        return WebhookAck(received=True, note=f"ignored_asset_{asset_upper}")
 
     onchain_tx = await record_provisional_deposit(
         db,
         tx_hash=payload.txId,
         to_address=payload.address,
         amount=payload.amount,
-        currency=f"{payload.asset}-TRC20" if payload.asset else "USDT-TRC20",
+        currency="USDT-TRC20",
         block_number=payload.blockNumber,
         raw_payload=payload.model_dump(mode="json"),
     )
 
     if onchain_tx is None:
-        # 重複通知 / 地址不是我們的 / 0 amount — 都回 200 讓 Tatum 不要 retry
-        return WebhookAck(received=True, note="ignored or duplicate")
+        # 重複通知 / 地址不是我們的 / 0 或負 amount(出帳)— 都回 200 讓 Tatum 不要 retry
+        return WebhookAck(received=True, note="ignored_or_duplicate")
 
-    # 進入 confirmation 流程 — 直接排程一個 60s 後升 POSTED 的 mock job
-    # Phase 3C-2 會改成 polling 真實 block height
+    # 排程 confirmation polling — defer 10s 第一輪查(Tron block ~3s,大概等 1-2 個 block 到位)
     await arq.enqueue_job(  # type: ignore[attr-defined]
         "confirm_onchain_tx",
         onchain_tx_id=onchain_tx.id,
-        _defer_by=60,  # 60 秒後執行,模擬 19 個 block ≈ 57 秒
+        _defer_by=10,
     )
 
     return WebhookAck(received=True, onchain_tx_id=onchain_tx.id)

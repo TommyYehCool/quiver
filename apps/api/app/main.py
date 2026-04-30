@@ -70,12 +70,54 @@ async def _verify_kek_consistency() -> None:
     logger.info("kek_check_ok")
 
 
+async def _sync_tatum_subscriptions_best_effort() -> None:
+    """啟動時對所有已有 tron_address 的 user 同步 Tatum 訂閱。
+
+    完全 best-effort:任何失敗(ngrok 沒起、Tatum 沒設、API 暫時掛了)都只 log,不擋 startup。
+    管理員可隨時呼叫 POST /api/admin/setup/sync-tatum 手動再來一次。
+    """
+    from app.core.db import db_session
+    from app.services.subscription import resolve_callback_url, sync_all_subscriptions
+
+    logger = get_logger(__name__)
+    try:
+        callback_url = await resolve_callback_url()
+    except Exception as e:
+        logger.warning("tatum_sync_resolve_url_failed", error=str(e))
+        return
+    if not callback_url:
+        logger.info("tatum_sync_skipped_no_url")
+        return
+
+    try:
+        async with db_session() as session:
+            stats = await sync_all_subscriptions(session, callback_url)
+        logger.info(
+            "tatum_sync_lifespan_done",
+            callback_url=callback_url,
+            created=stats.created,
+            refreshed=stats.refreshed,
+            skipped=stats.skipped,
+            failed=stats.failed,
+        )
+    except Exception as e:
+        logger.warning("tatum_sync_lifespan_failed", error=str(e))
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     configure_logging("DEBUG" if settings.is_dev else "INFO")
     logger = get_logger(__name__)
     await _verify_kek_consistency()
     logger.info("api_starting", env=settings.env)
+    # ngrok 容器可能還沒起好,稍等一下再去抓 tunnel URL
+    import asyncio
+
+    async def deferred_sync() -> None:
+        await asyncio.sleep(3)
+        await _sync_tatum_subscriptions_best_effort()
+
+    asyncio.create_task(deferred_sync())  # noqa: RUF006 — fire-and-forget
     yield
     logger.info("api_stopping")
 

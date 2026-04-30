@@ -12,18 +12,25 @@ from pydantic import BaseModel, Field
 
 
 class TatumWebhookIn(BaseModel):
-    """Tatum INCOMING_FUNGIBLE_TX 通知的最小欄位集。
+    """Tatum ADDRESS_TRANSACTION 通知的欄位。
 
-    對應 Tatum 文件:https://docs.tatum.io/docs/notifications/incoming-fungible-transactions
+    Tron 鏈上的真實 payload 形狀(實測):
+      address, amount, counterAddress, asset, blockNumber, txId, type, tokenId, chain, subscriptionType
+
+    `type` 在 Tron 是 "native"(TRX)或 "trc20"(代幣)。
+    `tokenId` 對 trc20 是合約地址,native 則為 null。
     """
 
-    txId: str = Field(min_length=10, max_length=80)  # Tron tx hash
-    address: str = Field(min_length=34, max_length=34)  # 收款地址(我們的用戶之一)
+    txId: str = Field(min_length=10, max_length=80)
+    address: str = Field(min_length=34, max_length=34)
     amount: Decimal
-    asset: str = "USDT"
+    asset: str | None = None
     blockNumber: int | None = None
-    counterAddress: str | None = None  # 付款方,記錄用
-    type: str | None = None  # Tatum 區分 INCOMING/OUTGOING
+    counterAddress: str | None = None
+    type: str | None = None
+    tokenId: str | None = None
+    chain: str | None = None
+    subscriptionType: str | None = None
 
 
 class WebhookAck(BaseModel):

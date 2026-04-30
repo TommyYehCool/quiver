@@ -37,6 +37,8 @@ class User(Base, TimestampMixin):
     )
     locale: Mapped[str] = mapped_column(String(8), nullable=False, server_default="zh-TW")
     tron_address: Mapped[str | None] = mapped_column(String(34), unique=True, index=True)
+    tatum_sub_id: Mapped[str | None] = mapped_column(String(64))
+    tatum_sub_callback_url: Mapped[str | None] = mapped_column(String(512))
 
     @property
     def is_admin(self) -> bool:
