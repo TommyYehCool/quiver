@@ -17,10 +17,16 @@ class WalletOut(BaseModel):
 
 
 class BalanceOut(BaseModel):
-    """User 的可動用餘額 + 處理中金額。"""
+    """User 的多種餘額視角。
 
-    available: Decimal  # ledger 算出來,可動用
-    pending: Decimal  # 還在 PROVISIONAL 的入金
+    `available` (ledger):真正可動用 — 扣掉送出的 + 加上收到的內部轉帳
+    `onchain` (Tatum):你 derive 出來的 Tron 地址在鏈上的實際餘額,僅供參考
+    `pending`: PROVISIONAL onchain_txs 加總,正在等 19 confirmation 的入金
+    """
+
+    available: Decimal
+    onchain: Decimal
+    pending: Decimal
     currency: str = "USDT-TRC20"
 
 

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BalanceCard } from "@/components/wallet/balance-card";
 import { DevSimulator } from "@/components/admin/dev-simulator";
 import { ReceiveCard } from "@/components/wallet/receive-card";
+import { TransferCard } from "@/components/wallet/transfer-card";
 import { fetchMeServer } from "@/lib/auth";
 
 interface KycResp {
@@ -149,6 +150,7 @@ export default async function DashboardPage({
       {kyc?.status === "APPROVED" ? (
         <>
           <BalanceCard />
+          <TransferCard />
           <ReceiveCard />
           {isAdmin ? <DevSimulator userId={user.id} /> : null}
         </>

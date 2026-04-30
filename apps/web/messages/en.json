@@ -68,9 +68,66 @@
     "desc": "Your spendable USDT (TRC20) balance. Pending deposits take ~1 minute to confirm.",
     "available": "Available",
     "pending": "Pending",
-    "history": "Recent deposits",
+    "onchain": "On-chain",
+    "onchainDifferNote": "(includes internally transferred)",
+    "history": "Recent activity",
+    "viewAll": "View all",
     "statusPending": "Processing",
-    "statusPosted": "Confirmed"
+    "statusPosted": "Confirmed",
+    "typeDeposit": "Deposit",
+    "typeTransferIn": "Received",
+    "typeTransferOut": "Sent"
+  },
+  "transfer": {
+    "title": "Send",
+    "desc": "Transfer USDT to anyone by email. Internal transfers are free.",
+    "recipientLabel": "Recipient email",
+    "amountLabel": "Amount",
+    "noteLabel": "Note (optional)",
+    "notePlaceholder": "e.g. lunch split",
+    "review": "Review",
+    "confirm": {
+      "title": "Confirm transfer",
+      "subtitle": "This cannot be undone — double-check below.",
+      "to": "To",
+      "amount": "Amount",
+      "note": "Note",
+      "cancel": "Cancel",
+      "send": "Confirm & send"
+    },
+    "success": {
+      "title": "Sent ✓",
+      "message": "Sent {amount} USDT to {to}",
+      "again": "Send another"
+    },
+    "errors": {
+      "transfer": {
+        "recipientNotFound": "No user with that email",
+        "selfTransfer": "Cannot send to yourself",
+        "recipientKycRequired": "Recipient hasn't completed identity verification",
+        "senderKycRequired": "Please complete identity verification first",
+        "recipientSuspended": "Recipient account is suspended",
+        "amountMustBePositive": "Amount must be > 0",
+        "insufficientFunds": "Insufficient balance",
+        "commitFailed": "Failed to send, please retry"
+      }
+    }
+  },
+  "history": {
+    "title": "Activity",
+    "subtitle": "All deposits + internal transfers.",
+    "backToDashboard": "Back to home",
+    "filterAll": "All",
+    "filterDeposit": "Deposits",
+    "filterTransfer": "Transfers",
+    "listTitle": "Activity log",
+    "totalCount": "{n} record(s)",
+    "empty": "No records",
+    "statusPending": "Processing",
+    "statusPosted": "Done",
+    "typeDeposit": "Deposit",
+    "typeTransferIn": "Received",
+    "typeTransferOut": "Sent"
   },
   "wallet": {
     "title": "My receive address",

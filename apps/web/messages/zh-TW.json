@@ -68,9 +68,66 @@
     "desc": "你的 USDT (TRC20) 可動用餘額。處理中的入金需要約 1 分鐘確認。",
     "available": "可動用",
     "pending": "處理中",
-    "history": "最近的收款",
+    "onchain": "鏈上保管",
+    "onchainDifferNote": "(包含內部已轉出的部分)",
+    "history": "最近活動",
+    "viewAll": "看全部",
     "statusPending": "處理中",
-    "statusPosted": "已到帳"
+    "statusPosted": "已到帳",
+    "typeDeposit": "入金",
+    "typeTransferIn": "收到轉帳",
+    "typeTransferOut": "送出轉帳"
+  },
+  "transfer": {
+    "title": "轉帳",
+    "desc": "用對方的 email 發送 USDT,鏈上不收手續費。",
+    "recipientLabel": "收件人 Email",
+    "amountLabel": "金額",
+    "noteLabel": "備註(可選)",
+    "notePlaceholder": "例如:午餐 AA",
+    "review": "下一步",
+    "confirm": {
+      "title": "確認轉帳",
+      "subtitle": "送出後不能取消,請確認資訊正確。",
+      "to": "收件人",
+      "amount": "金額",
+      "note": "備註",
+      "cancel": "取消",
+      "send": "確認送出"
+    },
+    "success": {
+      "title": "轉帳成功 ✓",
+      "message": "已送出 {amount} USDT 給 {to}",
+      "again": "再轉一筆"
+    },
+    "errors": {
+      "transfer": {
+        "recipientNotFound": "找不到此收件人,請確認 email 是否正確",
+        "selfTransfer": "不能轉給自己",
+        "recipientKycRequired": "對方尚未完成身分驗證,無法接收",
+        "senderKycRequired": "請先完成身分驗證",
+        "recipientSuspended": "對方帳號已停權",
+        "amountMustBePositive": "金額必須大於 0",
+        "insufficientFunds": "餘額不足",
+        "commitFailed": "送出失敗,請稍後再試"
+      }
+    }
+  },
+  "history": {
+    "title": "活動紀錄",
+    "subtitle": "包含所有入金 + 內部轉帳。",
+    "backToDashboard": "回首頁",
+    "filterAll": "全部",
+    "filterDeposit": "入金",
+    "filterTransfer": "轉帳",
+    "listTitle": "紀錄",
+    "totalCount": "共 {n} 筆",
+    "empty": "沒有紀錄",
+    "statusPending": "處理中",
+    "statusPosted": "已完成",
+    "typeDeposit": "入金",
+    "typeTransferIn": "收到",
+    "typeTransferOut": "送出"
   },
   "wallet": {
     "title": "我的收款地址",

@@ -71,6 +71,7 @@ class LedgerTransaction(Base, TimestampMixin):
     )
     amount: Mapped[Decimal] = mapped_column(Numeric(30, 6), nullable=False)
     currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(200))
 
 
 class LedgerEntry(Base, TimestampMixin):

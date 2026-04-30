@@ -67,6 +67,40 @@ async def send_kyc_approved(to: str, display_name: str | None) -> bool:
     return await _send(to, "[Quiver] KYC 審核已通過", html)
 
 
+async def send_transfer_received(
+    to: str,
+    *,
+    sender_email: str,
+    sender_display_name: str | None,
+    amount: str,
+    currency: str,
+    note: str | None,
+) -> bool:
+    sender_label = sender_display_name or sender_email
+    note_block = (
+        f'<p style="background:#f1f5f9;border-radius:8px;padding:10px 14px;color:#334155">'
+        f"備註:{note}</p>"
+        if note
+        else ""
+    )
+    html = f"""
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:auto">
+      <h2>你收到一筆轉帳 💰</h2>
+      <p style="font-size:32px;font-weight:600;color:#10b981;margin:8px 0">
+        +{amount} <span style="font-size:14px;color:#64748b">{currency}</span>
+      </p>
+      <p>來自 <strong>{sender_label}</strong>(<span style="color:#64748b">{sender_email}</span>)</p>
+      {note_block}
+      <p style="margin-top:24px">
+        <a href="{settings.frontend_base_url}" style="background:#7c3aed;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none">
+          打開 Quiver
+        </a>
+      </p>
+    </div>
+    """
+    return await _send(to, f"[Quiver] 收到 {amount} {currency}", html)
+
+
 async def send_kyc_rejected(to: str, display_name: str | None, reason: str) -> bool:
     name = display_name or to
     html = f"""

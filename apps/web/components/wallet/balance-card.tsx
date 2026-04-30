@@ -1,19 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { useTranslations } from "next-intl";
-import { Clock, Coins, Loader2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import Link from "next/link";
+import {
+  ArrowDownLeft,
+  ArrowRight,
+  ArrowUpRight,
+  Clock,
+  Coins,
+  Wallet,
+} from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchMyBalance, fetchMyHistory, type Balance, type OnchainTx } from "@/lib/api/wallet";
+import {
+  fetchMyBalance,
+  fetchMyHistory,
+  type ActivityItem,
+  type Balance,
+} from "@/lib/api/wallet";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 5_000;
 
 export function BalanceCard() {
   const t = useTranslations("balance");
+  const locale = useLocale();
   const [balance, setBalance] = React.useState<Balance | null>(null);
-  const [history, setHistory] = React.useState<OnchainTx[]>([]);
+  const [history, setHistory] = React.useState<ActivityItem[]>([]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -22,17 +36,19 @@ export function BalanceCard() {
     async function tick() {
       let hasPending = false;
       try {
-        const [b, h] = await Promise.all([fetchMyBalance(), fetchMyHistory(10)]);
+        const [b, h] = await Promise.all([
+          fetchMyBalance(),
+          fetchMyHistory({ pageSize: 5 }),
+        ]);
         if (cancelled) return;
         setBalance(b);
-        setHistory(h);
+        setHistory(h.items);
         hasPending =
-          h.some((tx) => tx.status === "PROVISIONAL") || Number(b.pending) > 0;
+          h.items.some((it) => it.status === "PROVISIONAL") || Number(b.pending) > 0;
       } catch {
         // 靜默失敗 — 下次 poll 再試
       }
       if (cancelled) return;
-      // 處理中時 5s 一輪;閒置時 30s 一輪,降低 server 壓力
       pollTimer = setTimeout(tick, hasPending ? POLL_INTERVAL_MS : POLL_INTERVAL_MS * 6);
     }
     tick();
@@ -43,8 +59,10 @@ export function BalanceCard() {
   }, []);
 
   const available = balance?.available ?? "0";
+  const onchain = balance?.onchain ?? "0";
   const pending = balance?.pending ?? "0";
   const showPending = Number(pending) > 0;
+  const onchainDiffers = balance && Number(onchain) !== Number(available);
 
   return (
     <Card className="bg-macaron-mint dark:bg-slate-900">
@@ -81,14 +99,32 @@ export function BalanceCard() {
           ) : null}
         </div>
 
+        {/* on-chain reference (smaller, only show if it differs from ledger or always for clarity) */}
+        <div className="flex items-center gap-2 rounded-lg border border-cream-edge bg-paper/50 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
+          <Wallet className="h-3.5 w-3.5" />
+          <span>{t("onchain")}</span>
+          <span className="font-mono tabular-nums">{fmt(onchain)} USDT</span>
+          {onchainDiffers ? (
+            <span className="ml-auto text-[10px] italic">{t("onchainDifferNote")}</span>
+          ) : null}
+        </div>
+
         {history.length > 0 ? (
           <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              {t("history")}
-            </p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                {t("history")}
+              </p>
+              <Link
+                href={`/${locale}/wallet/history`}
+                className="flex items-center gap-1 text-xs text-brand hover:underline"
+              >
+                {t("viewAll")} <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
             <ul className="space-y-2">
-              {history.slice(0, 5).map((tx) => (
-                <HistoryRow key={tx.id} tx={tx} t={t} />
+              {history.map((it) => (
+                <HistoryRow key={it.id} it={it} t={t} />
               ))}
             </ul>
           </div>
@@ -99,42 +135,56 @@ export function BalanceCard() {
 }
 
 function HistoryRow({
-  tx,
+  it,
   t,
 }: {
-  tx: OnchainTx;
+  it: ActivityItem;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const isPending = tx.status === "PROVISIONAL";
+  const isPending = it.status === "PROVISIONAL";
+  const isOut = it.type === "TRANSFER_OUT";
+  const isIn = it.type === "TRANSFER_IN";
+  const sign = isOut ? "-" : "+";
+  const amountColor = isOut
+    ? "text-rose-600 dark:text-rose-400"
+    : "text-emerald-700 dark:text-emerald-400";
+  const Icon = isOut ? ArrowUpRight : ArrowDownLeft;
+  const typeLabel =
+    it.type === "DEPOSIT"
+      ? t("typeDeposit")
+      : isIn
+        ? t("typeTransferIn")
+        : t("typeTransferOut");
+
+  const counterparty = isIn || isOut ? it.counterparty_display_name ?? it.counterparty_email : null;
+
   return (
     <li className="flex items-center justify-between gap-3 rounded-lg border border-cream-edge bg-paper px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800">
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 text-xs">
           <span
             className={cn(
-              "rounded-full px-2 py-0.5 text-[10px] font-medium",
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
               isPending
                 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+                : isOut
+                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
             )}
           >
-            {isPending ? (
-              <>
-                <Loader2 className="-mt-0.5 mr-1 inline h-3 w-3 animate-spin" />
-                {t("statusPending")}
-              </>
-            ) : (
-              t("statusPosted")
-            )}
+            <Icon className="h-3 w-3" />
+            {typeLabel}{isPending ? ` · ${t("statusPending")}` : ""}
           </span>
-          <span className="text-slate-500">
-            {new Date(tx.created_at).toLocaleString("zh-TW")}
-          </span>
+          <span className="text-slate-500">{new Date(it.created_at).toLocaleString("zh-TW")}</span>
         </p>
-        <p className="truncate font-mono text-[10px] text-slate-400">{tx.tx_hash}</p>
+        <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+          {counterparty ? counterparty : it.tx_hash ? <span className="font-mono">{it.tx_hash}</span> : null}
+          {it.note ? <span className="ml-2 italic">「{it.note}」</span> : null}
+        </p>
       </div>
-      <p className="flex-none font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-        +{fmt(tx.amount)}
+      <p className={cn("flex-none font-semibold tabular-nums", amountColor)}>
+        {sign}
+        {fmt(it.amount)}
       </p>
     </li>
   );
@@ -145,4 +195,3 @@ function fmt(s: string): string {
   if (Number.isNaN(n)) return s;
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 }
-

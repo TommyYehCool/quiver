@@ -8,21 +8,32 @@ export interface Wallet {
 }
 
 export interface Balance {
-  available: string;
-  pending: string;
+  available: string;  // ledger 可動用
+  onchain: string;    // 鏈上 derive 地址實際餘額(參考用)
+  pending: string;    // 還在確認中的入金
   currency: string;
 }
 
-export interface OnchainTx {
-  id: number;
-  tx_hash: string;
+export type ActivityType = "DEPOSIT" | "TRANSFER_IN" | "TRANSFER_OUT";
+
+export interface ActivityItem {
+  id: string;  // "d:{onchain_id}" 或 "t:{ledger_id}"
+  type: ActivityType;
   amount: string;
   currency: string;
-  status: "PROVISIONAL" | "POSTED" | "INVALID";
-  confirmations: number;
-  block_number: number | null;
+  status: string;
+  note: string | null;
+  counterparty_email: string | null;
+  counterparty_display_name: string | null;
+  tx_hash: string | null;
   created_at: string;
-  posted_at: string | null;
+}
+
+export interface ActivityListResponse {
+  items: ActivityItem[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 export async function fetchMyWallet(): Promise<Wallet> {
@@ -33,8 +44,17 @@ export async function fetchMyBalance(): Promise<Balance> {
   return apiFetch<Balance>("/api/wallet/balance");
 }
 
-export async function fetchMyHistory(limit = 20): Promise<OnchainTx[]> {
-  return apiFetch<OnchainTx[]>(`/api/wallet/history?limit=${limit}`);
+export async function fetchMyHistory(opts: {
+  type?: "all" | "DEPOSIT" | "TRANSFER";
+  page?: number;
+  pageSize?: number;
+} = {}): Promise<ActivityListResponse> {
+  const params = new URLSearchParams();
+  if (opts.type) params.set("type", opts.type);
+  if (opts.page) params.set("page", String(opts.page));
+  if (opts.pageSize) params.set("page_size", String(opts.pageSize));
+  const qs = params.toString();
+  return apiFetch<ActivityListResponse>(`/api/wallet/history${qs ? `?${qs}` : ""}`);
 }
 
 export interface TatumSyncResult {

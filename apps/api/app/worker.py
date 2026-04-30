@@ -12,7 +12,7 @@ from app.core.db import db_session
 from app.core.logging import configure_logging, get_logger
 from app.models.onchain_tx import OnchainTx, OnchainTxStatus
 from app.services import tatum
-from app.services.email import send_kyc_approved, send_kyc_rejected
+from app.services.email import send_kyc_approved, send_kyc_rejected, send_transfer_received
 from app.services.ledger import post_deposit
 from app.services.tatum import TatumError, TatumNotConfigured
 
@@ -45,6 +45,26 @@ async def kyc_send_rejected_email(
     reason: str,
 ) -> bool:
     return await send_kyc_rejected(to=to, display_name=display_name, reason=reason)
+
+
+async def transfer_send_received_email(
+    ctx: dict[str, Any],
+    *,
+    to: str,
+    sender_email: str,
+    sender_display_name: str | None,
+    amount: str,
+    currency: str,
+    note: str | None,
+) -> bool:
+    return await send_transfer_received(
+        to=to,
+        sender_email=sender_email,
+        sender_display_name=sender_display_name,
+        amount=amount,
+        currency=currency,
+        note=note,
+    )
 
 
 async def _reschedule_confirm(
@@ -177,6 +197,7 @@ class WorkerSettings:
         noop,
         kyc_send_approved_email,
         kyc_send_rejected_email,
+        transfer_send_received_email,
         confirm_onchain_tx,
     ]
     redis_settings = _redis_settings()
