@@ -10,38 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BalanceCard } from "@/components/wallet/balance-card";
 import { RecentActivityCard } from "@/components/wallet/recent-activity-card";
 import { DevSimulator } from "@/components/admin/dev-simulator";
+import { fetchMyKycStatusServer } from "@/lib/api/kyc-server";
+import { fetchSetupStatusServer } from "@/lib/api/setup-server";
 import { fetchMeServer } from "@/lib/auth";
-
-interface KycResp {
-  status: "PENDING" | "APPROVED" | "REJECTED";
-}
-
-interface SetupResp {
-  initialized: boolean;
-  awaiting_verify: boolean;
-}
-
-const SERVER_API_BASE_URL = process.env.SERVER_API_BASE_URL ?? "http://api:8000";
-
-async function fetchKycStatus(cookieHeader: string): Promise<KycResp | null> {
-  const res = await fetch(`${SERVER_API_BASE_URL}/api/kyc/me`, {
-    headers: { Cookie: cookieHeader },
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  const wrapped = (await res.json()) as { success: boolean; data?: KycResp | null };
-  return wrapped.success ? wrapped.data ?? null : null;
-}
-
-async function fetchSetupStatus(cookieHeader: string): Promise<SetupResp | null> {
-  const res = await fetch(`${SERVER_API_BASE_URL}/api/admin/setup/status`, {
-    headers: { Cookie: cookieHeader },
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  const wrapped = (await res.json()) as { success: boolean; data?: SetupResp };
-  return wrapped.success ? wrapped.data ?? null : null;
-}
 
 export default async function DashboardPage({
   params: { locale },
@@ -50,12 +21,17 @@ export default async function DashboardPage({
 }) {
   const t = await getTranslations("dashboard");
   const cookieHeader = cookies().toString();
-  const user = await fetchMeServer(cookieHeader);
+
+  // 平行抓三件事,React.cache 也讓重複的 user/kyc 請求合併成單次。
+  // user / kyc 都已經被 (app)/(user) layouts 抓過,這裡 cache 命中是 free。
+  const [user, kyc, setupStatus] = await Promise.all([
+    fetchMeServer(cookieHeader),
+    fetchMyKycStatusServer(cookieHeader),
+    fetchSetupStatusServer(cookieHeader),
+  ]);
   if (!user) redirect(`/${locale}/login`);
 
-  const kyc = await fetchKycStatus(cookieHeader);
   const isAdmin = user.roles.includes("ADMIN");
-  const setupStatus = isAdmin ? await fetchSetupStatus(cookieHeader) : null;
   const needsSetup = isAdmin && setupStatus !== null && !setupStatus.initialized;
 
   const isApproved = kyc?.status === "APPROVED";

@@ -5,23 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { BalanceCard } from "@/components/wallet/balance-card";
 import { RecentActivityCard } from "@/components/wallet/recent-activity-card";
 import { WalletTabs } from "@/components/wallet/wallet-tabs";
-import { fetchMeServer } from "@/lib/auth";
-
-interface KycResp {
-  status: "PENDING" | "APPROVED" | "REJECTED";
-}
-
-const SERVER_API_BASE_URL = process.env.SERVER_API_BASE_URL ?? "http://api:8000";
-
-async function fetchKycStatus(cookieHeader: string): Promise<KycResp | null> {
-  const res = await fetch(`${SERVER_API_BASE_URL}/api/kyc/me`, {
-    headers: { Cookie: cookieHeader },
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  const wrapped = (await res.json()) as { success: boolean; data?: KycResp | null };
-  return wrapped.success ? wrapped.data ?? null : null;
-}
+import { fetchMyKycStatusServer } from "@/lib/api/kyc-server";
 
 export default async function WalletPage({
   params: { locale },
@@ -30,12 +14,11 @@ export default async function WalletPage({
 }) {
   const t = await getTranslations({ locale, namespace: "wallet" });
   const cookieHeader = cookies().toString();
-  const user = await fetchMeServer(cookieHeader);
-  if (!user) redirect(`/${locale}/login`);
 
-  const kyc = await fetchKycStatus(cookieHeader);
+  // (app)/layout 已驗 auth、(user)/layout 已抓 kyc — 這裡的 fetch 會 React.cache hit,
+  // 不會多打 HTTP。沒過 KYC 引導去 /kyc。
+  const kyc = await fetchMyKycStatusServer(cookieHeader);
   if (kyc?.status !== "APPROVED") {
-    // 還沒過 KYC 不能用錢包功能,引導去 KYC
     redirect(`/${locale}/kyc`);
   }
 
