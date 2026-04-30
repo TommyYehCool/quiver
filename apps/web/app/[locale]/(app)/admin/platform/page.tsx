@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { fetchMeServer } from "@/lib/auth";
 import { fetchFeePayerServer, fetchHotWalletServer } from "@/lib/api/withdrawal-server";
 import { BulkSweepButton } from "@/components/admin/bulk-sweep-button";
+import { FeeWithdrawButton } from "@/components/admin/fee-withdraw-button";
 
 export default async function AdminPlatformPage({
   params: { locale },
@@ -80,6 +81,20 @@ export default async function AdminPlatformPage({
                   </p>
                 </div>
               </div>
+              {hot.user_balances_total !== null && hot.user_balances_total !== undefined &&
+              Number(hot.platform_profit ?? 0) > 0 ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-xs dark:border-emerald-900 dark:bg-emerald-950/20">
+                  <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                    平台獲利提領 — 把累計手續費移到外部錢包
+                  </p>
+                  <p className="mt-1 text-slate-600 dark:text-slate-400">
+                    可提 {hot.platform_profit} USDT(系統強制保護:不能提到 user 餘額)
+                  </p>
+                  <div className="mt-3">
+                    <FeeWithdrawButton />
+                  </div>
+                </div>
+              ) : null}
               {hot.user_balances_total !== null && hot.user_balances_total !== undefined ? (
                 <div className="rounded-lg border border-cream-edge bg-paper/50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800/50">
                   <p className="font-medium text-slate-600 dark:text-slate-300">USDT 結構拆解</p>

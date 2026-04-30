@@ -144,6 +144,35 @@ export async function fetchHotWallet(): Promise<HotWalletInfo> {
   return apiFetch<HotWalletInfo>("/api/admin/platform/hot-wallet");
 }
 
+// phase 6E-2.5: 提領平台獲利
+export interface OutboundQuota {
+  hot_usdt_balance: string;
+  user_balances_total: string;
+  platform_profit: string;
+  fee_withdrawal_max: string;
+}
+
+export interface FeeWithdrawResult {
+  tx_hash: string;
+  amount: string;
+  to_address: string;
+}
+
+export async function fetchOutboundQuota(): Promise<OutboundQuota> {
+  return apiFetch<OutboundQuota>("/api/admin/platform/fee-withdraw/quota");
+}
+
+export async function feeWithdraw(input: {
+  to_address: string;
+  amount: string;
+  totp_code?: string | null;
+}): Promise<FeeWithdrawResult> {
+  return apiFetch<FeeWithdrawResult>("/api/admin/platform/fee-withdraw", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export interface BulkSweepResult {
   dispatched: number;
   user_ids: number[];
