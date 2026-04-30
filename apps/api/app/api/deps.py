@@ -130,3 +130,21 @@ async def get_current_admin(user: CurrentUserDep) -> User:
 
 
 CurrentAdminDep = Annotated[User, Depends(get_current_admin)]
+
+
+async def get_2fa_admin(admin: CurrentAdminDep) -> User:
+    """敏感 admin 動作要求 2FA 已啟用 + 已驗證(端點本身仍須在 body 裡帶 totp_code 並驗)。
+
+    這個 dep 本身只攔「沒開 2FA」的 admin 對動敏感資料 / 資金的 endpoint。
+    用法:把 fee-withdraw / cold-rebalance / 其他 admin 寫入操作都套上,
+    強迫所有 ops 人員都先開 2FA。
+    """
+    if admin.totp_enabled_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail={"code": "admin.twofaRequired"},
+        )
+    return admin
+
+
+TwoFAAdminDep = Annotated[User, Depends(get_2fa_admin)]

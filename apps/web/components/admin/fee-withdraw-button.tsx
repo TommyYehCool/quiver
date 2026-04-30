@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { CheckCircle2, Coins, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { CheckCircle2, Coins, Loader2, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,8 @@ const TRON_RE = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
  */
 export function FeeWithdrawButton() {
   const router = useRouter();
+  const params = useParams<{ locale: string }>();
+  const locale = params?.locale ?? "zh-TW";
   const [open, setOpen] = React.useState(false);
   const [quota, setQuota] = React.useState<OutboundQuota | null>(null);
   const [twofaEnabled, setTwofaEnabled] = React.useState(false);
@@ -84,6 +87,17 @@ export function FeeWithdrawButton() {
       const params = (e as { params?: { max?: string; requested?: string } }).params;
       if (code === "platform.outbound.exceedsQuota" && params) {
         setErr(`金額超過可提額度(最多 ${params.max} USDT)`);
+      } else if (code === "admin.twofaRequired") {
+        setErr("必須先啟用兩步驟驗證");
+        // 後端 412 → 拉回去重 fetch 一次,讓 UI 切到 CTA
+        try {
+          const t = await fetchTwoFAStatus();
+          setTwofaEnabled(t.enabled);
+        } catch {}
+      } else if (code === "platform.outbound.twofaRequired") {
+        setErr("請輸入兩步驟驗證碼");
+      } else if (code === "twofa.invalidCode") {
+        setErr("驗證碼錯誤,請重新輸入");
       } else {
         setErr(code);
       }
@@ -116,6 +130,27 @@ export function FeeWithdrawButton() {
               把累計手續費從 HOT 提到外部地址。**永遠不能超過獲利金額**(系統強制保護用戶資金)。
             </p>
 
+            {/* 沒開 2FA → 顯示去啟用的 CTA,disable 表單 */}
+            {!done && quota !== null && !twofaEnabled ? (
+              <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+                <p className="flex items-center gap-2 font-medium text-amber-900 dark:text-amber-200">
+                  <ShieldAlert className="h-4 w-4" />
+                  必須先啟用兩步驟驗證
+                </p>
+                <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
+                  動到平台資金的操作強制要求 2FA。請先到設定頁啟用,再回來提獲利。
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Button asChild size="sm">
+                    <Link href={`/${locale}/settings`}>前往設定 →</Link>
+                  </Button>
+                  <Button onClick={close} variant="outline" size="sm">
+                    取消
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
             {done ? (
               <div className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
                 <p className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-300">
@@ -139,7 +174,7 @@ export function FeeWithdrawButton() {
                   關閉
                 </Button>
               </div>
-            ) : (
+            ) : !twofaEnabled && quota !== null ? null : (
               <>
                 {quota ? (
                   <div className="mt-3 rounded-md border border-cream-edge bg-paper/50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800/50">

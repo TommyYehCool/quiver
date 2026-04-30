@@ -102,9 +102,12 @@ def _validate_address(addr: str) -> None:
 
 
 async def _verify_admin_2fa(db: AsyncSession, *, admin: User, totp_code: str | None) -> None:
-    """admin 有開 2FA 就強制驗。"""
+    """敏感 admin 操作:強制要求 admin 已啟用 + 必驗 totp_code。
+
+    雙層防護:即使呼叫者忘記用 TwoFAAdminDep dep,service 這層還是會擋下沒開 2FA 的 admin。
+    """
     if admin.totp_enabled_at is None:
-        return
+        raise OutboundError("admin.twofaRequired", http_status=412)
     if not totp_code:
         raise OutboundError("platform.outbound.twofaRequired")
     secret = await totp_svc.decrypt_user_secret(

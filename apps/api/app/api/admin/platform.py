@@ -10,7 +10,7 @@ from decimal import Decimal
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from app.api.deps import CurrentAdminDep, DbDep
+from app.api.deps import CurrentAdminDep, DbDep, TwoFAAdminDep
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.rate_limit import rate_limit
@@ -159,14 +159,15 @@ async def get_outbound_quota(
 async def fee_withdraw(
     payload: FeeWithdrawIn,
     request: Request,
-    admin: CurrentAdminDep,
+    admin: TwoFAAdminDep,  # ← 強制 admin 必須先啟用 2FA
     db: DbDep,
 ) -> ApiResponse[FeeWithdrawOut]:
     """提領平台獲利到指定地址。
 
     安全機制:
       - admin 必驗(CurrentAdminDep)
-      - 若 admin 有開 2FA,必驗 totp_code
+      - **強制** admin 已啟用 2FA(沒開 → 412 admin.twofaRequired)
+      - 每次都必驗 totp_code(TOTP 或 backup code)
       - amount 不能超過 platform_profit(永遠不會碰到用戶資金)
       - 寫 audit log
       - rate-limit 每 10 分鐘 10 次
