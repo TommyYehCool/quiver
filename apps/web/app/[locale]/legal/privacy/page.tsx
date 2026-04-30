@@ -56,8 +56,8 @@ export default function PrivacyPage() {
       <section className="mt-10">
         <h2 className="text-xl font-semibold">4. 資料保存期限</h2>
         <p className="mt-3">
-          交易紀錄依法保留 [N] 年(會計法 / 稅捐稽徵法)。KYC 資料自帳戶終止後保留
-          [N] 年。其他個資於目的消滅後刪除。
+          交易紀錄依法保留 7 年(會計法 / 稅捐稽徵法)。KYC 資料自帳戶終止後保留
+          5 年(洗錢防制法第 7 條)。其他個資於目的消滅後刪除。
         </p>
       </section>
 

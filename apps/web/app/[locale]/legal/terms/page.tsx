@@ -3,6 +3,12 @@
  *
  * ⚠ 此為佔位範本。上線前必須給律師 review,並依台灣金管會 / 個資法 / 洗錢防制法
  *   實際業務需要調整。
+ *
+ * 注意:本頁手續費 / 門檻數字必須跟後端 settings 一致(`.env` 的 WITHDRAWAL_FEE_USDT
+ * / WITHDRAWAL_LARGE_THRESHOLD_USD / MIN_WITHDRAWAL_USDT)。改任何數字都要同步:
+ *   1. 改 `.env` 那邊的值
+ *   2. 改本頁的數字
+ *   3. bump 後端 `TOS_CURRENT_VERSION`(account.py),強迫用戶重新同意
  */
 export default function TermsPage() {
   return (
@@ -42,11 +48,12 @@ export default function TermsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-xl font-semibold">4. 手續費</h2>
+        <h2 className="text-xl font-semibold">4. 手續費與限額</h2>
         <ul className="mt-3 list-inside list-disc space-y-1">
           <li>內部轉帳免手續費。</li>
-          <li>提領手續費:每筆 [X] USDT(隨網路 gas 費用調整)。</li>
-          <li>大額提領(≥ [X] USD)需經人工審核,可能需 1-3 個工作日。</li>
+          <li>提領手續費:每筆 1 USDT(隨網路 gas 費用調整,變更前會通知)。</li>
+          <li>最低提領金額:5 USDT(避免低於手續費的微額提領)。</li>
+          <li>大額提領(≥ 1,000 USD)需經人工審核,可能需 1-3 個工作日。</li>
         </ul>
       </section>
 
@@ -72,7 +79,7 @@ export default function TermsPage() {
         <p className="mt-3">
           使用者可隨時於設定頁申請刪除帳戶。本服務於確認餘額為 0 後執行
           soft delete:個人資料遮罩、帳戶標記為已刪除,但交易紀錄依法保留
-          [N] 年(會計法第 38 條 / 稅捐稽徵法第 30 條)。
+          7 年(會計法第 38 條 / 稅捐稽徵法第 30 條)。
         </p>
       </section>
 
