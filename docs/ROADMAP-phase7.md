@@ -67,20 +67,25 @@
 
 ---
 
-### 6E-3 — 平台資安基本盤(預估半天)
-- Audit log
-  - 獨立表 `audit_logs` (actor_id, actor_kind, action, target_kind, target_id, payload jsonb, ip, user_agent, created_at)
-  - 寫入時機:KYC review、提領 approve / reject / force-fail、bulk-sweep、admin 改 user 狀態、敏感讀取(看用戶 KYC 照片)
-  - admin 後台加 `/admin/audit` 頁,可篩 actor / action
-- Rate limiting
-  - 用 Redis,以 IP + endpoint 計算
-  - login: 5/min, register: 3/min, api(general): 60/min
-  - 超過回 429 + Retry-After header
-- 錯誤監控
-  - 接 Sentry(api + worker + web),只送 5xx 與 unhandled
-  - 加 release tag 串 git sha
+### 6E-3 — 平台資安基本盤 ✅(已完成,commit `b05726e`)
 
-**驗收**:後台看得到一週的 admin 操作流水、爆破登入會被擋、Sentry 收到一筆模擬錯誤。
+實作內容:
+- **Audit log**:`audit_logs` 表(append-only)+ `app.services.audit.write_audit()` helper
+  - 接到 14 個動作:KYC approve/reject、提領 approve/reject/force-fail、bulk-sweep、sync-tatum、replay-onchain-tx、reconcile、complete-deletion、deletion request/cancel、revoke-others、login-success
+  - `GET /api/admin/audit` 可依 actor / action / target / 分頁 filter
+  - `/admin/audit` 頁面 + Dashboard admin card 連結
+- **Rate limit**:Redis token-bucket 中介層(redis 掛了 fail-open)
+  - `/api/auth/google/login` 10/min
+  - `/api/withdrawals` submit 10/5min
+  - 超過回 429 + `Retry-After` header
+- **Sentry**:`sentry-sdk[fastapi]` + `app.core.sentry.init_sentry()` (DSN 空字串 no-op)
+  - 接到 api lifespan + arq worker startup
+  - env / release / traces sample rate 全從 settings
+
+驗收(已通過):
+- Audit 寫入 + 查詢 + 篩選都通
+- 第 11 次 login 回 429 + Retry-After: 60
+- 無 DSN 時 boot 乾淨
 
 ---
 
@@ -100,26 +105,38 @@
 
 ---
 
-### 6E-5 — 上線 checklist(預估 1 天)
-- Mainnet 切換
-  - `.env.production`:`USDT_CONTRACT=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`(mainnet)、`TATUM_TRON_CHAIN=tron-mainnet`、Tatum API key 換 mainnet
-  - 重新 derive 地址(用 production master seed,跟 dev seed 完全分開)
-  - 提領手續費調整為 mainnet 真實 gas cost
-- Master seed 產生 + 備份 runbook(`docs/runbook-bootstrap.md`)
-  - 產生流程、KEK 顯示一次的注意事項、Shamir Secret Sharing 拆分(3 of 5)、實體保險箱位置紀錄
-- DB 備份策略
-  - PostgreSQL pg_dump 每天凌晨,送 S3(SSE-KMS),保留 30 天
-  - 每週 restore drill 到測試環境
-- Cron 監控
-  - reconcile / sweep cron 跑完寫 heartbeat 到 Redis,heartbeat 過期 → Sentry alert
-- Legal pages
-  - `/terms` 服務條款、`/privacy` 隱私政策(找律師 review)
-  - 註冊頁勾選同意(寫 `users.tos_accepted_at`)
-- Performance
-  - 開啟 Postgres 慢查詢 log
-  - Next.js bundle analyzer 過一次,大頁面 code-split
+### 6E-5 — 上線 checklist ✅(已完成,commit `3797ffa`)
 
-**驗收**:換到 mainnet 跑一次小額 E2E、KEK 三人各持一份備份卡片、DB 還原演練成功。
+實作內容(code + config):
+- **Cron heartbeat**:`hb:cron:*` Redis key,sweep_all + reconcile cron 跑完寫,watchdog cron 每 10 分鐘掃 stale → Sentry alert
+- **TOS / Privacy gating**:`users.tos_accepted_at` + `tos_version` schema(既有用戶 backfill `pre-tos`)、`/api/me/tos` GET+POST、`TosAcceptedUserDep` 加在 KYC/transfer/withdrawal endpoint、frontend `TosGate` modal
+- **Legal pages**:`/legal/terms` + `/legal/privacy` 範本(已填入目前手續費 / 大額閾值 / 法定保留年限,佔位符標註待律師 review)
+- **Postgres slow query log**:`log_min_duration_statement=500` (≥ 500ms 的查詢寫到 docker logs)
+- **Next.js bundle analyzer**:`npm run analyze` (`@next/bundle-analyzer`)
+- **DB backup**:`infra/backup/{Dockerfile,pg_dump.sh,restore.sh}` (S3 SSE-KMS)
+
+Runbooks:
+- `docs/runbook-bootstrap.md` — KEK 產生 + Shamir 3-of-5 + 第一次 deploy
+- `docs/runbook-mainnet-cutover.md` — testnet → mainnet 切換 + 5 USDT sanity test
+- `docs/runbook-backup-restore.md` — 每日備份 + 每週 restore drill
+- `docs/runbook-launch-day.md` — T-7 → T+5 階段性 checklist
+
+Config:
+- `.env.production.example` 完整範本(Sentry DSN、S3 backup、強密碼提醒、mainnet keys)
+
+驗收(已通過):
+- TOS modal 用戶第一次登入會跳、勾同意後不再跳
+- TOS 沒同意過的提領被擋(403 `tos.notAccepted`)
+- cron heartbeat 寫到 redis、watchdog 跑出 `stale:0`
+- postgres `SHOW log_min_duration_statement` = 500ms
+
+**剩下未做的部分**(都需要 user 行動,不是 code):
+- 真實 master seed 產生(必須在 production 機器上跑)
+- 真 KEK 拆 Shamir 並分發
+- 換 mainnet Tatum key
+- 設真實 SENTRY_DSN
+- 設真實 S3 bucket + KMS key
+- 找律師 review TOS / Privacy 內容
 
 ---
 
@@ -207,12 +224,15 @@
 | 優先 | 項目 | 預估 | 阻擋上線? | 狀態 |
 |---|---|---|---|---|
 | P0 | 6E-1 OAuth 帳號完整化(sessions + export + 刪除) | 2-3 hr | ✅ | ✅ 完成 |
-| P0 | 6E-3 Audit log + Rate limiting + Sentry | 0.5 day | ✅ | ⏸ |
-| P0 | 6E-5 上線 checklist + Mainnet | 1 day | ✅ | ⏸ |
+| P0 | 6E-3 Audit log + Rate limiting + Sentry | 0.5 day | ✅ | ✅ 完成 |
+| P0 | 6E-5 上線 checklist + Mainnet 配置 | 1 day | ✅ | ✅ 完成 |
 | P1 | 6E-2 2FA + 白名單 + 頻率上限 | 0.5 day | 強烈建議 | ⏸ |
 | P1 | 6E-4 冷熱錢包架構 | 1 day | 強烈建議 | ⏸ |
 | P2 | Phase 7A-D Mobile App | 3-4 週 | ❌ | ⏸ |
 | P3 | Phase 8 各子項 | 持續 | ❌ | ⏸ |
 
-**最短上線路徑**:~~6E-1~~ → 6E-3 → 6E-5 → 上線(~2 天剩)。
-**完整上線路徑**:全部 6E → 上線(~3 天剩)。
+**所有 P0 已清掉**。理論上現在可上 mainnet,但 P1 強烈建議補強再上(2FA + 提領白名單對提領安全 / 冷熱錢包對資金安全)。
+
+**剩餘工作分布**:
+- code 類:6E-2(0.5 day)、6E-4(1 day)
+- 操作類(needs human):master seed gen / KEK 分發 / mainnet key / Sentry DSN / S3 / 律師 review
