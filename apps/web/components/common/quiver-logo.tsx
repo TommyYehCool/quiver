@@ -1,8 +1,13 @@
 /**
- * Quiver brand mark — squircle + 3 個堆疊向上的 chevron
+ * Quiver brand mark — squircle + Q 圓環 + 右下角向上箭頭三角形
  *
- * 概念:Quiver = 箭袋。3 個 chevron 堆疊代表「收齊在箭袋裡的 arrows」,
- * 整體向上指 = 成長 / 收進來。避開了 ◯+↗ 那個男性符號的視覺陷阱。
+ * 概念融合:
+ * - Q 圓環 = 字母 Q 識別 + 「容器」隱喻
+ * - 右下角向上指的小三角 = 蓄勢待發的箭(從箭袋射出的瞬間)
+ *
+ * 為什麼這樣不像 ♂(男性符號)、不像 🔍(搜尋):
+ * - 男性符號:circle + 45° 對角線(向 1 點鐘),這裡是「實心三角形向上」
+ * - 搜尋:circle + 直線斜出,這裡是「分離的三角形」不是斜線
  */
 
 type Variant = "mark" | "lockup";
@@ -27,10 +32,24 @@ export function QuiverLogo({
   return <Lockup size={size} theme={theme} className={className} />;
 }
 
-/**
- * 純 mark — squircle + 3 個堆疊 chevron。
- * 三個 chevron 由下到上漸縮,模擬「箭羽收進箭袋、頂端是箭尖出鞘」。
- */
+function MarkInner() {
+  return (
+    <>
+      {/* Q 圓環(粗 stroke,類似品牌字母 Q 的視覺 weight)*/}
+      <circle
+        cx="21"
+        cy="21"
+        r="11"
+        stroke="white"
+        strokeWidth="4.5"
+        fill="none"
+      />
+      {/* 向上三角形,位在 Q 圓環的右下,像從箭袋射出的箭頭 */}
+      <path d="M 30 38 L 38 38 L 34 30 Z" fill="white" />
+    </>
+  );
+}
+
 function Mark({ size, className }: { size: number; className?: string }) {
   return (
     <svg
@@ -56,27 +75,11 @@ function Mark({ size, className }: { size: number; className?: string }) {
           <stop offset="100%" stopColor="#4F46E5" />
         </linearGradient>
       </defs>
-      {/* Squircle 容器 */}
       <path
         d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z"
         fill="url(#quiver-mark-grad)"
       />
-      {/* 3 個堆疊 chevron(由下到上,寬度漸縮)*/}
-      <g
-        stroke="white"
-        strokeWidth="3.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      >
-        {/* 3 個 chevron — 高度同 7、peak 間距同 8、寬度漸縮(透視感)*/}
-        {/* 底部 chevron(最寬,width=22)*/}
-        <path d="M 13 35 L 24 28 L 35 35" />
-        {/* 中部 chevron(width=20)*/}
-        <path d="M 14 27 L 24 20 L 34 27" />
-        {/* 頂部 chevron(width=16,像箭尖)*/}
-        <path d="M 16 19 L 24 12 L 32 19" />
-      </g>
+      <MarkInner />
     </svg>
   );
 }
@@ -127,17 +130,7 @@ function Lockup({
           d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z"
           fill="url(#quiver-lockup-grad)"
         />
-        <g
-          stroke="white"
-          strokeWidth="3.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        >
-          <path d="M 13 35 L 24 28 L 35 35" />
-          <path d="M 14 27 L 24 20 L 34 27" />
-          <path d="M 16 19 L 24 12 L 32 19" />
-        </g>
+        <MarkInner />
       </g>
       <text
         x="60"

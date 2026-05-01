@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiver Logo — 5 個方向比較</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #0F172A;
+    color: white;
+    padding: 40px 20px;
+    line-height: 1.6;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .subtitle {
+    text-align: center;
+    color: #94A3B8;
+    margin-bottom: 40px;
+    font-size: 14px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .card {
+    background: #1E293B;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid #334155;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .label {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .badge {
+    background: #7C3AED;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .desc {
+    color: #94A3B8;
+    font-size: 13px;
+    margin-bottom: 16px;
+    min-height: 60px;
+  }
+  .preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    background: #0F172A;
+    padding: 20px 12px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+  .size-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .size-label {
+    font-size: 11px;
+    color: #64748B;
+    font-family: ui-monospace, monospace;
+  }
+  /* 16px favicon 模擬 — 在白底上 */
+  .favicon-test {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    align-items: center;
+  }
+  .favicon-test-label {
+    color: #475569;
+    font-size: 11px;
+    font-family: ui-monospace, monospace;
+  }
+  .pros-cons {
+    margin-top: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .pros-cons div { margin: 2px 0; }
+  .pro { color: #10B981; }
+  .con { color: #F59E0B; }
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    color: #64748B;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Quiver Logo — 5 個極簡方向</h1>
+<p class="subtitle">每個方向都通過 16px favicon 測試 + 黑白測試。挑你最喜歡的告訴我。</p>
+
+<div class="grid">
+
+<!-- ============ Option A ============ -->
+<div class="card">
+  <div class="card-header">
+    <div class="label">A. 單一 chevron</div>
+    <div class="badge">最簡</div>
+  </div>
+  <p class="desc">只有 1 條粗 chevron 向上,線寬一致。最極簡、最像 Linear / Vercel 的層級。</p>
+
+  <div class="preview">
+    <div class="size-group">
+      <svg width="180" height="180" viewBox="0 0 48 48" fill="none">
+        <defs>
+          <linearGradient id="ga" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#ga)"/>
+        <path d="M 12 33 L 24 17 L 36 33" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span class="size-label">180px</span>
+    </div>
+    <div class="size-group">
+      <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+        <use href="#ga-mark"/>
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#ga)"/>
+        <path d="M 12 33 L 24 17 L 36 33" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span class="size-label">64px</span>
+    </div>
+  </div>
+  <div class="favicon-test">
+    <span class="favicon-test-label">favicon test:</span>
+    <svg width="16" height="16" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#ga)"/><path d="M 12 33 L 24 17 L 36 33" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+    <svg width="32" height="32" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#ga)"/><path d="M 12 33 L 24 17 L 36 33" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+  </div>
+  <div class="pros-cons">
+    <div class="pro">✓ 16px 看得清</div>
+    <div class="pro">✓ 寓意「上升 / 收進」</div>
+    <div class="con">⚠ 較通用,跟「箭袋」連結弱</div>
+  </div>
+</div>
+
+<!-- ============ Option B ============ -->
+<div class="card">
+  <div class="card-header">
+    <div class="label">B. 字母 Q + 斜線</div>
+    <div class="badge">字母</div>
+  </div>
+  <p class="desc">圓圈 + 右下短斜線(typographic Q tail,5 點鐘方向不是男性符號的 1 點鐘方向)。最直接的品牌字母識別。</p>
+
+  <div class="preview">
+    <div class="size-group">
+      <svg width="180" height="180" viewBox="0 0 48 48" fill="none">
+        <defs>
+          <linearGradient id="gb" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gb)"/>
+        <circle cx="22" cy="22" r="11" stroke="white" stroke-width="4" fill="none"/>
+        <line x1="30" y1="30" x2="37" y2="37" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <span class="size-label">180px</span>
+    </div>
+    <div class="size-group">
+      <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gb)"/>
+        <circle cx="22" cy="22" r="11" stroke="white" stroke-width="4" fill="none"/>
+        <line x1="30" y1="30" x2="37" y2="37" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <span class="size-label">64px</span>
+    </div>
+  </div>
+  <div class="favicon-test">
+    <span class="favicon-test-label">favicon test:</span>
+    <svg width="16" height="16" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gb)"/><circle cx="22" cy="22" r="11" stroke="white" stroke-width="4" fill="none"/><line x1="30" y1="30" x2="37" y2="37" stroke="white" stroke-width="4" stroke-linecap="round"/></svg>
+    <svg width="32" height="32" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gb)"/><circle cx="22" cy="22" r="11" stroke="white" stroke-width="4" fill="none"/><line x1="30" y1="30" x2="37" y2="37" stroke="white" stroke-width="4" stroke-linecap="round"/></svg>
+  </div>
+  <div class="pros-cons">
+    <div class="pro">✓ Q 字母直接識別品牌</div>
+    <div class="pro">✓ 斜線在 5 點鐘方向(非 1 點鐘),跟 ♂ 區隔明確</div>
+    <div class="con">⚠ 跟 Q-字母 fintech 容易撞臉(Quora、Quizlet 等)</div>
+  </div>
+</div>
+
+<!-- ============ Option C ============ -->
+<div class="card">
+  <div class="card-header">
+    <div class="label">C. 3 個等寬 chevron</div>
+    <div class="badge">疊加</div>
+  </div>
+  <p class="desc">3 條等寬等高 chevron 均勻堆疊。比目前版本更整齊(現在版本有透視漸縮)。stack 概念明確。</p>
+
+  <div class="preview">
+    <div class="size-group">
+      <svg width="180" height="180" viewBox="0 0 48 48" fill="none">
+        <defs>
+          <linearGradient id="gc" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gc)"/>
+        <g stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M 13 35 L 24 28 L 35 35"/>
+          <path d="M 13 27 L 24 20 L 35 27"/>
+          <path d="M 13 19 L 24 12 L 35 19"/>
+        </g>
+      </svg>
+      <span class="size-label">180px</span>
+    </div>
+    <div class="size-group">
+      <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gc)"/>
+        <g stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M 13 35 L 24 28 L 35 35"/>
+          <path d="M 13 27 L 24 20 L 35 27"/>
+          <path d="M 13 19 L 24 12 L 35 19"/>
+        </g>
+      </svg>
+      <span class="size-label">64px</span>
+    </div>
+  </div>
+  <div class="favicon-test">
+    <span class="favicon-test-label">favicon test:</span>
+    <svg width="16" height="16" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gc)"/><g stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M 13 35 L 24 28 L 35 35"/><path d="M 13 27 L 24 20 L 35 27"/><path d="M 13 19 L 24 12 L 35 19"/></g></svg>
+    <svg width="32" height="32" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gc)"/><g stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M 13 35 L 24 28 L 35 35"/><path d="M 13 27 L 24 20 L 35 27"/><path d="M 13 19 L 24 12 L 35 19"/></g></svg>
+  </div>
+  <div class="pros-cons">
+    <div class="pro">✓ 「stack / 收齊多支箭」概念明確</div>
+    <div class="pro">✓ 等距等寬,visual rhythm 強</div>
+    <div class="con">⚠ 16px 時 3 條可能糊在一起</div>
+  </div>
+</div>
+
+<!-- ============ Option D ============ -->
+<div class="card">
+  <div class="card-header">
+    <div class="label">D. 容器 + 箭</div>
+    <div class="badge">敘事</div>
+  </div>
+  <p class="desc">U 形容器 + 中央 1 支向上的箭(箭頭 + 軸)。最直接的「容器收納箭」具象化,但保持極簡。</p>
+
+  <div class="preview">
+    <div class="size-group">
+      <svg width="180" height="180" viewBox="0 0 48 48" fill="none">
+        <defs>
+          <linearGradient id="gd" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gd)"/>
+        <g stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <!-- U 形容器 -->
+          <path d="M 13 24 L 13 30 Q 13 38 24 38 Q 35 38 35 30 L 35 24"/>
+          <!-- 箭軸 + 箭頭(穿出容器) -->
+          <line x1="24" y1="34" x2="24" y2="11"/>
+          <path d="M 18 17 L 24 11 L 30 17"/>
+        </g>
+      </svg>
+      <span class="size-label">180px</span>
+    </div>
+    <div class="size-group">
+      <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gd)"/>
+        <g stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M 13 24 L 13 30 Q 13 38 24 38 Q 35 38 35 30 L 35 24"/>
+          <line x1="24" y1="34" x2="24" y2="11"/>
+          <path d="M 18 17 L 24 11 L 30 17"/>
+        </g>
+      </svg>
+      <span class="size-label">64px</span>
+    </div>
+  </div>
+  <div class="favicon-test">
+    <span class="favicon-test-label">favicon test:</span>
+    <svg width="16" height="16" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gd)"/><g stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M 13 24 L 13 30 Q 13 38 24 38 Q 35 38 35 30 L 35 24"/><line x1="24" y1="34" x2="24" y2="11"/><path d="M 18 17 L 24 11 L 30 17"/></g></svg>
+    <svg width="32" height="32" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#gd)"/><g stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M 13 24 L 13 30 Q 13 38 24 38 Q 35 38 35 30 L 35 24"/><line x1="24" y1="34" x2="24" y2="11"/><path d="M 18 17 L 24 11 L 30 17"/></g></svg>
+  </div>
+  <div class="pros-cons">
+    <div class="pro">✓ 「箭袋 + 箭」概念最直接(不需解釋)</div>
+    <div class="pro">✓ U 形跟箭兩元素清楚不混</div>
+    <div class="con">⚠ 元素數 = 3,稍微比 A/E 複雜</div>
+  </div>
+</div>
+
+<!-- ============ Option E ============ -->
+<div class="card">
+  <div class="card-header">
+    <div class="label">E. 純三角形(Vercel 風)</div>
+    <div class="badge">大膽</div>
+  </div>
+  <p class="desc">單一向上實心三角形,白色填充。最大膽、最 favicon-friendly。Vercel / Linear / Anthropic 等級的極簡。</p>
+
+  <div class="preview">
+    <div class="size-group">
+      <svg width="180" height="180" viewBox="0 0 48 48" fill="none">
+        <defs>
+          <linearGradient id="ge" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7C3AED"/><stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#ge)"/>
+        <path d="M 24 12 L 38 35 L 10 35 Z" fill="white"/>
+      </svg>
+      <span class="size-label">180px</span>
+    </div>
+    <div class="size-group">
+      <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#ge)"/>
+        <path d="M 24 12 L 38 35 L 10 35 Z" fill="white"/>
+      </svg>
+      <span class="size-label">64px</span>
+    </div>
+  </div>
+  <div class="favicon-test">
+    <span class="favicon-test-label">favicon test:</span>
+    <svg width="16" height="16" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#ge)"/><path d="M 24 12 L 38 35 L 10 35 Z" fill="white"/></svg>
+    <svg width="32" height="32" viewBox="0 0 48 48"><path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#ge)"/><path d="M 24 12 L 38 35 L 10 35 Z" fill="white"/></svg>
+  </div>
+  <div class="pros-cons">
+    <div class="pro">✓ 終極極簡,任何尺寸都清楚</div>
+    <div class="pro">✓ 「箭頭」隱喻清楚</div>
+    <div class="con">⚠ 跟 Vercel / Play 三角形容易撞</div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  <p>選好告訴我代號(A / B / C / D / E),我直接接到 production。</p>
+  <p style="margin-top: 8px; font-size: 12px;">想合併兩個概念也行(例:「A 但加 D 的容器底」)。</p>
+</div>
+
+</body>
+</html>
