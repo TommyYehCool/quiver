@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     withdrawal_daily_count_limit: int = 3
     withdrawal_daily_amount_limit_usd: Decimal = Decimal("5000")
 
+    # ---- Earn:Bitfinex platform key(可選,空就不能跑 platform 模式)----
+    # F-Phase 1 給 Tommy 自己的 internal earn_account 用;
+    # 未來 V0.5 commercial 也用同一把(共用 platform float)
+    bitfinex_api_key: SecretStr = SecretStr("")
+    bitfinex_api_secret: SecretStr = SecretStr("")
+
     # ---- 6E-4:冷熱錢包架構 ----
     # 你掌控但跟系統分離的 Tron 地址(TronLink、硬體錢包、多簽…),系統只讀,不簽。
     # 空字串 = 未設,/admin/platform 上的 COLD 卡會顯示「未設定」。

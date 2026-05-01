@@ -20,7 +20,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
-    LargeBinary,
     Numeric,
     SmallInteger,
     String,
@@ -167,8 +166,9 @@ class EarnBitfinexConnection(Base):
     is_platform_key: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false"
     )
-    encrypted_api_key: Mapped[bytes | None] = mapped_column(LargeBinary)
-    encrypted_api_secret: Mapped[bytes | None] = mapped_column(LargeBinary)
+    encrypted_api_key: Mapped[str | None] = mapped_column(Text)
+    encrypted_api_secret: Mapped[str | None] = mapped_column(Text)
+    # base64-encoded envelope blob(同 totp_secret_enc 風格)
     key_version: Mapped[int | None] = mapped_column(SmallInteger)
     permissions: Mapped[str] = mapped_column(String(32), nullable=False)
     # BitfinexPermissions.READ / .READ_FUNDING_WRITE

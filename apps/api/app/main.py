@@ -29,6 +29,7 @@ from app.api import (
 from app.api.admin import audit as admin_audit
 from app.api.admin import deletions as admin_deletions
 from app.api.admin import dev as admin_dev
+from app.api.admin import earn as admin_earn
 from app.api.admin import overview as admin_overview
 from app.api.admin import kyc as admin_kyc
 from app.api.admin import platform as admin_platform
@@ -207,6 +208,7 @@ app.include_router(admin_platform.router)
 app.include_router(admin_deletions.router)
 app.include_router(admin_audit.router)
 app.include_router(admin_overview.router)
+app.include_router(admin_earn.router)
 
 
 @app.get("/healthz", tags=["health"])

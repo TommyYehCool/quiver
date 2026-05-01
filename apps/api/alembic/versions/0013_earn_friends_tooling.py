@@ -118,8 +118,9 @@ def upgrade() -> None:
         ),
         # True  = 用 Quiver platform 共用 key(Commercial mode,Phase 1 都是 false)
         # False = 用此朋友 / 用戶自己的 key
-        sa.Column("encrypted_api_key", sa.LargeBinary(), nullable=True),
-        sa.Column("encrypted_api_secret", sa.LargeBinary(), nullable=True),
+        sa.Column("encrypted_api_key", sa.Text(), nullable=True),
+        sa.Column("encrypted_api_secret", sa.Text(), nullable=True),
+        # base64-encoded envelope blob(同 totp_secret_enc 風格)
         # nullable: is_platform_key=True 時不存(走 platform 共用 key)
         sa.Column("key_version", sa.SmallInteger(), nullable=True),
         sa.Column("permissions", sa.String(32), nullable=False),
