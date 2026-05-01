@@ -44,8 +44,8 @@ function MarkInner() {
         strokeWidth="4.5"
         fill="none"
       />
-      {/* 向上三角形,位在 Q 圓環的右下,像從箭袋射出的箭頭 */}
-      <path d="M 30 38 L 38 38 L 34 30 Z" fill="white" />
+      {/* 向上三角形,位在 Q 圓環的右下,底部跟圓環底部對齊(y=32)*/}
+      <path d="M 30 32 L 38 32 L 34 24 Z" fill="white" />
     </>
   );
 }
