@@ -23,6 +23,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
+import { QuiverLogo } from "@/components/common/quiver-logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 
 export default function LandingPage({
@@ -67,7 +68,7 @@ function Header({ locale }: { locale: string }) {
   return (
     <header className="container flex h-16 items-center justify-between">
       <Link href={`/${locale}`} className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-xl bg-brand-gradient" aria-hidden />
+        <QuiverLogo size={36} />
         <span className="text-lg font-semibold tracking-tight">Quiver</span>
       </Link>
       <div className="flex items-center gap-2">

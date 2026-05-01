@@ -18,6 +18,7 @@ import {
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { LogoutButton } from "@/components/common/logout-button";
 import { NotificationBell } from "@/components/common/notification-bell";
+import { QuiverLogo } from "@/components/common/quiver-logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -68,7 +69,7 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
           {/* Logo + primary nav */}
           <div className="flex items-center gap-6">
             <Link href={`/${locale}/dashboard`} className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl bg-brand-gradient" aria-hidden />
+              <QuiverLogo size={36} />
               <span className="text-lg font-semibold tracking-tight">Quiver</span>
             </Link>
             <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">

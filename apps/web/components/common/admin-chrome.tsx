@@ -21,6 +21,7 @@ import {
 
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { LogoutButton } from "@/components/common/logout-button";
+import { QuiverLogo } from "@/components/common/quiver-logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +85,7 @@ export function AdminChrome({
         <div className="container flex h-16 items-center justify-between gap-3">
           <div className="flex items-center gap-6">
             <Link href={`/${locale}/admin`} className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl bg-violet-600" aria-hidden />
+              <QuiverLogo size={36} />
               <span className="text-lg font-semibold tracking-tight text-violet-900 dark:text-violet-200">
                 Quiver Admin
               </span>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" fill="none" aria-label="Quiver">
+  <defs>
+    <linearGradient id="quiver-grad-l" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+  <!-- Mark -->
+  <g>
+    <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#quiver-grad-l)"/>
+    <circle cx="21" cy="21" r="9" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 27 27 L 37 37" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 32 37 L 37 37 L 37 32" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <!-- Wordmark — dark text for light background -->
+  <text x="60" y="33" font-family="Inter, system-ui, sans-serif" font-size="26" font-weight="600" fill="#0F172A" letter-spacing="-0.5">Quiver</text>
+</svg>
