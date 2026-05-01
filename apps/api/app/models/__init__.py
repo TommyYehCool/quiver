@@ -2,6 +2,18 @@
 
 from app.models.audit_log import ActorKind, AuditLog, TargetKind
 from app.models.base import Base
+from app.models.earn import (
+    BitfinexPermissions,
+    CustodyMode,
+    EarnAccount,
+    EarnBitfinexConnection,
+    EarnEvmAddress,
+    EarnFeeAccrual,
+    EarnPositionSnapshot,
+    EarnTier,
+    FeeAccrualStatus,
+    FeePaidMethod,
+)
 from app.models.kyc import KycStatus, KycSubmission
 from app.models.ledger import (
     Account,
@@ -27,7 +39,17 @@ __all__ = [
     "ActorKind",
     "AuditLog",
     "Base",
+    "BitfinexPermissions",
+    "CustodyMode",
+    "EarnAccount",
+    "EarnBitfinexConnection",
+    "EarnEvmAddress",
+    "EarnFeeAccrual",
+    "EarnPositionSnapshot",
+    "EarnTier",
     "EntryDirection",
+    "FeeAccrualStatus",
+    "FeePaidMethod",
     "KycStatus",
     "KycSubmission",
     "LedgerEntry",

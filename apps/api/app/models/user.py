@@ -66,6 +66,15 @@ class User(Base, TimestampMixin):
         Boolean, nullable=False, server_default="false"
     )
 
+    # phase 9 / Friends Tooling: Earn 系統角色
+    # 'none' = 沒參與 Earn(預設)
+    # 'internal' = Tommy 自己 / admin
+    # 'friend' = friends-only(self-custody)
+    # 'commercial' = V0.5 公開用戶(platform-custody)
+    earn_tier: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="none"
+    )
+
     @property
     def is_admin(self) -> bool:
         return UserRole.ADMIN.value in self.roles
