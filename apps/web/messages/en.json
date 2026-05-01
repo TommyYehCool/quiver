@@ -25,6 +25,13 @@
         "desc": "Withdraw to any wallet — we cover the on-chain fees."
       }
     },
+    "naming": {
+      "badge": "Etymology",
+      "title": "Why \"Quiver\"?",
+      "subtitle": "A quiver is the case archers use to hold their arrows.",
+      "story": "We think of each USDT in your wallet like an arrow. Quiver is YOUR case — keeping your assets organized, ready to deploy, and safely held.",
+      "tagline": "Your money isn't on some exchange or buried in some protocol — it's in your own Quiver."
+    },
     "painPoint": {
       "title": "Why is crypto so painful in Taiwan?",
       "subtitle": "We handle all the insider details so it feels as easy as Line Pay.",

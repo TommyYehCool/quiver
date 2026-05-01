@@ -1,22 +1,16 @@
 /**
- * Quiver brand mark — squircle 容器 + Q 圓環 + 突破箭頭
+ * Quiver brand mark — squircle + 3 個堆疊向上的 chevron
  *
- * 概念:Quiver = 箭袋。圓環是容器,箭頭是「動」(收 / 發 / 成長)。
- * 跟原本 squircle gradient blob 相比,加上有故事的 mark,辨識度更高且 favicon 可用。
+ * 概念:Quiver = 箭袋。3 個 chevron 堆疊代表「收齊在箭袋裡的 arrows」,
+ * 整體向上指 = 成長 / 收進來。避開了 ◯+↗ 那個男性符號的視覺陷阱。
  */
 
 type Variant = "mark" | "lockup";
 type Theme = "auto" | "light" | "dark";
 
 interface QuiverLogoProps {
-  /**
-   * "mark" 只 logo icon(預設,headers 通常配 wordmark text);
-   * "lockup" 含 wordmark "Quiver" 一起。
-   */
   variant?: Variant;
-  /** 高度(px)。寬度自動推。 */
   size?: number;
-  /** 預設 auto 跟著 dark mode tailwind class 切。 */
   theme?: Theme;
   className?: string;
 }
@@ -30,10 +24,13 @@ export function QuiverLogo({
   if (variant === "mark") {
     return <Mark size={size} className={className} />;
   }
-  // lockup: mark + wordmark
   return <Lockup size={size} theme={theme} className={className} />;
 }
 
+/**
+ * 純 mark — squircle + 3 個堆疊 chevron。
+ * 三個 chevron 由下到上漸縮,模擬「箭羽收進箭袋、頂端是箭尖出鞘」。
+ */
 function Mark({ size, className }: { size: number; className?: string }) {
   return (
     <svg
@@ -59,32 +56,26 @@ function Mark({ size, className }: { size: number; className?: string }) {
           <stop offset="100%" stopColor="#4F46E5" />
         </linearGradient>
       </defs>
+      {/* Squircle 容器 */}
       <path
         d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z"
         fill="url(#quiver-mark-grad)"
       />
-      <circle
-        cx="21"
-        cy="21"
-        r="9"
+      {/* 3 個堆疊 chevron(由下到上,寬度漸縮)*/}
+      <g
         stroke="white"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M 27 27 L 37 37"
-        stroke="white"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M 32 37 L 37 37 L 37 32"
-        stroke="white"
-        strokeWidth="3"
+        strokeWidth="3.2"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
-      />
+      >
+        {/* 底部 chevron(最寬)*/}
+        <path d="M 13 33 L 24 24 L 35 33" />
+        {/* 中部 chevron */}
+        <path d="M 14 25 L 24 16 L 34 25" />
+        {/* 頂部 chevron(略小,像箭尖)*/}
+        <path d="M 17 17 L 24 11 L 31 17" />
+      </g>
     </svg>
   );
 }
@@ -98,7 +89,6 @@ function Lockup({
   theme: Theme;
   className?: string;
 }) {
-  // 寬度比例:200/48 = 4.17(svg viewBox 已固定),依 size 推 width
   const width = (size * 200) / 48;
   const textColorClass =
     theme === "auto"
@@ -136,28 +126,17 @@ function Lockup({
           d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z"
           fill="url(#quiver-lockup-grad)"
         />
-        <circle
-          cx="21"
-          cy="21"
-          r="9"
+        <g
           stroke="white"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 27 27 L 37 37"
-          stroke="white"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 32 37 L 37 37 L 37 32"
-          stroke="white"
-          strokeWidth="3"
+          strokeWidth="3.2"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
-        />
+        >
+          <path d="M 13 33 L 24 24 L 35 33" />
+          <path d="M 14 25 L 24 16 L 34 25" />
+          <path d="M 17 17 L 24 11 L 31 17" />
+        </g>
       </g>
       <text
         x="60"

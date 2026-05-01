@@ -37,6 +37,7 @@ export default function LandingPage({
       <div className="relative">
         <Header locale={locale} />
         <Hero locale={locale} />
+        <Naming />
         <PainPoint />
         <Features />
         <Earn locale={locale} />
@@ -107,6 +108,45 @@ function Hero({ locale }: { locale: string }) {
           <Button asChild variant="outline" size="lg">
             <Link href="#features">{t("secondary")}</Link>
           </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Naming section — 為什麼叫 Quiver?
+ * 緊接 Hero 之後,讓用戶第一時間理解品牌名故事。
+ * Layout:logo 大圖 + 三段式描述。
+ */
+function Naming() {
+  const t = useTranslations("marketing.naming");
+  return (
+    <section className="container py-12 md:py-20">
+      <div className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2">
+        {/* Left: 大 logo + 視覺輔助 */}
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 -z-10 rounded-full bg-bubble-lavender/40 blur-3xl dark:bg-violet-950/40" />
+          <QuiverLogo size={180} className="drop-shadow-2xl" />
+        </div>
+
+        {/* Right: 文案 */}
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-bubble-lavender px-3 py-1 text-xs font-medium text-violet-800 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300">
+            <Sparkles className="h-3 w-3" />
+            {t("badge")}
+          </div>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
+            {t("title")}
+          </h2>
+          <p className="mt-4 text-base text-slate-600 dark:text-slate-300">
+            {t("subtitle")}
+          </p>
+          <p className="mt-3 text-base text-slate-600 dark:text-slate-300">
+            {t("story")}
+          </p>
+          <p className="mt-5 border-l-4 border-violet-400 pl-4 text-sm font-medium italic text-slate-700 dark:border-violet-600 dark:text-slate-200">
+            {t("tagline")}
+          </p>
         </div>
       </div>
     </section>
