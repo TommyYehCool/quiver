@@ -69,12 +69,13 @@ function Mark({ size, className }: { size: number; className?: string }) {
         strokeLinejoin="round"
         fill="none"
       >
-        {/* 底部 chevron(最寬)*/}
-        <path d="M 13 33 L 24 24 L 35 33" />
-        {/* 中部 chevron */}
-        <path d="M 14 25 L 24 16 L 34 25" />
-        {/* 頂部 chevron(略小,像箭尖)*/}
-        <path d="M 17 17 L 24 11 L 31 17" />
+        {/* 3 個 chevron — 高度同 7、peak 間距同 8、寬度漸縮(透視感)*/}
+        {/* 底部 chevron(最寬,width=22)*/}
+        <path d="M 13 35 L 24 28 L 35 35" />
+        {/* 中部 chevron(width=20)*/}
+        <path d="M 14 27 L 24 20 L 34 27" />
+        {/* 頂部 chevron(width=16,像箭尖)*/}
+        <path d="M 16 19 L 24 12 L 32 19" />
       </g>
     </svg>
   );
@@ -133,9 +134,9 @@ function Lockup({
           strokeLinejoin="round"
           fill="none"
         >
-          <path d="M 13 33 L 24 24 L 35 33" />
-          <path d="M 14 25 L 24 16 L 34 25" />
-          <path d="M 17 17 L 24 11 L 31 17" />
+          <path d="M 13 35 L 24 28 L 35 35" />
+          <path d="M 14 27 L 24 20 L 34 27" />
+          <path d="M 16 19 L 24 12 L 32 19" />
         </g>
       </g>
       <text
