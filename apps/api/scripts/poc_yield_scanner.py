@@ -42,7 +42,7 @@ class YieldOption:
 # Bitfinex funding market — public API,免認證
 # ====================================================================
 
-def fetch_bitfinex_funding(symbol: str = "fUSDT") -> YieldOption | None:
+def fetch_bitfinex_funding(symbol: str = "fUST") -> YieldOption | None:
     """從 Bitfinex 的 funding ticker 抓 FRR(Flash Return Rate)。
 
     https://api-pub.bitfinex.com/v2/ticker/fUSDT 回 array:
@@ -52,6 +52,7 @@ def fetch_bitfinex_funding(symbol: str = "fUSDT") -> YieldOption | None:
 
     FRR 單位:per day(日利率)。年化 APY = FRR × 365(simple)。
     """
+    # 注意:Bitfinex 用 'UST' 表示 Tether USDT(不是 'USDT'),所以 funding symbol 是 fUST
     url = f"https://api-pub.bitfinex.com/v2/ticker/{symbol}"
     try:
         r = httpx.get(url, timeout=10.0)
@@ -69,10 +70,12 @@ def fetch_bitfinex_funding(symbol: str = "fUSDT") -> YieldOption | None:
         notes = (
             f"period {ask_period}d, last {last_apy:.2f}% APY"
         )
+        # Bitfinex 'UST' = Tether USDT,顯示時還原成 USDT 比較直觀
+        asset_display = "USDT" if symbol == "fUST" else symbol[1:]
         return YieldOption(
             platform="Bitfinex Funding",
             chain="CeFi",
-            asset=symbol[1:],
+            asset=asset_display,
             apy_pct=apy,
             tvl_usd=None,  # ticker 沒給,要從 funding stats endpoint 拿
             notes=notes,
@@ -160,11 +163,12 @@ def main() -> None:
     options: list[YieldOption] = []
 
     # 1. Bitfinex (CeFi)
+    # 注意:Bitfinex 用 'fUST' 代表 Tether,不是 'fUSDT'(歷史遺留)
     print("\n— CeFi —")
-    bf_usdt = fetch_bitfinex_funding("fUSDT")
-    if bf_usdt:
-        print(bf_usdt)
-        options.append(bf_usdt)
+    bf_ust = fetch_bitfinex_funding("fUST")
+    if bf_ust:
+        print(bf_ust)
+        options.append(bf_ust)
     bf_usd = fetch_bitfinex_funding("fUSD")
     if bf_usd:
         print(bf_usd)
