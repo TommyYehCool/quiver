@@ -1,8 +1,8 @@
-# Quiver Earn — Friends Tooling Plan(非商業、無收費)
+# Quiver Earn — Friends Tooling Plan(非商業、無收費,但架構已 future-proof)
 
 > **Status**: 規劃完成,可立即啟動(無律師阻塞)
-> **Companion**: 跟 `EARN-V05-BITFINEX-AAVE-PLAN.md` 並列另一條軸線
-> **目的**: Tommy + 朋友各自用自己的帳戶,Quiver 當「儀表板 / ops 工具」,**不收費、不混合資金**
+> **Companion**: 跟 `EARN-V05-BITFINEX-AAVE-PLAN.md` 並列另一條軸線,但**共用同一份 schema 和 code**
+> **目的**: Tommy + 朋友各自用自己的帳戶,Quiver 當「儀表板 / ops 工具」,**不收費、不混合資金**;**未來 V0.5 商業化時零搬遷**
 
 ---
 
@@ -18,6 +18,44 @@
 | 律師意見書 | 必須 | 不需要 | **不需要** |
 | 開發時間 | 8 週 | 1 週 | **2-3 週** |
 | 上線阻塞 | 律師 + bootstrap | 0 | **0** |
+
+→ **本 plan 寫的 schema / code 將來 V0.5 商業化時 100% 沿用,差別只是 row 上的 flag**(custody_mode、perf_fee_bps)。詳見 § Unified Architecture。
+
+---
+
+## 🧩 Unified Architecture(Friends + Future Commercial 共用)
+
+**原則**:Friends 跟 Commercial V0.5 的差別只有 3 個 axis,用 flag 表達,**底層共用 schema + code**:
+
+| Axis | Friends mode | Commercial V0.5 mode |
+|---|---|---|
+| `custody_mode` | `"self"`(朋友自己保管) | `"platform"`(Quiver 持有 platform float) |
+| `perf_fee_bps` | `0` | `1500`(15%) |
+| `can_quiver_operate` | `false`(預設,F-Phase 3 改 true) | `true`(自動 rebalance) |
+
+→ 同一份 `earn_accounts` 表、同一個 `BitfinexAdapter`、同一個 `/admin/earn` dashboard,**根據 flag 表現出不同行為**。
+
+### Migration story(從 Friends → Commercial)
+
+**現在(Friends)**:
+```sql
+INSERT INTO earn_accounts (user_id, custody_mode, perf_fee_bps, can_quiver_operate)
+VALUES (alice_id, 'self', 0, false);
+INSERT INTO earn_bitfinex_connections (earn_account_id, encrypted_api_key, is_platform_key, ...)
+VALUES (alice_account_id, <Alice 自己的 key>, false, ...);
+```
+
+**律師 OK 後上線 V0.5(同時 onboard 公開用戶 Charlie)**:
+```sql
+-- Alice 不變(grandfathered as friend)
+-- Charlie 新註冊
+INSERT INTO earn_accounts (user_id, custody_mode, perf_fee_bps, can_quiver_operate)
+VALUES (charlie_id, 'platform', 1500, true);
+INSERT INTO earn_bitfinex_connections (earn_account_id, is_platform_key, ...)
+VALUES (charlie_account_id, true, ...);  -- 用 platform 共用 key
+```
+
+→ **0 schema migration、0 code rewrite**,只是新 row 不同 flag。
 
 ---
 
@@ -91,64 +129,95 @@ Tommy(super admin,寫程式跟主操作)
 
 | Day | 任務 |
 |---|---|
-| F1-D1 | DB schema:`friend_accounts` / `friend_bitfinex_keys` / `friend_evm_addresses` + alembic migration |
-| F1-D2 | Admin UI 新增 friend account flow(輸入 Bitfinex API key + EVM address + Tron address)|
-| F1-D3 | 抽象化 BitfinexAdapter 支援 multi-key(從 PoC #2 重構,key 從 DB 讀) |
-| F1-D4 | 每日 cron 同步:每個 friend 跑一次 Bitfinex + Polygon 部位讀取,寫 DB |
-| F1-D5 | Admin dashboard `/admin/friends-earn`:每個 friend 一張卡 + 總計卡 |
-| F1-D6 | 跨 friend APY 比較 table:當下哪個策略最有利、誰沒部署到最佳處 |
+| F1-D1 | DB schema:`users.earn_tier` + `earn_accounts` / `earn_bitfinex_connections` / `earn_evm_addresses` / `earn_position_snapshots` + alembic migration |
+| F1-D2 | Admin UI 新增 earn_account flow(輸入 Bitfinex API key + EVM address + Tron address,選 tier='friend')|
+| F1-D3 | 抽象化 BitfinexAdapter 支援 multi-connection(從 PoC #2 重構,key 從 `earn_bitfinex_connections` 讀;同一份 code 將來也支援 platform 共用 key) |
+| F1-D4 | 每日 cron 同步:每個 active `earn_account` 跑一次部位讀取,寫 `earn_position_snapshots` |
+| F1-D5 | Admin dashboard `/admin/earn`:list 所有 earn_accounts,每個一張卡 + 總計卡 |
+| F1-D6 | 跨 account APY 比較 table:當下哪個策略最有利、誰沒部署到最佳處 |
 | F1-D7 | 文件 + onboarding script(朋友怎麼開 read-only API key 的 step-by-step)|
 
-#### 資料 schema
+#### 資料 schema(Unified — Friends + Future Commercial 共用)
 
 ```sql
--- 朋友帳戶 metadata
-CREATE TABLE friend_accounts (
+-- 既有 users 表加 earn 參與 tier
+ALTER TABLE users ADD COLUMN earn_tier VARCHAR(16) NOT NULL DEFAULT 'none';
+-- "none" = 沒參與 Earn(預設,既有 wallet 用戶)
+-- "internal" = Tommy 自己 / admin
+-- "friend" = friends-only(self-custody, no fee)
+-- "commercial" = V0.5 公開用戶(platform-custody, 15% fee)— Phase 1 不會有 row
+
+-- Earn 帳戶 metadata(統一給 Friends + Commercial 用)
+CREATE TABLE earn_accounts (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(64) NOT NULL,           -- "Alice" / "Bob" / "Tommy"
-    email VARCHAR(255),                   -- 給寄月報用,可選
-    is_self BOOLEAN NOT NULL DEFAULT FALSE, -- True = Tommy 自己
+    user_id INTEGER NOT NULL REFERENCES users(id) UNIQUE,
+
+    -- 核心 mode flags(這 3 個 axis 區分 friend / commercial)
+    custody_mode VARCHAR(16) NOT NULL,           -- "self" / "platform"
+    perf_fee_bps INTEGER NOT NULL DEFAULT 0,     -- 0 = friends, 1500 = V0.5
+    can_quiver_operate BOOLEAN NOT NULL DEFAULT FALSE,  -- F-Phase 3 / V0.5 才 true
+
+    -- onboarding metadata
+    onboarded_by INTEGER REFERENCES users(id),    -- friend 模式由 admin 加
+    risk_acknowledged_at TIMESTAMPTZ,             -- 朋友 / 用戶簽免責的時間
+
     notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    archived_at TIMESTAMPTZ
-);
-
--- 朋友的 Bitfinex API key(加密)
-CREATE TABLE friend_bitfinex_keys (
-    id SERIAL PRIMARY KEY,
-    friend_id INTEGER NOT NULL REFERENCES friend_accounts(id),
-    encrypted_api_key BYTEA NOT NULL,
-    encrypted_api_secret BYTEA NOT NULL,
-    key_version INTEGER NOT NULL,         -- 接既有 KEK 加密
-    permissions VARCHAR(32) NOT NULL,     -- "read" / "read+funding-write"
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    revoked_at TIMESTAMPTZ
-);
-
--- 朋友的 EVM 地址(只讀,不存 priv key — 朋友自己保管)
-CREATE TABLE friend_evm_addresses (
-    id SERIAL PRIMARY KEY,
-    friend_id INTEGER NOT NULL REFERENCES friend_accounts(id),
-    chain VARCHAR(32) NOT NULL,           -- "polygon" / "ethereum"
-    address VARCHAR(64) NOT NULL,
-    label VARCHAR(64),                    -- "Alice MetaMask" / "Alice Ledger"
+    archived_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 每日部位快照(用於追蹤 APY trend)
-CREATE TABLE friend_position_snapshots (
+-- Bitfinex API key 連線(統一 Friends + Commercial)
+CREATE TABLE earn_bitfinex_connections (
     id SERIAL PRIMARY KEY,
-    friend_id INTEGER NOT NULL REFERENCES friend_accounts(id),
+    earn_account_id INTEGER NOT NULL REFERENCES earn_accounts(id),
+
+    is_platform_key BOOLEAN NOT NULL DEFAULT FALSE,
+    -- True  = 用 Quiver platform 共用 key(Commercial mode,Phase 1 都是 false)
+    -- False = 用此朋友 / 用戶自己的 key
+
+    encrypted_api_key BYTEA,                      -- nullable: is_platform_key=True 時不存
+    encrypted_api_secret BYTEA,
+    key_version INTEGER,                          -- 接既有 KEK rotation
+    permissions VARCHAR(32) NOT NULL,             -- "read" / "read+funding-write"
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    revoked_at TIMESTAMPTZ
+);
+CREATE INDEX idx_bitfinex_conn_active
+    ON earn_bitfinex_connections(earn_account_id) WHERE revoked_at IS NULL;
+
+-- EVM 地址(self-custody 朋友自己 wallet,platform 模式指 Quiver EVM HOT)
+CREATE TABLE earn_evm_addresses (
+    id SERIAL PRIMARY KEY,
+    earn_account_id INTEGER NOT NULL REFERENCES earn_accounts(id),
+    chain VARCHAR(32) NOT NULL,                   -- "polygon" / "ethereum"
+    address VARCHAR(64) NOT NULL,
+    is_platform_address BOOLEAN NOT NULL DEFAULT FALSE,  -- platform 模式 = True
+    label VARCHAR(64),                            -- "Alice MetaMask" / "Alice Ledger"
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 每日部位快照(用於追蹤 APY trend,Friends + Commercial 共用)
+CREATE TABLE earn_position_snapshots (
+    id SERIAL PRIMARY KEY,
+    earn_account_id INTEGER NOT NULL REFERENCES earn_accounts(id),
     snapshot_date DATE NOT NULL,
-    bitfinex_funding_usdt NUMERIC(38, 18),  -- 在 Bitfinex Funding wallet
-    bitfinex_lent_usdt NUMERIC(38, 18),     -- 已借出去
-    bitfinex_daily_earned NUMERIC(38, 18),  -- 當日結算
-    aave_polygon_usdt NUMERIC(38, 18),      -- AAVE supply 部位(USDT 換算)
-    aave_polygon_apr NUMERIC(8, 6),         -- 當日 APR snapshot
+    bitfinex_funding_usdt NUMERIC(38, 18),        -- 在 Bitfinex Funding wallet
+    bitfinex_lent_usdt NUMERIC(38, 18),           -- 已借出去
+    bitfinex_daily_earned NUMERIC(38, 18),        -- 當日結算
+    aave_polygon_usdt NUMERIC(38, 18),            -- AAVE supply 部位(USDT 換算)
+    aave_daily_apr NUMERIC(8, 6),                 -- 當日 APR snapshot
     total_usdt NUMERIC(38, 18),
-    UNIQUE (friend_id, snapshot_date)
+    UNIQUE (earn_account_id, snapshot_date)
 );
 ```
+
+> 💡 **跟原 friend_* 設計的差別**:
+> - 不另開 `friend_accounts` 表,而是 `users.earn_tier` + `earn_accounts`
+> - `earn_bitfinex_connections.is_platform_key` flag 讓未來 commercial mode 自動接上
+> - `earn_evm_addresses.is_platform_address` 同上
+> - 所有部位 / earnings 都掛 `earn_account_id`,Friends 跟 Commercial 用同一張表
+> - **未來 V0.5 上線:0 schema migration、0 code rewrite,只是新 row 帶不同 flag**
 
 #### 朋友 onboarding flow(給朋友的步驟)
 
@@ -178,9 +247,9 @@ CREATE TABLE friend_position_snapshots (
 | Day | 任務 |
 |---|---|
 | F2-D1 | 朋友用既有 Google OAuth 登入,但角色 = "friend"(新角色)|
-| F2-D2 | `/earn` 用戶頁,顯示**只屬於這個朋友的部位**(by friend_id 過濾)|
+| F2-D2 | `/earn` 用戶頁,顯示**只屬於這個朋友的部位**(by `earn_account_id` 過濾,= 自己的 user_id)|
 | F2-D3 | 月報 email(寄給 friend.email,內含 30 天 APY trend、累計 earnings)|
-| F2-D4 | 朋友可以撤銷 API key 授權(從 Quiver UI,觸發 friend_bitfinex_keys.revoked_at)|
+| F2-D4 | 朋友可以撤銷 API key 授權(從 Quiver UI,觸發 `earn_bitfinex_connections.revoked_at`)|
 | F2-D5 | 「免責 acknowledgment」popup:第一次登入要 click 「我了解這是非正式工具,我的錢我自己負責」 |
 
 ---
@@ -193,7 +262,7 @@ CREATE TABLE friend_position_snapshots (
 
 | Day | 任務 |
 |---|---|
-| F3-D1 | 升級 friend_bitfinex_keys 支援 write 權限(各 friend 自己決定要不要給) |
+| F3-D1 | 升級 `earn_bitfinex_connections.permissions` 支援 `read+funding-write`(各 friend 自己決定要不要給)+ 在該朋友 `earn_accounts.can_quiver_operate=true` |
 | F3-D2 | 「Auto-renew Bitfinex offer」cron,每天掃所有 friends,如有 idle 就 submit FRR offer |
 | F3-D3 | 「APY 落差告警」:當某 friend 的 AAVE > Bitfinex 1% 以上,Email 通知該 friend(by email) |
 | F3-D4 | 「跨 friend rebalance suggestion」:Tommy 看到 dashboard 知道誰需要動作,可一鍵發 email 給朋友 |
@@ -292,31 +361,62 @@ CREATE TABLE friend_position_snapshots (
 
 ---
 
-## 跟 V0.5 plan 的關係
+## 跟 V0.5 plan 的關係(unified architecture 版)
 
-| 共通 | 不同 |
-|---|---|
-| 都用 Bitfinex Funding + AAVE V3 Polygon | V0.5 收 perf fee,Friends 不收 |
-| 都用 PoC #2 的 Bitfinex auth flow | V0.5 用 Quiver 自己的 EVM HOT,Friends 朋友自己保管 |
-| 都用 PoC #1 的 AAVE 讀取 | V0.5 寫 transaction(supply/withdraw),Friends 純讀 |
-| 都用既有 KEK 加密 | V0.5 加密 platform priv key,Friends 加密朋友 API key |
+### Schema / Code 100% 共用
 
-→ **Friends tooling = V0.5 W1-W2 的 80%**,其他 W3-W8 全部砍掉。
+| 項目 | Friends 用法 | V0.5 用法 |
+|---|---|---|
+| `users.earn_tier` | `'friend'` | `'commercial'` |
+| `earn_accounts.custody_mode` | `'self'` | `'platform'` |
+| `earn_accounts.perf_fee_bps` | `0` | `1500` |
+| `earn_accounts.can_quiver_operate` | `false`(F-Phase 1)/ `true`(F-Phase 3) | `true` |
+| `earn_bitfinex_connections.is_platform_key` | `false`(朋友自己的 key) | `true`(共用 platform key) |
+| `earn_evm_addresses.is_platform_address` | `false`(朋友自己 wallet) | `true`(Quiver EVM HOT) |
+| `earn_position_snapshots` | 朋友帳戶讀回的真實餘額 | platform float 算 share 的虛擬部位 |
+| `BitfinexAdapter` | 同一份 code,根據 `is_platform_key` 切 key | 同上 |
+| `/admin/earn` | 列所有 friend rows | 列所有 commercial rows(+ friends) |
+
+### V0.5 額外要做的事(完全不影響 Friends 部分)
+
+| 新增功能 | 工時 | 觸不觸碰 Friends? |
+|---|---|---|
+| Quiver platform Bitfinex 帳戶 + key | 0.5 day | 不(新增 platform `is_platform_key=true` row) |
+| Quiver platform EVM HOT(spec W2-D1) | 1 day | 不 |
+| 用戶自助 signup → 進 commercial mode | 1 day | 不 |
+| 用戶 deposit / withdraw to Earn 流程 | 2-3 day | 不(Tron HOT 內部記帳,既有架構) |
+| Bridge automation(spec W3) | 5 day | 不 |
+| Auto-rebalance(spec W5) | 5 day | 不 |
+| 15% perf fee 計算 + 結算 | 1 day | 不 |
+| Risk disclosure UX | 2 day | 不 |
+
+→ **V0.5 開發 = 在 unified schema 上補 platform 端 + 用戶 UX**,**Friends code 完全沒動**。
+
+### Future-proof 程度自我檢查
+
+- [x] Friends 跟 Commercial 用同一個 `earn_accounts` 表
+- [x] 同一個 BitfinexAdapter,key source 用 flag 區分
+- [x] 同一個 dashboard,UI 根據 tier 顯示不同細節
+- [x] Friends row 不需 schema migration 即可繼續存活
+- [x] 新 commercial 用戶就是新 row,沒「轉移」概念
+- [x] Friends 中的某個朋友若**主動申請**轉 commercial(付費版),只是 UPDATE 那 row 的 `custody_mode` + `perf_fee_bps` + 把 platform key 接上
 
 ---
 
 ## 未決的小決策(寫程式前要拍板)
 
-1. **朋友個資存哪**:你的 production DB 還是另開一個 friend-only DB?
-   - 我的建議:同 DB,加 `is_friend` flag,不混淆 user data
+1. **朋友需先有 Quiver wallet 帳戶嗎**(因為 `earn_accounts.user_id` FK 到 `users`)?
+   - 我的建議:**是**,朋友先用 Google OAuth 登入 Quiver,然後 Tommy elevate `earn_tier='friend'`。好處:他們順便試用 Quiver wallet、未來自助登入看 dashboard 也用同一帳號。
 2. **多少朋友算上限**:5 / 10 / 不設限?
    - 我的建議:**Phase 1 max 5 人**,跑順了再開到 10
-3. **Tommy 自己也是 friend_account 嗎**:
-   - 我的建議:**是**,is_self=true,讓資料統一
+3. **Tommy 自己怎麼設**:
+   - 我的建議:**`users.earn_tier='internal'`**(跟 friend 區分,將來商業化也不會混到 friend 統計)
 4. **要不要做月報 email**:
    - 我的建議:Phase 2 做(Phase 1 admin 自己看就好)
 5. **APY 落差告警閾值**:多少 % 差距才告警?
    - 我的建議:**1%**(再低 noise 太多)
+6. **`earn_account` 是否強制只能一個 user 一個**(`UNIQUE (user_id)`)?
+   - 我的建議:**是**,簡化邏輯。一個朋友想要 self-custody 的同時加 platform 部位是 V0.5+ 的 feature,先不支援。
 
 ---
 
