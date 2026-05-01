@@ -24,6 +24,117 @@
         "title": "代付鏈上手續費",
         "desc": "提領出去時，所有區塊鏈手續費由我們負擔。"
       }
+    },
+    "painPoint": {
+      "title": "為什麼台灣人用加密貨幣這麼麻煩？",
+      "subtitle": "我們把那些「行內人才知道」的細節全部處理好，讓你像用 Line Pay 一樣輕鬆。",
+      "p1Problem": "看到 USDT、TRC20、TRX、Wei、gwei 一頭霧水",
+      "p1Solution": "Quiver 全程顯示 NTD，所有區塊鏈名詞翻譯成日常語言。",
+      "p2Problem": "每筆交易都要付鏈上手續費，新手經常燒錢學經驗",
+      "p2Solution": "用戶間轉帳完全免費；提領時所有 gas 費由我們承擔。",
+      "p3Problem": "錢包私鑰自己保管，掉了就永遠沒了",
+      "p3Solution": "Google 帳號登入，私鑰用銀行級加密 + Shamir 分片冷備份。",
+      "p4Problem": "想被動賺利息但不會用 DeFi，又怕 CEX 倒",
+      "p4Solution": "Quiver Earn(beta）幫你接上 Bitfinex Funding 跟 AAVE，錢還在你帳戶。"
+    },
+    "featuresMore": {
+      "f4Title": "雙語 + 深色模式",
+      "f4Desc": "繁體中文 / 英文完整翻譯，深色模式自動跟系統切換。",
+      "f5Title": "兩步驟驗證 + 提領白名單",
+      "f5Desc": "TOTP 兩步驟驗證、24 小時 cooldown 白名單、velocity 限制大額提領。",
+      "f6Title": "完整個資管理",
+      "f6Desc": "符合個資法第 10/11 條：個資匯出、帳號刪除、登入裝置管理。"
+    },
+    "earn": {
+      "badge": "Beta · 邀請制",
+      "title": "把閒置 USDT 變被動收入",
+      "subtitle": "Quiver Earn 幫你把錢包裡的 USDT 接上 Bitfinex Funding（CeFi）跟 AAVE V3（DeFi），自動追蹤每天 APY 變化。目前限好友參與，不收手續費。",
+      "howTitle": "怎麼運作？",
+      "step1Title": "1. 你有自己的 Bitfinex 帳戶 + USDT",
+      "step1Desc": "我們不持有任何用戶資金。你的 USDT 永遠在你自己的 Bitfinex Funding wallet。",
+      "step2Title": "2. 給 Quiver 一支 read-only API key",
+      "step2Desc": "用 AES-GCM + KEK 加密儲存。Quiver 只能讀，不能 withdraw、不能 trade。隨時可在 Bitfinex 撤銷。",
+      "step3Title": "3. Quiver 每天追蹤你的部位",
+      "step3Desc": "幫你看 Bitfinex Funding wallet 餘額、已借出的本金、累積收益。可選加 Polygon 地址追 AAVE 部位。",
+      "step4Title": "4. 你看 dashboard，自己決定下一步",
+      "step4Desc": "Quiver 不替你做投資決策。看數據、了解市場、自己選何時加碼或撤回。",
+      "h1": {
+        "title": "真實市場利率",
+        "desc": "Bitfinex Funding 把 USDT 借給 margin trader，APY 隨市場波動。AAVE V3 Polygon 純鏈上借貸，TVL $1.2B。實際 net APY 比台灣定存高很多。"
+      },
+      "h2": {
+        "title": "你的錢始終在你帳戶",
+        "desc": "資金永遠在你自己的 Bitfinex 帳戶 / EVM 錢包，Quiver 只是讀資料的儀表板，不持有、不能 withdraw。"
+      },
+      "h3": {
+        "title": "完全免費（friend tier）",
+        "desc": "目前邀請制 friend tier 不收任何手續費。將來商業版會收績效手續費，但 friend tier 永遠免費。"
+      },
+      "h4": {
+        "title": "雙平台 hedge 風險",
+        "desc": "不只押在 Bitfinex（CEX 風險），同時可以追 AAVE（DeFi 鏈上）。萬一一邊出事，另一邊不受影響。"
+      },
+      "h5": {
+        "title": "歷史趨勢追蹤",
+        "desc": "每天自動 snapshot，dashboard 顯示 30 天 APY 走勢、累積收益。報稅季節數據都在。"
+      },
+      "h6": {
+        "title": "跨朋友 APY 排行",
+        "desc": "你跟其他朋友的 APY 公開比較（自願），看誰策略最好、有什麼可以學。"
+      },
+      "compareTitle": "跟其他選擇比較",
+      "compare": {
+        "row1Name": "台灣銀行 1 年定存",
+        "row1Rate": "1.6%",
+        "row1Note": "穩，但通膨吃光",
+        "row2Name": "CEX Earn (Binance, OKX)",
+        "row2Rate": "5-12%",
+        "row2Note": "高 APY，但有 Celsius / FTX 倒閉先例",
+        "row3Name": "Quiver Earn (Bitfinex Funding)",
+        "row3Rate": "5-15%",
+        "row3Note": "錢在你帳戶，不過鎖期 2-30 天",
+        "row4Name": "AAVE V3 (DeFi)",
+        "row4Rate": "~4%",
+        "row4Note": "完全 onchain 透明"
+      },
+      "disclaimer": "Earn 是邀請制 beta 工具，非合規金融產品。Quiver 不對 Bitfinex / DeFi 協議任何事故負責。過往報酬不代表未來。加密貨幣有高風險，請只投入可承擔損失的金額。",
+      "cta": "聯繫加入 beta"
+    },
+    "roadmap": {
+      "title": "產品路線圖",
+      "subtitle": "Quiver 不是疊加 feature，是一步一步把該做的事做對。",
+      "r1Status": "已完成",
+      "r1Title": "Phase 1 — 錢包 MVP",
+      "r1Desc": "USDT-TRC20 代管錢包、KYC、提領、平台代付 gas、冷熱錢包、雙語、深色模式、2FA、Audit log。",
+      "r2Status": "進行中",
+      "r2Title": "Phase 2 — Earn 朋友 Beta",
+      "r2Desc": "Bitfinex Funding + AAVE V3 部位追蹤儀表板。邀請制，限 10 朋友，不收手續費。",
+      "r3Status": "規劃中",
+      "r3Title": "Phase 3 — Mobile App",
+      "r3Desc": "iOS + Android (Flutter)。完整錢包功能、Face ID、推播。",
+      "r4Status": "等待法律",
+      "r4Title": "Phase 4 — Earn 公開版",
+      "r4Desc": "律師審完法律地位後開放公開註冊，加 auto-rebalance 跟 perf fee。"
+    },
+    "trust": {
+      "title": "你可以信任的理由",
+      "subtitle": "不是「我們承諾」，而是「程式碼跟 schema 強制」。",
+      "t1Title": "私鑰銀行級加密",
+      "t1Desc": "AES-256-GCM + 32 bytes Master KEK + Shamir 5/3 冷備份。私鑰永遠不出主機。",
+      "t2Title": "提領白名單 + 24 小時 cooldown",
+      "t2Desc": "所有提領要先加白名單，並等 24 小時才能用。即使 session 被劫持也偷不走錢。",
+      "t3Title": "完整 Audit log",
+      "t3Desc": "所有敏感動作（KYC 審核、提領、密碼修改）都記入 append-only audit_logs。",
+      "t4Title": "Earn read-only invariant",
+      "t4Desc": "Earn 系統的 Bitfinex API key 不能 withdraw、不能 trade、不能 transfer。架構上斷掉資金被偷的可能性。",
+      "t5Title": "對帳機制",
+      "t5Desc": "每天 03:00 自動對帳：鏈上餘額 vs ledger，差 0.01 USDT 就 alert。"
+    },
+    "ctaFinal": {
+      "title": "從一個免費帳號開始",
+      "subtitle": "錢包永遠免費。Earn beta 邀請制，先聯繫。",
+      "primaryCta": "免費開始使用",
+      "secondaryCta": "Earn beta 申請"
     }
   },
   "login": {

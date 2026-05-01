@@ -24,6 +24,117 @@
         "title": "We pay the gas fees",
         "desc": "Withdraw to any wallet — we cover the on-chain fees."
       }
+    },
+    "painPoint": {
+      "title": "Why is crypto so painful in Taiwan?",
+      "subtitle": "We handle all the insider details so it feels as easy as Line Pay.",
+      "p1Problem": "USDT, TRC20, TRX, Wei, gwei — what does any of this mean?",
+      "p1Solution": "Quiver shows everything in NTD and translates blockchain jargon to plain language.",
+      "p2Problem": "Every transaction costs gas — beginners burn money learning",
+      "p2Solution": "Internal transfers are free; we cover gas fees on withdrawals.",
+      "p3Problem": "Self-custody private keys — lose them and your money is gone forever",
+      "p3Solution": "Sign in with Google. Keys protected with bank-grade encryption + Shamir cold backup.",
+      "p4Problem": "Want passive interest but DeFi is scary, and CEXes go bankrupt",
+      "p4Solution": "Quiver Earn (beta) connects to Bitfinex Funding & AAVE — funds stay in your account."
+    },
+    "featuresMore": {
+      "f4Title": "Bilingual + Dark Mode",
+      "f4Desc": "Full Traditional Chinese / English translations, dark mode follows your system.",
+      "f5Title": "2FA + Withdrawal Whitelist",
+      "f5Desc": "TOTP 2FA, 24h cooldown whitelist, velocity limits on large withdrawals.",
+      "f6Title": "Privacy & Data Rights",
+      "f6Desc": "GDPR-compliant: data export, account deletion, login session management."
+    },
+    "earn": {
+      "badge": "Beta · Invite Only",
+      "title": "Turn idle USDT into passive income",
+      "subtitle": "Quiver Earn connects your USDT to Bitfinex Funding (CeFi) and AAVE V3 (DeFi), tracking APY changes daily. Currently invite-only friends, no fees.",
+      "howTitle": "How it works",
+      "step1Title": "1. You have your own Bitfinex account + USDT",
+      "step1Desc": "We hold zero user funds. Your USDT stays in your own Bitfinex Funding wallet.",
+      "step2Title": "2. Give Quiver a read-only API key",
+      "step2Desc": "Encrypted with AES-GCM + KEK. Quiver can only read — no withdraw, no trade. Revoke anytime on Bitfinex.",
+      "step3Title": "3. Quiver tracks your position daily",
+      "step3Desc": "Watch Bitfinex Funding wallet balance, lent principal, earnings. Optional Polygon address for AAVE.",
+      "step4Title": "4. You see the dashboard, you decide next",
+      "step4Desc": "Quiver doesn't make investment decisions for you. Read data, understand markets, choose your own moves.",
+      "h1": {
+        "title": "Real market rates",
+        "desc": "Bitfinex Funding lends USDT to margin traders, APY varies with market. AAVE V3 Polygon is pure on-chain lending, $1.2B TVL. Net APY beats Taiwan time deposit by 3-10x."
+      },
+      "h2": {
+        "title": "Your money stays in your account",
+        "desc": "Funds always in YOUR Bitfinex / EVM wallet. Quiver is just a read-only dashboard, doesn't hold and can't withdraw."
+      },
+      "h3": {
+        "title": "Free for friend tier",
+        "desc": "Invite-only friend tier pays no fees. Future commercial version will charge perf fee, but friend tier stays free forever."
+      },
+      "h4": {
+        "title": "Hedged across CeFi + DeFi",
+        "desc": "Don't put all eggs in Bitfinex (CEX risk). Track AAVE (on-chain) too. If one fails, the other isn't affected."
+      },
+      "h5": {
+        "title": "Historical trend tracking",
+        "desc": "Daily auto-snapshot. Dashboard shows 30-day APY trend, cumulative earnings. Tax season data is ready."
+      },
+      "h6": {
+        "title": "Cross-friend APY ranking",
+        "desc": "Compare APY with other friends (opt-in) — see who has the best strategy and learn."
+      },
+      "compareTitle": "Compared to other options",
+      "compare": {
+        "row1Name": "Taiwan Bank 1-Year Time Deposit",
+        "row1Rate": "1.6%",
+        "row1Note": "Stable, but eaten by inflation",
+        "row2Name": "CEX Earn (Binance, OKX)",
+        "row2Rate": "5-12%",
+        "row2Note": "High APY, but Celsius / FTX precedents",
+        "row3Name": "Quiver Earn (Bitfinex Funding)",
+        "row3Rate": "5-15%",
+        "row3Note": "Funds stay in your account, but 2-30 day lock",
+        "row4Name": "AAVE V3 (DeFi)",
+        "row4Rate": "~4%",
+        "row4Note": "Fully on-chain transparent"
+      },
+      "disclaimer": "Earn is invite-only beta tooling, NOT a regulated financial product. Quiver is not liable for any Bitfinex / DeFi protocol incidents. Past performance does not predict future results. Crypto is high risk — invest only what you can afford to lose.",
+      "cta": "Contact to join beta"
+    },
+    "roadmap": {
+      "title": "Product roadmap",
+      "subtitle": "Not piling on features — doing each phase right before the next.",
+      "r1Status": "Done",
+      "r1Title": "Phase 1 — Wallet MVP",
+      "r1Desc": "USDT-TRC20 custodial wallet, KYC, withdrawals, gas sponsoring, hot/cold wallets, bilingual, dark mode, 2FA, audit log.",
+      "r2Status": "In Progress",
+      "r2Title": "Phase 2 — Earn Friends Beta",
+      "r2Desc": "Bitfinex Funding + AAVE V3 position tracking dashboard. Invite-only, max 10 friends, no fees.",
+      "r3Status": "Planned",
+      "r3Title": "Phase 3 — Mobile App",
+      "r3Desc": "iOS + Android (Flutter). Full wallet features, Face ID, push notifications.",
+      "r4Status": "Awaiting Legal",
+      "r4Title": "Phase 4 — Earn Public",
+      "r4Desc": "After legal review, open public registration with auto-rebalance and perf fee."
+    },
+    "trust": {
+      "title": "Why you can trust this",
+      "subtitle": "Not 'we promise' — but 'enforced by code and schema'.",
+      "t1Title": "Bank-grade key encryption",
+      "t1Desc": "AES-256-GCM + 32-byte Master KEK + Shamir 5/3 cold backup. Keys never leave the host.",
+      "t2Title": "Withdrawal whitelist + 24h cooldown",
+      "t2Desc": "All withdrawals require pre-approved whitelist + 24h wait. Even hijacked sessions can't steal funds.",
+      "t3Title": "Complete audit log",
+      "t3Desc": "Every sensitive action (KYC, withdrawals, settings) is logged in append-only audit_logs.",
+      "t4Title": "Earn read-only invariant",
+      "t4Desc": "Earn's Bitfinex API keys can't withdraw, trade, or transfer. Architecturally impossible to steal funds.",
+      "t5Title": "Daily reconciliation",
+      "t5Desc": "03:00 daily auto-reconciliation: on-chain balance vs ledger. Drift > 0.01 USDT triggers alert."
+    },
+    "ctaFinal": {
+      "title": "Start with a free account",
+      "subtitle": "Wallet is free forever. Earn beta is invite-only — contact us.",
+      "primaryCta": "Get started — it's free",
+      "secondaryCta": "Apply for Earn beta"
     }
   },
   "login": {
