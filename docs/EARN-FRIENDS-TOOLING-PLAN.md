@@ -210,6 +210,39 @@ CREATE TABLE earn_position_snapshots (
     total_usdt NUMERIC(38, 18),
     UNIQUE (earn_account_id, snapshot_date)
 );
+
+-- 抽成 / 績效手續費結算紀錄(Friends-with-fee + Commercial 共用)
+-- Phase 1 Friends 預設 perf_fee_bps=0,所以這表會空;
+-- 將來 Friends 改抽成 / V0.5 上線都自動會有 row。
+CREATE TABLE earn_fee_accruals (
+    id SERIAL PRIMARY KEY,
+    earn_account_id INTEGER NOT NULL REFERENCES earn_accounts(id),
+
+    -- 結算期間
+    period_start DATE NOT NULL,
+    period_end DATE NOT NULL,
+    earnings_amount NUMERIC(38, 18) NOT NULL,    -- 該期間累計 earnings
+    fee_bps_applied INTEGER NOT NULL,             -- 當時用的 perf_fee_bps(留歷史)
+    fee_amount NUMERIC(38, 18) NOT NULL,          -- = earnings × bps / 10000
+
+    -- 結算狀態
+    status VARCHAR(16) NOT NULL DEFAULT 'ACCRUED',
+    -- "ACCRUED" = 已計算還沒收
+    -- "PAID"    = 已收
+    -- "WAIVED"  = Tommy 特赦不收(朋友請吃飯抵)
+    paid_at TIMESTAMPTZ,
+    paid_method VARCHAR(32),
+    -- "tron_usdt"          = 朋友從自己錢包匯 USDT 到 Tommy
+    -- "platform_deduction" = Commercial 模式自動從虛擬餘額扣
+    -- "manual_offline"     = 朋友直接給現金 / 請吃飯,Tommy 手動 mark paid
+    paid_tx_hash VARCHAR(128),                    -- USDT 轉帳的話存 tx 證明
+
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (earn_account_id, period_start, period_end)
+);
+CREATE INDEX idx_fee_accruals_unpaid
+    ON earn_fee_accruals(earn_account_id) WHERE status = 'ACCRUED';
 ```
 
 > 💡 **跟原 friend_* 設計的差別**:
@@ -400,23 +433,79 @@ CREATE TABLE earn_position_snapshots (
 - [x] Friends row 不需 schema migration 即可繼續存活
 - [x] 新 commercial 用戶就是新 row,沒「轉移」概念
 - [x] Friends 中的某個朋友若**主動申請**轉 commercial(付費版),只是 UPDATE 那 row 的 `custody_mode` + `perf_fee_bps` + 把 platform key 接上
+- [x] **未來想跟朋友抽成**,只是 UPDATE `earn_accounts.perf_fee_bps` 從 0 到例如 500(5%),`earn_fee_accruals` 表自動開始記紀錄
 
 ---
 
-## 未決的小決策(寫程式前要拍板)
+## 🪙 未來「朋友抽成 mode」啟用流程(設計決策已留位)
 
-1. **朋友需先有 Quiver wallet 帳戶嗎**(因為 `earn_accounts.user_id` FK 到 `users`)?
-   - 我的建議:**是**,朋友先用 Google OAuth 登入 Quiver,然後 Tommy elevate `earn_tier='friend'`。好處:他們順便試用 Quiver wallet、未來自助登入看 dashboard 也用同一帳號。
-2. **多少朋友算上限**:5 / 10 / 不設限?
-   - 我的建議:**Phase 1 max 5 人**,跑順了再開到 10
-3. **Tommy 自己怎麼設**:
-   - 我的建議:**`users.earn_tier='internal'`**(跟 friend 區分,將來商業化也不會混到 friend 統計)
-4. **要不要做月報 email**:
-   - 我的建議:Phase 2 做(Phase 1 admin 自己看就好)
-5. **APY 落差告警閾值**:多少 % 差距才告警?
-   - 我的建議:**1%**(再低 noise 太多)
-6. **`earn_account` 是否強制只能一個 user 一個**(`UNIQUE (user_id)`)?
-   - 我的建議:**是**,簡化邏輯。一個朋友想要 self-custody 的同時加 platform 部位是 V0.5+ 的 feature,先不支援。
+> 現在 Phase 1 Friends 預設 `perf_fee_bps=0`,但 schema 已支援 → 將來想抽成 0 schema 改動。
+
+### 場景:Tommy 跟某個朋友合意改 5% 抽成
+
+#### 操作
+
+```sql
+-- Alice 同意給 Tommy 5% perf fee
+UPDATE earn_accounts SET perf_fee_bps = 500 WHERE user_id = alice_id;
+```
+
+#### 自動發生
+
+每月 1 號 cron 跑(新增 service):
+
+```python
+async def accrue_monthly_fees():
+    """為每個 perf_fee_bps > 0 的 earn_account 計算上月手續費。"""
+    for acc in await repo.list_fee_eligible_accounts():
+        earnings = await calc_monthly_earnings(acc.id, last_month)
+        fee = earnings * acc.perf_fee_bps / 10000
+        if fee > 0:
+            await repo.insert_fee_accrual(
+                earn_account_id=acc.id,
+                period_start=last_month_start,
+                period_end=last_month_end,
+                earnings_amount=earnings,
+                fee_bps_applied=acc.perf_fee_bps,
+                fee_amount=fee,
+                status="ACCRUED",
+            )
+```
+
+#### Friends mode 收費差異(vs Commercial)
+
+| 項目 | Friends mode (self-custody) | Commercial mode (platform-custody) |
+|---|---|---|
+| 計算 | 同一個 cron | 同一個 cron |
+| 收款方式 | **手動**(朋友自己轉 USDT 給 Tommy) | **自動**(從用戶虛擬餘額扣) |
+| `paid_method` | `"tron_usdt"` 或 `"manual_offline"` | `"platform_deduction"` |
+| 對帳 | Tommy admin UI 手動 mark PAID + 貼 tx hash | 系統自動 mark |
+
+→ 這個 split 也已用 `paid_method` 欄位涵蓋,**不用改 schema**。
+
+### ⚠️ Friends + 抽成的法律邊界(重要!)
+
+當 `perf_fee_bps > 0` 配合 `custody_mode='self'`,法律 status 從「朋友共享工具」**升級**為「**收費的私人投資管理**」:
+
+| 條件組合 | 法律 risk | 行動 |
+|---|---|---|
+| ≤ 3 朋友、收費 ≤ 5%、家人 / 摯友 | 低-中 | 簡單書面協議即可 |
+| 4-10 朋友、收費 ≤ 10% | **中-高** | **強烈建議律師意見書** |
+| > 10 朋友、有收費、有公開推廣 | 高 | 已是準商業,直接走 V0.5 商業流程 |
+
+→ **抽成模式啟用前 Tommy 應自我評估,大概率要諮詢律師**。
+   但這個門檻**比 V0.5 全公開上線低很多**(可能只要 NT$15K-30K 律師費,而不是完整意見書 NT$30-100K)。
+
+---
+
+## 已拍板的決策(2026-05-01)
+
+1. ✅ **朋友先有 Quiver wallet 帳戶**(Google OAuth)再由 Tommy elevate 為 `earn_tier='friend'`
+2. ✅ **Phase 1 max 10 朋友**(soft limit,在 admin UI 擋第 11 個)
+3. ✅ **Tommy = `earn_tier='internal'`,跟朋友區分**;**抽成機制(`perf_fee_bps` 欄位 + `earn_fee_accruals` 表)Phase 1 就建好,但預設 0**,將來啟用無 schema 改動
+4. ✅ **月報 email 留 Phase 2 做**;Phase 1 admin 自己看 dashboard 就好
+5. ✅ **APY 落差告警閾值 1%**
+6. ✅ **`earn_accounts.user_id` UNIQUE**(一個 user 一個 earn account,簡化邏輯)
 
 ---
 
