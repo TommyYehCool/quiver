@@ -70,7 +70,7 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
           <div className="flex items-center gap-6">
             <Link href={`/${locale}/dashboard`} className="flex items-center gap-2">
               <QuiverLogo size={36} />
-              <span className="text-lg font-semibold tracking-tight">Quiver</span>
+              <span className="font-display text-lg font-bold tracking-tight">Quiver</span>
             </Link>
             <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
               {items.map((it) => (

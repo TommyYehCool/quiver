@@ -27,7 +27,7 @@ export default function LoginPage({
       <header className="container flex h-16 items-center justify-between">
         <Link href={`/${locale}`} className="flex items-center gap-2">
           <QuiverLogo size={36} />
-          <span className="text-lg font-semibold tracking-tight">Quiver</span>
+          <span className="font-display text-lg font-bold tracking-tight">Quiver</span>
         </Link>
         <div className="flex items-center gap-2">
           <LocaleSwitcher />

@@ -16,6 +16,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        // Sora — 給品牌 wordmark / 重要 display heading 用
+        display: ["var(--font-sora)", "var(--font-inter)", "system-ui", "sans-serif"],
       },
       colors: {
         brand: {

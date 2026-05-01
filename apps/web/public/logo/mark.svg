@@ -6,6 +6,6 @@
     </linearGradient>
   </defs>
   <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#quiver-grad)"/>
-  <circle cx="21" cy="21" r="11" stroke="white" stroke-width="4.5" fill="none"/>
-  <path d="M 30 32 L 38 32 L 34 24 Z" fill="white"/>
+  <path d="M 24 8 C 14 8 8 14 8 24 C 8 34 14 40 24 40 C 34 40 40 34 40 24 C 40 14 34 8 24 8 Z" stroke="white" stroke-width="3.8" fill="none"/>
+  <path d="M 28 36 L 40 36 L 40 24 Z" fill="white"/>
 </svg>

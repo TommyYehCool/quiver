@@ -86,7 +86,7 @@ export function AdminChrome({
           <div className="flex items-center gap-6">
             <Link href={`/${locale}/admin`} className="flex items-center gap-2">
               <QuiverLogo size={36} />
-              <span className="text-lg font-semibold tracking-tight text-violet-900 dark:text-violet-200">
+              <span className="font-display text-lg font-bold tracking-tight text-violet-900 dark:text-violet-200">
                 Quiver Admin
               </span>
             </Link>

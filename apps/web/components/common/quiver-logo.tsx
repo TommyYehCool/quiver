@@ -1,13 +1,17 @@
 /**
- * Quiver brand mark — squircle + Q 圓環 + 右下角向上箭頭三角形
+ * Quiver brand mark — squircle bg + 外框白 Q outline + 右下實心三角形
  *
- * 概念融合:
- * - Q 圓環 = 字母 Q 識別 + 「容器」隱喻
- * - 右下角向上指的小三角 = 蓄勢待發的箭(從箭袋射出的瞬間)
+ * 設計演化:
+ * v1: 通用紫色 blob ❌(無 character)
+ * v2: 圓圈 + 對角箭頭 ❌(像男性符號 ♂)
+ * v3: 3 個堆疊 chevron ✓(避開 ♂ 但跟「箭袋」連結弱)
+ * v4: Q 圓環 + 右下小三角 ✓(有 Q 識別)
+ * v5: Q outline(方圓形)+ 右下角填充三角形 ← 現在版本
  *
- * 為什麼這樣不像 ♂(男性符號)、不像 🔍(搜尋):
- * - 男性符號:circle + 45° 對角線(向 1 點鐘),這裡是「實心三角形向上」
- * - 搜尋:circle + 直線斜出,這裡是「分離的三角形」不是斜線
+ * v5 概念:
+ * - 用 outline 方圓形(像 hexagonal Q)取代圓環,角度感強
+ * - 右下角實心三角形像「Q 的尾巴」/「箭頭從箭袋射出」
+ * - Triangle 跟 outline 共邊,視覺上「補滿」一個角
  */
 
 type Variant = "mark" | "lockup";
@@ -35,17 +39,15 @@ export function QuiverLogo({
 function MarkInner() {
   return (
     <>
-      {/* Q 圓環(粗 stroke,類似品牌字母 Q 的視覺 weight)*/}
-      <circle
-        cx="21"
-        cy="21"
-        r="11"
+      {/* 白色方圓形 outline(內 Q),比 bg squircle 小一圈 */}
+      <path
+        d="M 24 8 C 14 8 8 14 8 24 C 8 34 14 40 24 40 C 34 40 40 34 40 24 C 40 14 34 8 24 8 Z"
         stroke="white"
-        strokeWidth="4.5"
+        strokeWidth="3.8"
         fill="none"
       />
-      {/* 向上三角形,位在 Q 圓環的右下,底部跟圓環底部對齊(y=32)*/}
-      <path d="M 30 32 L 38 32 L 34 24 Z" fill="white" />
+      {/* 右下角實心三角形(Q 的尾巴/箭頭),跟 outline 在 corner 共邊 */}
+      <path d="M 28 36 L 40 36 L 40 24 Z" fill="white" />
     </>
   );
 }
@@ -132,12 +134,13 @@ function Lockup({
         />
         <MarkInner />
       </g>
+      {/* Sora 字體更幾何 / display 感,呼應 mark 的角度感 */}
       <text
         x="60"
         y="33"
-        fontFamily="Inter, system-ui, sans-serif"
+        fontFamily="var(--font-sora), 'Sora', system-ui, sans-serif"
         fontSize="26"
-        fontWeight="600"
+        fontWeight="700"
         letterSpacing="-0.5"
         className={textColorClass}
       >
