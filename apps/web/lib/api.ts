@@ -14,6 +14,26 @@ export interface ApiResponse<T> {
   error?: ApiError;
 }
 
+/**
+ * 動態決定 API base URL,讓 localhost dev 跟 ngrok 共用同一份 frontend code:
+ *
+ * - SSR(typeof window === undefined):用 NEXT_PUBLIC_API_BASE_URL(build-time env)
+ * - Browser on localhost / 127.* :用 NEXT_PUBLIC_API_BASE_URL(http://localhost:8000)
+ * - Browser on 任何其他 host(ngrok / production):用空字串 → 變相對 URL,
+ *   `/api/...` 會透過 nginx routing 自動轉到 api container
+ */
+export function getApiBase(): string {
+  const buildTimeBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+  if (typeof window === "undefined") return buildTimeBase;
+  const host = window.location.host;
+  if (host.startsWith("localhost") || host.startsWith("127.")) {
+    return buildTimeBase;
+  }
+  // ngrok / production: 同 origin 走 nginx,/api 自動 proxy 到 api 服務
+  return "";
+}
+
+// 既有 callers 可能還在引用 API_BASE_URL,保留兼容(等於 SSR-time value)
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -31,7 +51,7 @@ export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${getApiBase()}${path}`, {
     ...init,
     credentials: "include",
     headers: {
@@ -92,7 +112,7 @@ export async function fetchMe(): Promise<User | null> {
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${API_BASE_URL}/api/auth/logout`, {
+  await fetch(`${getApiBase()}/api/auth/logout`, {
     method: "POST",
     credentials: "include",
   });
@@ -100,5 +120,5 @@ export async function logout(): Promise<void> {
 
 export function googleLoginUrl(locale: string): string {
   const params = new URLSearchParams({ locale });
-  return `${API_BASE_URL}/api/auth/google/login?${params.toString()}`;
+  return `${getApiBase()}/api/auth/google/login?${params.toString()}`;
 }

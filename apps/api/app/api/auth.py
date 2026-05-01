@@ -47,12 +47,41 @@ oauth.register(
 )
 
 
-def _redirect_uri() -> str:
-    return f"{settings.api_base_url}/api/auth/google/callback"
+def _public_origin(request: Request) -> str:
+    """根據 request 拿到實際對外 origin。
+
+    支援 localhost、ngrok、production:從 X-Forwarded-Proto / X-Forwarded-Host(nginx
+    在 docker-compose.yml 已設定 forward 這兩個 header)推實際 URL,
+    fallback 到 settings.api_base_url(無 reverse proxy 時的 dev 直連)。
+    """
+    forwarded_host = (
+        request.headers.get("x-forwarded-host")
+        or request.headers.get("host")
+    )
+    forwarded_proto = (
+        request.headers.get("x-forwarded-proto") or request.url.scheme
+    )
+    if forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}"
+    return settings.api_base_url
 
 
-def _frontend_redirect(path: str = "/", error: str | None = None) -> str:
-    base = settings.frontend_base_url.rstrip("/")
+def _is_https_request(request: Request) -> bool:
+    """判斷請求是否走 HTTPS(用於 cookie secure flag)。"""
+    return (
+        request.headers.get("x-forwarded-proto") == "https"
+        or request.url.scheme == "https"
+    )
+
+
+def _redirect_uri(request: Request) -> str:
+    return f"{_public_origin(request)}/api/auth/google/callback"
+
+
+def _frontend_redirect(
+    request: Request, path: str = "/", error: str | None = None
+) -> str:
+    base = _public_origin(request).rstrip("/")
     if error:
         return f"{base}{path}?{urlencode({'auth_error': error})}"
     return f"{base}{path}"
@@ -69,7 +98,7 @@ async def google_login(request: Request, locale: str = "zh-TW") -> RedirectRespo
     """
     request.session["post_login_locale"] = locale if locale in {"zh-TW", "en"} else "zh-TW"
     return await oauth.google.authorize_redirect(  # type: ignore[no-any-return]
-        request, _redirect_uri()
+        request, _redirect_uri(request)
     )
 
 
@@ -81,14 +110,14 @@ async def google_callback(request: Request, db: DbDep) -> RedirectResponse:
     except OAuthError as e:
         logger.warning("oauth_failed", error=str(e))
         return RedirectResponse(
-            url=_frontend_redirect("/login", error="oauth_failed"),
+            url=_frontend_redirect(request, "/login", error="oauth_failed"),
             status_code=status.HTTP_302_FOUND,
         )
 
     userinfo = token.get("userinfo")
     if not userinfo or not userinfo.get("email_verified"):
         return RedirectResponse(
-            url=_frontend_redirect("/login", error="email_unverified"),
+            url=_frontend_redirect(request, "/login", error="email_unverified"),
             status_code=status.HTTP_302_FOUND,
         )
 
@@ -119,10 +148,11 @@ async def google_callback(request: Request, db: DbDep) -> RedirectResponse:
 
     locale = request.session.pop("post_login_locale", "zh-TW")
     redirect = RedirectResponse(
-        url=_frontend_redirect(f"/{locale}/dashboard"),
+        url=_frontend_redirect(request, f"/{locale}/dashboard"),
         status_code=status.HTTP_302_FOUND,
     )
-    set_session_cookie(redirect, jwt_token)
+    # 從實際 request 推 cookie secure flag(ngrok 是 HTTPS,localhost 是 HTTP)
+    set_session_cookie(redirect, jwt_token, secure=_is_https_request(request))
     logger.info("login_success", user_id=user.id, jti=jti)
     return redirect
 
