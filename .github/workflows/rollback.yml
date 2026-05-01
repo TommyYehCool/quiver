@@ -1,0 +1,99 @@
+name: Rollback Production
+
+# 純手動 trigger:回滾到指定 commit / tag
+# 不跑 migration(預設)— 因為 schema 通常不能 downgrade 安全
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "目標 ref(commit SHA / tag,例如 wallet-v1.0)"
+        required: true
+      run_alembic_downgrade:
+        description: "也 downgrade alembic?(危險,通常不要)"
+        required: false
+        default: "false"
+        type: choice
+        options: [true, false]
+      reason:
+        description: "為什麼要 rollback?(寫進 audit 用)"
+        required: true
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Rollback to ${{ github.event.inputs.target_ref }}
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Print intent
+        run: |
+          echo "🔥 ROLLBACK INITIATED"
+          echo "  Target: ${{ github.event.inputs.target_ref }}"
+          echo "  Triggered by: ${{ github.actor }}"
+          echo "  Reason: ${{ github.event.inputs.reason }}"
+          echo "  Downgrade alembic: ${{ github.event.inputs.run_alembic_downgrade }}"
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/quiver_deploy
+          chmod 600 ~/.ssh/quiver_deploy
+          ssh-keyscan -H ${{ secrets.PROD_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Reset to target ref
+        run: |
+          ssh -i ~/.ssh/quiver_deploy quiver@${{ secrets.PROD_HOST }} <<'EOF'
+            set -euo pipefail
+            cd ~/quiver
+            git fetch origin --tags
+            git reset --hard ${{ github.event.inputs.target_ref }}
+            echo "Now at: $(git rev-parse --short HEAD)"
+          EOF
+
+      - name: Optional alembic downgrade
+        if: ${{ github.event.inputs.run_alembic_downgrade == 'true' }}
+        run: |
+          ssh -i ~/.ssh/quiver_deploy quiver@${{ secrets.PROD_HOST }} <<'EOF'
+            set -euo pipefail
+            cd ~/quiver
+            echo "⚠️ Downgrading alembic"
+            docker compose run --rm api alembic downgrade -1
+          EOF
+
+      - name: Rebuild + recreate
+        run: |
+          ssh -i ~/.ssh/quiver_deploy quiver@${{ secrets.PROD_HOST }} <<'EOF'
+            set -euo pipefail
+            cd ~/quiver
+            docker compose build --pull api worker web
+            docker compose up -d --no-deps api worker web nginx
+          EOF
+
+      - name: Health check
+        run: |
+          for i in {1..30}; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.PROD_DOMAIN }}/healthz)
+            [ "$CODE" = "200" ] && echo "✓ healthy" && exit 0
+            sleep 4
+          done
+          echo "✗ unhealthy after rollback"
+          exit 1
+
+      - name: Notify Discord
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          EMOJI="🔥"
+          [ "$STATUS" = "success" ] && EMOJI="🔄"
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\":\"${EMOJI} Rollback to ${{ github.event.inputs.target_ref }} — status: ${STATUS}\nReason: ${{ github.event.inputs.reason }}\nBy: ${{ github.actor }}\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/quiver_deploy

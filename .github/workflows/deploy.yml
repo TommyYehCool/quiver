@@ -1,0 +1,154 @@
+name: Deploy to Production
+
+# 觸發:
+# - push to main(自動 deploy)
+# - 手動 trigger(workflow_dispatch),可選 ref 跑 hotfix
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".github/ISSUE_TEMPLATE/**"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy(預設 main,可指定 commit / tag)"
+        required: false
+        default: "main"
+      run_migrations:
+        description: "跑 alembic upgrade head?"
+        required: false
+        default: "true"
+        type: choice
+        options: [true, false]
+
+# 防止 concurrent deploy 互相打架
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Linode
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://${{ secrets.PROD_DOMAIN }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.sha }}
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/quiver_deploy
+          chmod 600 ~/.ssh/quiver_deploy
+          ssh-keyscan -H ${{ secrets.PROD_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Show deploy info
+        run: |
+          echo "Deploying ref=${{ github.event.inputs.ref || github.sha }}"
+          echo "To host=${{ secrets.PROD_HOST }}"
+          echo "Triggered by=${{ github.actor }}"
+          echo "Run migrations=${{ github.event.inputs.run_migrations || 'true' }}"
+
+      - name: Pull latest code on server
+        run: |
+          ssh -i ~/.ssh/quiver_deploy quiver@${{ secrets.PROD_HOST }} <<'EOF'
+            set -euo pipefail
+            cd ~/quiver
+            echo "─── git fetch + reset ───"
+            git fetch origin
+            # 用 GITHUB_REF 對應的 SHA(不直接 reset main,避免 race)
+            git reset --hard ${{ github.event.inputs.ref || github.sha }}
+            echo "Now at: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%s)"
+          EOF
+
+      - name: Build images
+        run: |
+          ssh -i ~/.ssh/quiver_deploy quiver@${{ secrets.PROD_HOST }} <<'EOF'
+            set -euo pipefail
+            cd ~/quiver
+            echo "─── docker compose build ───"
+            docker compose build --pull api worker web
+          EOF
+
+      - name: Run alembic migrations
+        if: ${{ github.event.inputs.run_migrations != 'false' }}
+        run: |
+          ssh -i ~/.ssh/quiver_deploy quiver@${{ secrets.PROD_HOST }} <<'EOF'
+            set -euo pipefail
+            cd ~/quiver
+            echo "─── alembic upgrade head ───"
+            # 啟動 postgres 但不重建 api(讓現役 api 繼續服務直到下一步)
+            docker compose up -d postgres redis
+            sleep 3
+            # 用一次性容器跑 migration(不影響現役 api)
+            docker compose run --rm api alembic upgrade head
+            echo "─── migration done ───"
+          EOF
+
+      - name: Recreate services with zero-downtime feel
+        run: |
+          ssh -i ~/.ssh/quiver_deploy quiver@${{ secrets.PROD_HOST }} <<'EOF'
+            set -euo pipefail
+            cd ~/quiver
+            echo "─── recreate api / worker / web ───"
+            # docker compose up -d 只重啟有變動的 service
+            docker compose up -d --no-deps api worker web
+            echo "─── recreate nginx ───"
+            docker compose up -d --no-deps nginx
+          EOF
+
+      - name: Wait for healthy + smoke test
+        run: |
+          ssh -i ~/.ssh/quiver_deploy quiver@${{ secrets.PROD_HOST }} <<'EOF'
+            set -euo pipefail
+            echo "─── waiting for api healthz ───"
+            for i in {1..30}; do
+              if curl -sf http://localhost:8000/healthz > /dev/null; then
+                echo "✓ api healthy"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "✗ api 60s 內沒起來"
+            docker compose logs api --tail 50
+            exit 1
+          EOF
+
+      - name: Public smoke test
+        run: |
+          for i in {1..15}; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ secrets.PROD_DOMAIN }}/healthz)
+            if [ "$CODE" = "200" ]; then
+              echo "✓ public health 200"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $CODE"
+            sleep 4
+          done
+          echo "✗ public health check 失敗"
+          exit 1
+
+      - name: Notify Discord on success
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d '{"content":"✅ Quiver production deploy 成功 — ${{ github.event.inputs.ref || github.sha }} by ${{ github.actor }}"}' \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Notify Discord on failure
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d '{"content":"🚨 Quiver production deploy 失敗 — ${{ github.event.inputs.ref || github.sha }} by ${{ github.actor }}\nLogs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/quiver_deploy
