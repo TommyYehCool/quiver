@@ -89,16 +89,70 @@
 </head>
 <body>
 
-<h1>Logo 比較 — v6 / ChatGPT / v7 修正版</h1>
-<p class="subtitle">三個並排看 favicon 16px + 大圖,選一個。</p>
+<h1>Logo 比較 — v7 / v8(你的 upload 版重繪)</h1>
+<p class="subtitle">v8 是把你 upload 的設計用乾淨手刻 SVG 重畫,檔案從 1.8MB → 250 bytes。</p>
 
 <div class="grid">
 
-<!-- ============ v7 (NEW — clean Q with hole + tail) ============ -->
+<!-- ============ v8 (NEW — based on user upload, redrawn clean) ============ -->
 <div class="card">
   <div class="card-header">
-    <div class="label">v7 — 修正版</div>
-    <div class="badge" style="background: #10B981;">推薦</div>
+    <div class="label">v8 — 你的設計重繪</div>
+    <div class="badge" style="background: #F59E0B;">NEW</div>
+  </div>
+
+  <div class="preview bg-purple-grad">
+    <div class="size-group">
+      <svg width="200" height="200" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 6 L 39 15 L 39 33 L 46 43 L 32 41 L 24 42 L 9 33 L 9 15 Z M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z" fill="white" fill-rule="evenodd"/>
+      </svg>
+      <span class="size-label">200px</span>
+    </div>
+    <div class="size-group">
+      <svg width="64" height="64" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 6 L 39 15 L 39 33 L 46 43 L 32 41 L 24 42 L 9 33 L 9 15 Z M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z" fill="white" fill-rule="evenodd"/>
+      </svg>
+      <span class="size-label">64px</span>
+    </div>
+  </div>
+
+  <div class="favicon-test">
+    <span class="favicon-test-label">favicon test:</span>
+    <div style="background: #6D28D9; padding: 4px; border-radius: 4px;">
+      <svg width="16" height="16" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 6 L 39 15 L 39 33 L 46 43 L 32 41 L 24 42 L 9 33 L 9 15 Z M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z" fill="white" fill-rule="evenodd"/>
+      </svg>
+    </div>
+    <div style="background: #6D28D9; padding: 4px; border-radius: 4px;">
+      <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 6 L 39 15 L 39 33 L 46 43 L 32 41 L 24 42 L 9 33 L 9 15 Z M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z" fill="white" fill-rule="evenodd"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <div class="pro">✓ 尾巴更大、更突出(對應你 upload 的設計)</div>
+    <div class="pro">✓ 乾淨手刻 SVG(無 trace 雜訊)</div>
+    <div class="pro">✓ 250 bytes(原 1.8MB → 縮小 7000 倍)</div>
+    <div class="pro">✓ 16px favicon 仍清晰</div>
+    <div class="con">⚠ 比 v7 更不對稱(因尾巴長)</div>
+  </div>
+
+  <div class="stats">
+    Path: 1 個 path,14 指令<br>
+    SVG 大小:約 250 bytes<br>
+    尾巴從 (39, 33) 延伸到 (46, 43)<br>
+    比 v7 尾巴長 60%
+  </div>
+</div>
+
+<!-- ============ v7 (current) ============ -->
+
+<!-- ============ v7 (current production) ============ -->
+<div class="card">
+  <div class="card-header">
+    <div class="label">v7 — 現在 production</div>
+    <div class="badge">in use</div>
   </div>
 
   <div class="preview bg-purple-grad">

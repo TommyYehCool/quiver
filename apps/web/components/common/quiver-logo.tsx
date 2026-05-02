@@ -35,11 +35,11 @@ export function QuiverLogo({
   return <Lockup size={size} theme={theme} className={className} />;
 }
 
-/** Q glyph 路徑(外形 + 內洞 + 尾巴,單一 path 用 evenodd fill)*/
+/** Q glyph 路徑 v8(基於 user upload 的設計重畫,尾巴更大、更突出)*/
 const Q_PATH =
-  // 外形(含尾巴):從頂點順時針
-  "M 24 6 L 39 15 L 39 33 L 43 39 L 32 39 L 24 42 L 9 33 L 9 15 Z " +
-  // 內洞:同方向 hexagon,evenodd 自動鏤空
+  // 外形(含大尾巴延伸到右下角):
+  "M 24 6 L 39 15 L 39 33 L 46 43 L 32 41 L 24 42 L 9 33 L 9 15 Z " +
+  // 內洞:六邊形 counter
   "M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z";
 
 function MarkInner() {
