@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>誠實比對:你 upload vs 我畫的 v8</title>
+<style>
+  body { margin: 0; padding: 40px; background: #0F172A; color: white; font-family: system-ui; }
+  h1 { text-align: center; margin-bottom: 32px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; max-width: 1200px; margin: 0 auto; }
+  .col { background: #1E293B; padding: 24px; border-radius: 16px; }
+  .label { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+  .render {
+    background: linear-gradient(135deg, #7C3AED, #4F46E5);
+    border-radius: 12px;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+  }
+  img.original { max-width: 100%; height: auto; }
+  .note { color: #94A3B8; font-size: 13px; margin-top: 12px; }
+  .observe { background: #0F172A; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>誠實比對</h1>
+<style>
+  .row { grid-template-columns: 1fr 1fr 1fr; }
+</style>
+<div class="row">
+  <div class="col">
+    <div class="label">🎨 原檔(1.8 MB)</div>
+    <div class="render" style="background: white; padding: 0;">
+      <img src="/logo/your-upload.svg" class="original" alt="Original"/>
+    </div>
+    <div class="observe">
+      <strong>1,889,845 bytes</strong><br>
+      9,163 個 path<br>
+      不適合 production
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="label">⚡ 優化後(484 KB / gzip 142 KB)</div>
+    <div class="render" style="background: white; padding: 0;">
+      <img src="/logo/optimized.svg" class="original" alt="Optimized"/>
+    </div>
+    <div class="observe">
+      <strong>492,192 bytes(縮 74%)</strong><br>
+      傳輸 gzip 後 142 KB<br>
+      2 個 path,色彩合併成 2 色
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="label">📐 我畫的 v8(失敗)</div>
+    <div class="render">
+      <svg width="380" height="380" viewBox="0 0 48 48" fill="none">
+        <path d="M 24 6 L 39 15 L 39 33 L 46 43 L 32 41 L 24 42 L 9 33 L 9 15 Z M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z" fill="white" fill-rule="evenodd"/>
+      </svg>
+    </div>
+    <div class="observe">
+      <strong>250 bytes</strong><br>
+      但結構完全不對<br>
+      ❌ 沒重現「外框 + 內 Q + 突破尾」
+    </div>
+  </div>
+</div>
+</body>
+</html>

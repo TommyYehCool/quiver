@@ -1,16 +1,11 @@
 /**
- * Quiver brand mark v7 — 真正 Q 字母感 + 乾淨幾何
+ * Quiver brand mark v9 — based on Tommy's upload design.
  *
- * 設計演化:
- * v6: 八邊形 outline + 三角形 → 看起來像「容器 + 三角」非 Q
- * v7: 六邊形 Q with 內圈空洞 + 尾巴 → 真正 Q 字母感
+ * 經過 SVGO + 色彩合併 + path merge 優化:
+ * 原 1.8 MB → 484 KB raw / 142 KB gzip(縮 92%)
+ * 用 <img src> 引用而非 inline,讓瀏覽器 cache 好。
  *
- * 結構:
- * - 外六角形(pointy-top,r=18,中心 24,24)
- * - 內六角形空洞(r=8,Q 的 counter)
- * - 右下三角形尾巴(extending outward at 45°)
- *
- * 用 evenodd fill rule 一個 path 同時做外形 + 內洞,SVG 簡潔。
+ * lockup 變體用 <img> + Sora 字體 wordmark 並排。
  */
 
 type Variant = "mark" | "lockup";
@@ -30,54 +25,17 @@ export function QuiverLogo({
   className,
 }: QuiverLogoProps) {
   if (variant === "mark") {
-    return <Mark size={size} className={className} />;
+    return (
+      <img
+        src="/logo/mark.svg"
+        alt="Quiver"
+        width={size}
+        height={size}
+        className={className}
+      />
+    );
   }
   return <Lockup size={size} theme={theme} className={className} />;
-}
-
-/** Q glyph 路徑 v8(基於 user upload 的設計重畫,尾巴更大、更突出)*/
-const Q_PATH =
-  // 外形(含大尾巴延伸到右下角):
-  "M 24 6 L 39 15 L 39 33 L 46 43 L 32 41 L 24 42 L 9 33 L 9 15 Z " +
-  // 內洞:六邊形 counter
-  "M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z";
-
-function MarkInner() {
-  return <path d={Q_PATH} fill="white" fillRule="evenodd" />;
-}
-
-function Mark({ size, className }: { size: number; className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 48 48"
-      width={size}
-      height={size}
-      fill="none"
-      className={className}
-      aria-label="Quiver"
-      role="img"
-    >
-      <defs>
-        <linearGradient
-          id="quiver-mark-grad"
-          x1="0"
-          y1="0"
-          x2="48"
-          y2="48"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor="#7C3AED" />
-          <stop offset="100%" stopColor="#4F46E5" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z"
-        fill="url(#quiver-mark-grad)"
-      />
-      <MarkInner />
-    </svg>
-  );
 }
 
 function Lockup({
@@ -89,56 +47,40 @@ function Lockup({
   theme: Theme;
   className?: string;
 }) {
-  const width = (size * 200) / 48;
-  const textColorClass =
+  // 根據 theme 決定 wordmark 顏色
+  const textColor =
     theme === "auto"
-      ? "fill-slate-900 dark:fill-white"
+      ? "currentColor"
       : theme === "light"
-      ? "fill-slate-900"
-      : "fill-white";
+      ? "#0F172A"
+      : "#FFFFFF";
 
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 200 48"
-      width={width}
-      height={size}
-      fill="none"
+    <span
       className={className}
-      aria-label="Quiver"
-      role="img"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: size * 0.25,
+      }}
     >
-      <defs>
-        <linearGradient
-          id="quiver-lockup-grad"
-          x1="0"
-          y1="0"
-          x2="48"
-          y2="48"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor="#7C3AED" />
-          <stop offset="100%" stopColor="#4F46E5" />
-        </linearGradient>
-      </defs>
-      <g>
-        <path
-          d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z"
-          fill="url(#quiver-lockup-grad)"
-        />
-        <MarkInner />
-      </g>
-      <text
-        x="60"
-        y="33"
-        fontFamily="var(--font-sora), 'Sora', system-ui, sans-serif"
-        fontSize="26"
-        fontWeight="700"
-        letterSpacing="-0.5"
-        className={textColorClass}
+      <img
+        src="/logo/mark.svg"
+        alt="Quiver"
+        width={size}
+        height={size}
+      />
+      <span
+        style={{
+          fontFamily: "var(--font-sora), 'Sora', system-ui, sans-serif",
+          fontSize: size * 0.55,
+          fontWeight: 700,
+          letterSpacing: "-0.025em",
+          color: textColor,
+        }}
       >
         Quiver
-      </text>
-    </svg>
+      </span>
+    </span>
   );
 }
