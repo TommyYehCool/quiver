@@ -6,6 +6,5 @@
     </linearGradient>
   </defs>
   <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="url(#g)"/>
-  <path d="M 16 6 L 32 6 L 42 16 L 42 32 L 32 42 L 16 42 L 6 32 L 6 16 Z" stroke="white" stroke-width="3.5" fill="none" stroke-linejoin="round"/>
-  <path d="M 28 36 L 38 36 L 38 26 Z" fill="white"/>
+  <path d="M 24 6 L 39 15 L 39 33 L 43 39 L 32 39 L 24 42 L 9 33 L 9 15 Z M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z" fill="white" fill-rule="evenodd"/>
 </svg>

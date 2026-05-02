@@ -1,11 +1,16 @@
 /**
- * Quiver brand mark — squircle bg + 八邊形 Q outline + 右下實心三角形
+ * Quiver brand mark v7 — 真正 Q 字母感 + 乾淨幾何
  *
- * v6 設計改變:
- * - Q 形狀從圓 / 方圓形改成 octagonal(8 邊形)— 角度感最強
- * - 右下三角形貼著 outline 內側,像 Q 的尾巴 / 從箭袋射出的箭頭
- * - 比 v5 的方圓形更 distinctive,跟 fuly.ai 的 hexagon 撞臉風險也控制住
- *   (它是 6 邊,我們是 8 邊,且我們有 Q 尾巴特徵)
+ * 設計演化:
+ * v6: 八邊形 outline + 三角形 → 看起來像「容器 + 三角」非 Q
+ * v7: 六邊形 Q with 內圈空洞 + 尾巴 → 真正 Q 字母感
+ *
+ * 結構:
+ * - 外六角形(pointy-top,r=18,中心 24,24)
+ * - 內六角形空洞(r=8,Q 的 counter)
+ * - 右下三角形尾巴(extending outward at 45°)
+ *
+ * 用 evenodd fill rule 一個 path 同時做外形 + 內洞,SVG 簡潔。
  */
 
 type Variant = "mark" | "lockup";
@@ -30,21 +35,15 @@ export function QuiverLogo({
   return <Lockup size={size} theme={theme} className={className} />;
 }
 
+/** Q glyph 路徑(外形 + 內洞 + 尾巴,單一 path 用 evenodd fill)*/
+const Q_PATH =
+  // 外形(含尾巴):從頂點順時針
+  "M 24 6 L 39 15 L 39 33 L 43 39 L 32 39 L 24 42 L 9 33 L 9 15 Z " +
+  // 內洞:同方向 hexagon,evenodd 自動鏤空
+  "M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z";
+
 function MarkInner() {
-  return (
-    <>
-      {/* 白色 octagonal outline (8 邊形,top/right/bottom/left 4 個短邊 + 4 個 45° 切角) */}
-      <path
-        d="M 16 6 L 32 6 L 42 16 L 42 32 L 32 42 L 16 42 L 6 32 L 6 16 Z"
-        stroke="white"
-        strokeWidth="3.5"
-        fill="none"
-        strokeLinejoin="round"
-      />
-      {/* 右下實心三角形(Q 尾巴/箭頭),right-angle 貼右下角內側 */}
-      <path d="M 28 36 L 38 36 L 38 26 Z" fill="white" />
-    </>
-  );
+  return <path d={Q_PATH} fill="white" fillRule="evenodd" />;
 }
 
 function Mark({ size, className }: { size: number; className?: string }) {
