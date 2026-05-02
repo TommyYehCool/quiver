@@ -26,44 +26,30 @@
 <body>
 <h1>誠實比對</h1>
 <style>
-  .row { grid-template-columns: 1fr 1fr 1fr; }
+  .row { grid-template-columns: 1fr 1fr; }
 </style>
 <div class="row">
   <div class="col">
-    <div class="label">🎨 原檔(1.8 MB)</div>
+    <div class="label">⚠️ v9(舊版 SVGO 優化)— 有噪點</div>
     <div class="render" style="background: white; padding: 0;">
-      <img src="/logo/your-upload.svg" class="original" alt="Original"/>
+      <img src="/logo/mark.svg" class="original" alt="v9"/>
     </div>
     <div class="observe">
-      <strong>1,889,845 bytes</strong><br>
-      9,163 個 path<br>
-      不適合 production
+      <strong>492,192 bytes / gzip 142 KB</strong><br>
+      色塊邊緣有 trace 雜訊<br>
+      ⚠️ 白色區塊內有黑點
     </div>
   </div>
 
   <div class="col">
-    <div class="label">⚡ 優化後(484 KB / gzip 142 KB)</div>
+    <div class="label">✨ v10(potrace 重新 vectorize)</div>
     <div class="render" style="background: white; padding: 0;">
-      <img src="/logo/optimized.svg" class="original" alt="Optimized"/>
+      <img src="/logo/clean-preview.svg" class="original" alt="v10"/>
     </div>
     <div class="observe">
-      <strong>492,192 bytes(縮 74%)</strong><br>
-      傳輸 gzip 後 142 KB<br>
-      2 個 path,色彩合併成 2 色
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="label">📐 我畫的 v8(失敗)</div>
-    <div class="render">
-      <svg width="380" height="380" viewBox="0 0 48 48" fill="none">
-        <path d="M 24 6 L 39 15 L 39 33 L 46 43 L 32 41 L 24 42 L 9 33 L 9 15 Z M 24 16 L 31 20 L 31 28 L 24 32 L 17 28 L 17 20 Z" fill="white" fill-rule="evenodd"/>
-      </svg>
-    </div>
-    <div class="observe">
-      <strong>250 bytes</strong><br>
-      但結構完全不對<br>
-      ❌ 沒重現「外框 + 內 Q + 突破尾」
+      <strong>48,782 bytes / gzip 19 KB(縮 99%)</strong><br>
+      potrace turdsize=100 過濾噪點<br>
+      ✓ 純色塊,無雜訊
     </div>
   </div>
 </div>
