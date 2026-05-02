@@ -1,17 +1,11 @@
 /**
- * Quiver brand mark — squircle bg + 外框白 Q outline + 右下實心三角形
+ * Quiver brand mark — squircle bg + 八邊形 Q outline + 右下實心三角形
  *
- * 設計演化:
- * v1: 通用紫色 blob ❌(無 character)
- * v2: 圓圈 + 對角箭頭 ❌(像男性符號 ♂)
- * v3: 3 個堆疊 chevron ✓(避開 ♂ 但跟「箭袋」連結弱)
- * v4: Q 圓環 + 右下小三角 ✓(有 Q 識別)
- * v5: Q outline(方圓形)+ 右下角填充三角形 ← 現在版本
- *
- * v5 概念:
- * - 用 outline 方圓形(像 hexagonal Q)取代圓環,角度感強
- * - 右下角實心三角形像「Q 的尾巴」/「箭頭從箭袋射出」
- * - Triangle 跟 outline 共邊,視覺上「補滿」一個角
+ * v6 設計改變:
+ * - Q 形狀從圓 / 方圓形改成 octagonal(8 邊形)— 角度感最強
+ * - 右下三角形貼著 outline 內側,像 Q 的尾巴 / 從箭袋射出的箭頭
+ * - 比 v5 的方圓形更 distinctive,跟 fuly.ai 的 hexagon 撞臉風險也控制住
+ *   (它是 6 邊,我們是 8 邊,且我們有 Q 尾巴特徵)
  */
 
 type Variant = "mark" | "lockup";
@@ -39,15 +33,16 @@ export function QuiverLogo({
 function MarkInner() {
   return (
     <>
-      {/* 白色方圓形 outline(內 Q),比 bg squircle 小一圈 */}
+      {/* 白色 octagonal outline (8 邊形,top/right/bottom/left 4 個短邊 + 4 個 45° 切角) */}
       <path
-        d="M 24 8 C 14 8 8 14 8 24 C 8 34 14 40 24 40 C 34 40 40 34 40 24 C 40 14 34 8 24 8 Z"
+        d="M 16 6 L 32 6 L 42 16 L 42 32 L 32 42 L 16 42 L 6 32 L 6 16 Z"
         stroke="white"
-        strokeWidth="3.8"
+        strokeWidth="3.5"
         fill="none"
+        strokeLinejoin="round"
       />
-      {/* 右下角實心三角形(Q 的尾巴/箭頭),跟 outline 在 corner 共邊 */}
-      <path d="M 28 36 L 40 36 L 40 24 Z" fill="white" />
+      {/* 右下實心三角形(Q 尾巴/箭頭),right-angle 貼右下角內側 */}
+      <path d="M 28 36 L 38 36 L 38 26 Z" fill="white" />
     </>
   );
 }
@@ -134,7 +129,6 @@ function Lockup({
         />
         <MarkInner />
       </g>
-      {/* Sora 字體更幾何 / display 感,呼應 mark 的角度感 */}
       <text
         x="60"
         y="33"

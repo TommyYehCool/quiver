@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-label="Quiver">
   <path d="M 24 1.5 C 8 1.5 1.5 8 1.5 24 C 1.5 40 8 46.5 24 46.5 C 40 46.5 46.5 40 46.5 24 C 46.5 8 40 1.5 24 1.5 Z" fill="currentColor"/>
-  <path d="M 24 8 C 14 8 8 14 8 24 C 8 34 14 40 24 40 C 34 40 40 34 40 24 C 40 14 34 8 24 8 Z" stroke="white" stroke-width="3.8" fill="none"/>
-  <path d="M 28 36 L 40 36 L 40 24 Z" fill="white"/>
+  <path d="M 16 6 L 32 6 L 42 16 L 42 32 L 32 42 L 16 42 L 6 32 L 6 16 Z" stroke="white" stroke-width="3.5" fill="none" stroke-linejoin="round"/>
+  <path d="M 28 36 L 38 36 L 38 26 Z" fill="white"/>
 </svg>
