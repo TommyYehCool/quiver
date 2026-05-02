@@ -22,7 +22,6 @@ import {
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { LogoutButton } from "@/components/common/logout-button";
 import { QuiverLogo } from "@/components/common/quiver-logo";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -102,9 +101,6 @@ export function AdminChrome({
               <LocaleSwitcher />
             </div>
             <div className="hidden lg:block">
-              <ThemeToggle />
-            </div>
-            <div className="hidden lg:block">
               <LogoutButton locale={locale} />
             </div>
             <button
@@ -135,7 +131,6 @@ export function AdminChrome({
               {/* Mobile-only:把 desktop header 右側的工具收進來 */}
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-violet-200 pt-3 px-1 dark:border-violet-900">
                 <LocaleSwitcher />
-                <ThemeToggle />
                 <LogoutButton locale={locale} />
               </div>
             </nav>

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { QuiverLogo } from "@/components/common/quiver-logo";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
 
 export default function LoginPage({
@@ -31,7 +30,6 @@ export default function LoginPage({
         </Link>
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
-          <ThemeToggle />
         </div>
       </header>
 

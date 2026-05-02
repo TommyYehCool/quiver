@@ -24,7 +24,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { QuiverLogo } from "@/components/common/quiver-logo";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 
 export default function LandingPage({
   params: { locale },
@@ -74,7 +73,6 @@ function Header({ locale }: { locale: string }) {
       </Link>
       <div className="flex items-center gap-2">
         <LocaleSwitcher />
-        <ThemeToggle />
         <Button asChild size="sm">
           <Link href={`/${locale}/login`}>{t("login")}</Link>
         </Button>

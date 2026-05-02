@@ -19,7 +19,6 @@ import { LocaleSwitcher } from "@/components/common/locale-switcher";
 import { LogoutButton } from "@/components/common/logout-button";
 import { NotificationBell } from "@/components/common/notification-bell";
 import { QuiverLogo } from "@/components/common/quiver-logo";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -92,7 +91,7 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
               </Link>
             ) : null}
             <NotificationBell />
-            {/* Settings + LocaleSwitcher + ThemeToggle + Logout 在 mobile 收進 drawer */}
+            {/* Settings + LocaleSwitcher + Logout 在 mobile 收進 drawer */}
             <Link
               href={`/${locale}/settings`}
               aria-label="Settings"
@@ -102,9 +101,6 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
             </Link>
             <div className="hidden md:block">
               <LocaleSwitcher />
-            </div>
-            <div className="hidden md:block">
-              <ThemeToggle />
             </div>
             <div className="hidden md:block">
               <LogoutButton locale={locale} />
@@ -152,7 +148,6 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
                 </Link>
                 <div className="mt-2 flex items-center justify-between gap-2 px-1">
                   <LocaleSwitcher />
-                  <ThemeToggle />
                   <LogoutButton locale={locale} />
                 </div>
               </div>

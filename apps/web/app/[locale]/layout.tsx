@@ -45,7 +45,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning className={`${inter.variable} ${sora.variable}`}>
+    <html lang={locale} suppressHydrationWarning className={`dark ${inter.variable} ${sora.variable}`}>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
