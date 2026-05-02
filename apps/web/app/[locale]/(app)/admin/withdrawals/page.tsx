@@ -142,8 +142,8 @@ export default async function AdminWithdrawalsPage({
                         <div className="text-xs text-slate-500">{w.user_email}</div>
                       </td>
                       <td className="py-3 pr-4 font-semibold tabular-nums">
-                        {w.amount}
-                        <span className="ml-1 text-xs font-normal text-slate-500">+ {w.fee} fee</span>
+                        {fmt(w.amount)}
+                        <span className="ml-1 text-xs font-normal text-slate-500">+ {fmt(w.fee)} fee</span>
                       </td>
                       <td className="max-w-[180px] truncate py-3 pr-4 font-mono text-xs">{w.to_address}</td>
                       <td className="py-3 pr-4">
@@ -192,4 +192,15 @@ export default async function AdminWithdrawalsPage({
       </Card>
     </div>
   );
+}
+
+/** 把 USDT 金額去掉尾部多餘 0(保留至少 2 位):"10.000000" → "10.00", "10.500000" → "10.50"。 */
+function fmt(raw: unknown): string {
+  if (raw === null || raw === undefined) return String(raw);
+  const n = Number(raw);
+  if (Number.isNaN(n)) return String(raw);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  });
 }

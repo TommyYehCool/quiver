@@ -67,9 +67,9 @@ export default async function AdminWithdrawalDetailPage({
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <Row label="申請人" value={`${w.user_display_name ?? "—"}(${w.user_email})`} />
-          <Row label="金額" value={`${w.amount} USDT`} />
-          <Row label="手續費" value={`${w.fee} USDT`} />
-          <Row label="總計從餘額扣" value={`${(Number(w.amount) + Number(w.fee)).toFixed(6)} USDT`} />
+          <Row label="金額" value={`${fmt(w.amount)} USDT`} />
+          <Row label="手續費" value={`${fmt(w.fee)} USDT`} />
+          <Row label="總計從餘額扣" value={`${fmt(Number(w.amount) + Number(w.fee))} USDT`} />
           <Row label="收款地址" value={w.to_address} mono />
           <Row label="送出時間" value={new Date(w.created_at).toLocaleString("zh-TW")} />
           {w.reviewed_at ? (
@@ -102,4 +102,15 @@ function Row({ label, value, mono = false }: { label: string; value: string; mon
       <span className={mono ? "break-all text-right font-mono text-xs" : "text-right font-medium"}>{value}</span>
     </div>
   );
+}
+
+/** 把 USDT 金額去掉尾部多餘 0(保留至少 2 位):"10.000000" → "10.00", "10.500000" → "10.50"。 */
+function fmt(raw: unknown): string {
+  if (raw === null || raw === undefined) return String(raw);
+  const n = Number(raw);
+  if (Number.isNaN(n)) return String(raw);
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  });
 }
