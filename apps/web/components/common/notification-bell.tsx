@@ -127,7 +127,22 @@ export function NotificationBell() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-40 mt-2 w-[360px] origin-top-right rounded-2xl border border-cream-edge bg-paper shadow-xl dark:border-slate-700 dark:bg-slate-900">
+        <>
+          {/* Mobile-only backdrop:點空白關閉 */}
+          <div
+            className="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-sm sm:hidden"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <div
+            className={[
+              "z-40 rounded-2xl border border-cream-edge bg-paper shadow-xl dark:border-slate-700 dark:bg-slate-900",
+              // mobile (< sm):fixed 螢幕水平居中,從上方 4rem 開始
+              "fixed left-4 right-4 top-16",
+              // desktop (>= sm):從 bell 右下展開的 dropdown
+              "sm:absolute sm:inset-auto sm:right-0 sm:mt-2 sm:w-[360px] sm:origin-top-right",
+            ].join(" ")}
+          >
           <div className="flex items-center justify-between border-b border-cream-edge px-4 py-3 dark:border-slate-700">
             <p className="text-sm font-semibold">{t("title")}</p>
             {unread > 0 ? (
@@ -162,6 +177,7 @@ export function NotificationBell() {
             )}
           </div>
         </div>
+        </>
       ) : null}
     </div>
   );
@@ -250,11 +266,28 @@ function toneFor(type: NotificationType): string {
   }
 }
 
+/** 把 USDT 金額去掉尾部多餘 0:"10.000000" → "10",  "10.500000" → "10.5"。
+ * 但保留至少 2 位小數,所以 "10" → "10.00"(讓金額看起來像金額)。 */
+function fmtAmount(raw: unknown): string {
+  if (raw === null || raw === undefined) return String(raw);
+  const n = Number(raw);
+  if (Number.isNaN(n)) return String(raw);
+  // 去掉尾部 0 但保留至少 2 位小數
+  return n.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  });
+}
+
 function renderMessage(
   it: NotificationItem,
   t: ReturnType<typeof useTranslations>,
 ): string {
-  const p = it.params ?? {};
+  const p: Record<string, unknown> = { ...(it.params ?? {}) };
+  // amount 出現在這幾個 type 的 message,統一格式化(去掉如 10.000000 那種尾零)
+  if ("amount" in p) {
+    p.amount = fmtAmount(p.amount);
+  }
   const key = `messages.${it.type}`;
   // 各 type 用對應 i18n template,fallback 到 raw type 名
   if (t.has(key)) {
