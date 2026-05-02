@@ -70,7 +70,7 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
           <div className="flex items-center gap-6">
             <Link href={`/${locale}/dashboard`} className="flex items-center gap-2">
               <QuiverLogo size={36} />
-              <span className="font-display text-lg font-bold tracking-tight">Quiver</span>
+              <span className="hidden font-display text-lg font-bold tracking-tight sm:inline">Quiver</span>
             </Link>
             <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
               {items.map((it) => (
@@ -92,16 +92,23 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
               </Link>
             ) : null}
             <NotificationBell />
+            {/* Settings + LocaleSwitcher + ThemeToggle + Logout 在 mobile 收進 drawer */}
             <Link
               href={`/${locale}/settings`}
               aria-label="Settings"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+              className="hidden h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 md:flex"
             >
               <Settings className="h-5 w-5" />
             </Link>
-            <LocaleSwitcher />
-            <ThemeToggle />
-            <LogoutButton locale={locale} />
+            <div className="hidden md:block">
+              <LocaleSwitcher />
+            </div>
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
+            <div className="hidden md:block">
+              <LogoutButton locale={locale} />
+            </div>
 
             {/* Mobile hamburger */}
             <button
@@ -132,6 +139,23 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
                   {t("switchToAdmin")}
                 </Link>
               ) : null}
+
+              {/* Mobile-only:把 desktop header 右側的工具收進來 */}
+              <div className="mt-3 border-t border-cream-edge pt-3 dark:border-slate-800">
+                <Link
+                  href={`/${locale}/settings`}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-cream/60 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Link>
+                <div className="mt-2 flex items-center justify-between gap-2 px-1">
+                  <LocaleSwitcher />
+                  <ThemeToggle />
+                  <LogoutButton locale={locale} />
+                </div>
+              </div>
             </nav>
           </div>
         ) : null}

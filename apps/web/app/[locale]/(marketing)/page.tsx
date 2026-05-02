@@ -70,7 +70,7 @@ function Header({ locale }: { locale: string }) {
     <header className="container flex h-16 items-center justify-between">
       <Link href={`/${locale}`} className="flex items-center gap-2">
         <QuiverLogo size={36} />
-        <span className="font-display text-lg font-bold tracking-tight">Quiver</span>
+        <span className="hidden font-display text-lg font-bold tracking-tight sm:inline">Quiver</span>
       </Link>
       <div className="flex items-center gap-2">
         <LocaleSwitcher />

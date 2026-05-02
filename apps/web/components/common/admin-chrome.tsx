@@ -86,7 +86,7 @@ export function AdminChrome({
           <div className="flex items-center gap-6">
             <Link href={`/${locale}/admin`} className="flex items-center gap-2">
               <QuiverLogo size={36} />
-              <span className="font-display text-lg font-bold tracking-tight text-violet-900 dark:text-violet-200">
+              <span className="hidden font-display text-lg font-bold tracking-tight text-violet-900 dark:text-violet-200 sm:inline">
                 Quiver Admin
               </span>
             </Link>
@@ -98,9 +98,15 @@ export function AdminChrome({
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <LocaleSwitcher />
-            <ThemeToggle />
-            <LogoutButton locale={locale} />
+            <div className="hidden lg:block">
+              <LocaleSwitcher />
+            </div>
+            <div className="hidden lg:block">
+              <ThemeToggle />
+            </div>
+            <div className="hidden lg:block">
+              <LogoutButton locale={locale} />
+            </div>
             <button
               onClick={() => setMobileOpen((v) => !v)}
               className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-violet-700 hover:bg-violet-100 dark:text-violet-300 dark:hover:bg-violet-950 lg:hidden"
@@ -125,6 +131,13 @@ export function AdminChrome({
                   onClose={() => setMobileOpen(false)}
                 />
               ))}
+
+              {/* Mobile-only:把 desktop header 右側的工具收進來 */}
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-violet-200 pt-3 px-1 dark:border-violet-900">
+                <LocaleSwitcher />
+                <ThemeToggle />
+                <LogoutButton locale={locale} />
+              </div>
             </nav>
           </div>
         ) : null}
