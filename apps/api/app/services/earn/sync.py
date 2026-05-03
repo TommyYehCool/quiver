@@ -96,6 +96,10 @@ async def sync_one_account(
         aave_daily_apr=aave_apr,
         total_usdt=total,
     )
+    # 必須 commit,否則 caller 用 standalone async session 跑時會 rollback。
+    # 既有的 admin /api/admin/earn/accounts/{id}/sync endpoint 也是預期此 fn
+    # 自己 commit(不會在 endpoint 層再做)。
+    await db.commit()
 
     success = bf_error is None and aave_error is None
     error_summary = "; ".join(filter(None, [bf_error, aave_error])) or None
