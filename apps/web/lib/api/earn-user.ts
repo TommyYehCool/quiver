@@ -39,6 +39,17 @@ export interface EarnSnapshotUserOut {
   bitfinex_daily_earned: string | null;
 }
 
+export interface ActiveCreditOut {
+  id: number;
+  amount: string;
+  rate_daily: string;
+  apr_pct: string;
+  period_days: number;
+  opened_at_ms: number;
+  expires_at_ms: number;
+  expected_interest_at_expiry: string;
+}
+
 export interface EarnMeOut {
   kyc_status: KycStatusValue;
   can_connect: boolean;
@@ -51,6 +62,7 @@ export interface EarnMeOut {
   daily_earned_usdt: string | null;
   total_at_bitfinex: string | null;
   active_positions: EarnPositionUserOut[];
+  active_credits: ActiveCreditOut[];
   recent_snapshots: EarnSnapshotUserOut[];
 }
 

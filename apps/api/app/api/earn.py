@@ -29,6 +29,7 @@ from app.models.earn import (
 from app.models.kyc import KycStatus, KycSubmission
 from app.schemas.api import ApiResponse
 from app.schemas.earn_user import (
+    ActiveCreditOut,
     EarnConnectIn,
     EarnConnectOut,
     EarnMeOut,
@@ -97,6 +98,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 daily_earned_usdt=None,
                 total_at_bitfinex=None,
                 active_positions=[],
+                active_credits=[],
                 recent_snapshots=[],
             )
         )
@@ -106,8 +108,39 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
     latest = snapshots[-1] if snapshots else None
     active_positions = await _list_active_positions(db, account.id)
 
-    funding_idle = latest.bitfinex_funding_usdt if latest else None
-    lent = latest.bitfinex_lent_usdt if latest else None
+    # Live fetch active credits from Bitfinex (so /earn shows real-time loan
+    # rate + expiry instead of stale daily snapshot). Costs ~500ms per request
+    # but worth it for transparency. Fail open — if Bitfinex hiccups we still
+    # render the page with snapshot data.
+    active_credits: list[ActiveCreditOut] = []
+    funding_idle: Decimal | None = latest.bitfinex_funding_usdt if latest else None
+    lent: Decimal | None = latest.bitfinex_lent_usdt if latest else None
+    daily_earned: Decimal | None = latest.bitfinex_daily_earned if latest else None
+    if conn is not None:
+        try:
+            from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
+
+            adapter = await BitfinexFundingAdapter.from_connection(db, conn)
+            live_position = await adapter.get_funding_position()
+            funding_idle = live_position.funding_available
+            lent = live_position.lent_total
+            daily_earned = live_position.daily_earned_estimate
+            active_credits = [
+                ActiveCreditOut(
+                    id=c.id,
+                    amount=c.amount,
+                    rate_daily=c.rate_daily,
+                    apr_pct=c.apr_pct,
+                    period_days=c.period_days,
+                    opened_at_ms=c.opened_at_ms,
+                    expires_at_ms=c.expires_at_ms,
+                    expected_interest_at_expiry=c.expected_interest_at_expiry,
+                )
+                for c in live_position.active_credits
+            ]
+        except Exception as e:  # noqa: BLE001
+            logger.warning("earn_me_live_fetch_failed", user_id=user.id, error=str(e))
+
     total = (
         (funding_idle or Decimal(0)) + (lent or Decimal(0))
         if (funding_idle is not None or lent is not None)
@@ -124,7 +157,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             bitfinex_funding_address=account.bitfinex_funding_address,
             funding_idle_usdt=funding_idle,
             lent_usdt=lent,
-            daily_earned_usdt=latest.bitfinex_daily_earned if latest else None,
+            daily_earned_usdt=daily_earned,
             total_at_bitfinex=total,
             active_positions=[
                 EarnPositionUserOut(
@@ -141,6 +174,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 )
                 for p in active_positions
             ],
+            active_credits=active_credits,
             recent_snapshots=[
                 EarnSnapshotUserOut(
                     snapshot_date=s.snapshot_date,

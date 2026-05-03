@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AutoLendToggle } from "@/components/earn/auto-lend-toggle";
+import { ActiveCreditRow } from "@/components/earn/active-credit-row";
 import type { EarnPositionStatus } from "@/lib/api/earn-user";
 
 function fmtUsd(s: string | null): string {
@@ -172,6 +173,25 @@ export default async function EarnPage({
               <CardContent className="text-xs text-slate-500">最新 snapshot 估算</CardContent>
             </Card>
           </div>
+
+          {/* Active loans (live from Bitfinex) — rate + interest + countdown */}
+          {earn.active_credits.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>目前借出</CardTitle>
+                <CardDescription>
+                  Bitfinex 上正在計息的 funding loans。每筆借期到期後自動回 funding wallet,系統會 auto-renew 重新掛單。
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {earn.active_credits.map((c) => (
+                    <ActiveCreditRow key={c.id} credit={c} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Auto-lend toggle */}
           <Card>

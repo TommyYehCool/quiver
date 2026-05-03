@@ -56,6 +56,39 @@ class BitfinexPosition:
     funding_available: Decimal     # 真正可用的(扣掉 active loans / locked)
     lent_total: Decimal            # active credits (借出去)
     daily_earned_estimate: Decimal | None
+    active_credits: tuple["FundingCredit", ...] = ()  # 每筆 lender-side loan 的詳細
+
+
+@dataclass(frozen=True)
+class FundingCredit:
+    """Active funding credit/loan — money currently lent out (lender side).
+
+    Sourced from `/v2/auth/r/funding/credits/<sym>` or `/v2/auth/r/funding/loans/<sym>`
+    (Bitfinex 的 classification 不一致,我們兩個都查再合)。Only entries with
+    SIDE=1 (lender) are exposed via this dataclass.
+    """
+
+    id: int
+    symbol: str
+    amount: Decimal              # principal currently lent
+    rate_daily: Decimal          # daily rate (0.0001 = 0.01% / day)
+    period_days: int             # original period
+    opened_at_ms: int            # unix ms when loan started
+    side: int                    # 1 = lender (we lent), -1 = borrower
+
+    @property
+    def expires_at_ms(self) -> int:
+        return self.opened_at_ms + self.period_days * 86_400_000
+
+    @property
+    def expected_interest_at_expiry(self) -> Decimal:
+        """Total interest if loan runs full term:amount × rate × days."""
+        return self.amount * self.rate_daily * Decimal(self.period_days)
+
+    @property
+    def apr_pct(self) -> Decimal:
+        """Annualized rate as percentage (informational)."""
+        return self.rate_daily * Decimal(365) * Decimal(100)
 
 
 @dataclass(frozen=True)
@@ -215,21 +248,49 @@ class BitfinexFundingAdapter:
                 break
 
         lent_total = Decimal(0)
+        active_credits: list[FundingCredit] = []
+        # Row format(credits + loans 同):
+        #   [ID, SYMBOL, SIDE, MTS_CREATE, MTS_UPDATE, AMOUNT, FLAGS, STATUS,
+        #    RATE_TYPE, _, _, RATE, PERIOD, MTS_OPENING, MTS_LAST_PAYOUT, ...]
         for row in (credits or []) + (loans or []):
-            if not isinstance(row, list) or len(row) < 6:
+            if not isinstance(row, list) or len(row) < 14:
                 continue
-            # SIDE: 1 = lender (we lent it out), -1 = borrower (we took loan).
-            # We only count lender-side positions toward lent_total.
             side = row[2] if len(row) > 2 else None
             if side != 1:
+                continue  # only lender-side (SIDE=1) counts as our lent funds
+            try:
+                amount = Decimal(str(row[5] or 0))
+                rate = Decimal(str(row[11] or 0))
+                period = int(row[12] or 0)
+                opened = int(row[13] or row[3] or 0)
+                cred = FundingCredit(
+                    id=int(row[0]),
+                    symbol=str(row[1]),
+                    amount=amount,
+                    rate_daily=rate,
+                    period_days=period,
+                    opened_at_ms=opened,
+                    side=int(side),
+                )
+            except (TypeError, ValueError):
                 continue
-            lent_total += Decimal(str(row[5] or 0))
+            lent_total += cred.amount
+            active_credits.append(cred)
+
+        # Daily earned estimate = sum(amount × daily_rate) across active credits
+        daily_earned: Decimal | None = None
+        if active_credits:
+            daily_earned = sum(
+                (c.amount * c.rate_daily for c in active_credits),
+                Decimal(0),
+            )
 
         return BitfinexPosition(
             funding_balance=funding_balance,
             funding_available=funding_available,
             lent_total=lent_total,
-            daily_earned_estimate=None,
+            daily_earned_estimate=daily_earned,
+            active_credits=tuple(active_credits),
         )
 
     # ──── write methods (F-Phase 3 / Path A MVP) ────

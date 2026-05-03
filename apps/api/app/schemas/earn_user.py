@@ -38,6 +38,18 @@ class EarnSnapshotUserOut(BaseModel):
     bitfinex_daily_earned: Decimal | None
 
 
+class ActiveCreditOut(BaseModel):
+    """Live snapshot of one active funding credit (= money currently lent at Bitfinex)."""
+    id: int
+    amount: Decimal
+    rate_daily: Decimal              # 0.0001 = 0.01% / day
+    apr_pct: Decimal                 # annualised %
+    period_days: int
+    opened_at_ms: int
+    expires_at_ms: int
+    expected_interest_at_expiry: Decimal
+
+
 class EarnMeOut(BaseModel):
     """Everything the user needs on /earn:KYC gate, account state, positions."""
 
@@ -59,6 +71,9 @@ class EarnMeOut(BaseModel):
 
     # In-flight pipeline state for transparency (e.g., "200 USDT broadcast, awaiting Bitfinex credit")
     active_positions: list[EarnPositionUserOut]
+
+    # Live active loans at Bitfinex (each with rate + expiry)
+    active_credits: list[ActiveCreditOut]
 
     # Trend (last N days)
     recent_snapshots: list[EarnSnapshotUserOut]
