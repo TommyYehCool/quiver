@@ -437,6 +437,37 @@ async def cron_sweep_all(ctx: dict[str, Any]) -> str:
     return f"dispatched:{len(users)}"
 
 
+async def cron_earn_reconcile(ctx: dict[str, Any]) -> str:
+    """每 30 分鐘對所有 active earn_account 跑 reconcile + auto-renew。
+
+    Reconciliation:close lent positions whose Bitfinex offers no longer
+    exist; warn on positions stuck > 1hr in non-terminal states.
+
+    Auto-renew:if user's Bitfinex funding wallet has ≥ MIN idle and no
+    in-flight pipeline, submit a fresh funding offer (this is how 2-day
+    offers naturally roll over after maturity).
+    """
+    from app.services.earn.reconcile import reconcile_all_accounts
+    from app.services.heartbeat import write_heartbeat
+
+    async with db_session() as session:
+        summaries = await reconcile_all_accounts(session)
+
+    await write_heartbeat(ctx["redis"], "earn_reconcile", expected_interval_s=1800)
+
+    total_renewed = sum(s.get("renewed", 0) for s in summaries)
+    total_closed = sum(s.get("lent_closed", 0) for s in summaries)
+    total_stuck = sum(s.get("stuck_warnings", 0) for s in summaries)
+    logger.info(
+        "earn_reconcile_done",
+        accounts=len(summaries),
+        renewed=total_renewed,
+        closed=total_closed,
+        stuck=total_stuck,
+    )
+    return f"accounts:{len(summaries)} renewed:{total_renewed} closed:{total_closed} stuck:{total_stuck}"
+
+
 async def cron_heartbeat_watchdog(ctx: dict[str, Any]) -> str:
     """每 10 分鐘掃 cron heartbeat,stale 就打 Sentry alert。"""
     from app.services.heartbeat import watchdog_alert_stale
@@ -572,6 +603,7 @@ class WorkerSettings:
         sweep_user,
         cron_sweep_all,
         cron_heartbeat_watchdog,
+        cron_earn_reconcile,
         auto_lend_dispatcher,
         auto_lend_finalizer,
     ]
@@ -588,6 +620,12 @@ class WorkerSettings:
         cron(
             cron_heartbeat_watchdog,
             minute={0, 10, 20, 30, 40, 50},
+            run_at_startup=False,
+        ),
+        # F-3e: 每 30 分鐘對 earn_account 跑 reconcile + auto-renew
+        cron(
+            cron_earn_reconcile,
+            minute={5, 35},
             run_at_startup=False,
         ),
     ]
