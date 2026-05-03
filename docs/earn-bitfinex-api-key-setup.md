@@ -156,7 +156,7 @@ Tommy 收到後會立刻在 Quiver 加密存(AES-GCM + KEK,跟錢包私鑰同等
 
 ### 下半段(權限 + IP allowlist)
 
-![Bitfinex API Key permissions — bottom section](images/earn-bitfinex/perms-bottom.png)
+![Bitfinex API Key permissions — bottom section](images/earn-bitfinex/perms-down.png)
 
 對照上面截圖,逐欄確認:
 - 該 ON 的全 ON ✅
