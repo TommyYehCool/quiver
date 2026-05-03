@@ -39,10 +39,12 @@ from app.schemas.earn_user import (
     EarnSettingsUpdateIn,
     EarnSnapshotUserOut,
 )
+from app.models.referral import ReferralBindingSource
 from app.services.earn import encryption as earn_crypto
 from app.services.earn import fee_policy
 from app.services.earn import repo as earn_repo
 from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
+from app.services.referral import binding as referral_binding
 
 router = APIRouter(prefix="/api/earn", tags=["earn-user"])
 logger = get_logger(__name__)
@@ -318,6 +320,27 @@ async def connect_bitfinex(
         permissions=BitfinexPermissions.READ_FUNDING_WRITE.value,
     )
 
+    # Step 5 (F-4b): optional referral code bind. Failures are soft —
+    # connect itself never fails on a bad code, just surfaces the error.
+    referral_bind_status: str | None = None
+    if payload.referral_code:
+        try:
+            await referral_binding.bind(
+                db,
+                referee_user_id=user.id,
+                referrer_code=payload.referral_code,
+                source=ReferralBindingSource.EARN_CONNECT,
+            )
+            referral_bind_status = "ok"
+        except referral_binding.BindError as e:
+            logger.info(
+                "earn_connect_referral_bind_failed",
+                user_id=user.id,
+                code=payload.referral_code,
+                reason=e.code,
+            )
+            referral_bind_status = e.code
+
     await db.commit()
 
     logger.info(
@@ -336,6 +359,7 @@ async def connect_bitfinex(
             bitfinex_funding_balance=position.funding_balance,
             earn_tier=user.earn_tier,
             perf_fee_bps=account.perf_fee_bps,
+            referral_bind_status=referral_bind_status,
         )
     )
 

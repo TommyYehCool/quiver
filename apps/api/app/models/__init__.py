@@ -27,6 +27,12 @@ from app.models.ledger import (
 from app.models.login_session import LoginSession
 from app.models.notification import Notification, NotificationType
 from app.models.onchain_tx import OnchainTx, OnchainTxStatus
+from app.models.referral import (
+    Referral,
+    ReferralBindingSource,
+    ReferralCode,
+    ReferralPayout,
+)
 from app.models.system_keys import SystemKey, SystemKeyState
 from app.models.totp_backup_code import TotpBackupCode
 from app.models.user import User, UserStatus
@@ -61,6 +67,10 @@ __all__ = [
     "NotificationType",
     "OnchainTx",
     "OnchainTxStatus",
+    "Referral",
+    "ReferralBindingSource",
+    "ReferralCode",
+    "ReferralPayout",
     "SystemKey",
     "SystemKeyState",
     "TargetKind",

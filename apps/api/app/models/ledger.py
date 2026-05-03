@@ -25,6 +25,9 @@ class AccountKind(str, enum.Enum):
     USER = "USER"
     PLATFORM_CUSTODY = "PLATFORM_CUSTODY"  # 我們在鏈上的保管池
     FEE_PAYER = "FEE_PAYER"  # Phase 5+ 用,平台代付 TRX 用
+    PLATFORM_FEE_REVENUE = "PLATFORM_FEE_REVENUE"
+    # F-4b:Quiver 收的 perf_fee 的對手方。EARN_PERF_FEE 把 USER 的請求權減少,
+    # 同額度 CR 到這裡。REFERRAL_PAYOUT 從這裡 DR 出去 → CR 到 referrer 的 USER。
 
 
 class LedgerTxType(str, enum.Enum):
@@ -33,6 +36,14 @@ class LedgerTxType(str, enum.Enum):
     WITHDRAWAL = "WITHDRAWAL"  # Phase 5+
     REVERSE = "REVERSE"  # Phase 5+
     EARN_OUTBOUND = "EARN_OUTBOUND"  # F-Phase 3 / Path A:USDT 從 HOT 送到 user 的 Bitfinex
+    EARN_PERF_FEE = "EARN_PERF_FEE"
+    # F-4b:Quiver 從 user Quiver wallet 餘額收 perf_fee
+    #   DR USER (請求權減少 perf_fee)
+    #   CR PLATFORM_FEE_REVENUE
+    REFERRAL_PAYOUT = "REFERRAL_PAYOUT"
+    # F-4b:Quiver 把 perf_fee 的 10%/5% 撥給 L1/L2 referrer
+    #   DR PLATFORM_FEE_REVENUE
+    #   CR USER(referrer)
 
 
 class LedgerTxStatus(str, enum.Enum):

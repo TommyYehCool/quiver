@@ -68,6 +68,25 @@ async def _platform_custody_account(db: AsyncSession, currency: str = CURRENCY) 
     return account
 
 
+async def _platform_fee_revenue_account(
+    db: AsyncSession, currency: str = CURRENCY
+) -> Account:
+    """The CR side of EARN_PERF_FEE / DR side of REFERRAL_PAYOUT (F-4b)."""
+    result = await db.execute(
+        select(Account).where(
+            Account.user_id.is_(None),
+            Account.kind == AccountKind.PLATFORM_FEE_REVENUE.value,
+            Account.currency == currency,
+        )
+    )
+    account = result.scalar_one_or_none()
+    if account is None:
+        raise LedgerError(
+            "PLATFORM_FEE_REVENUE account not seeded — alembic migration 0015 should create it"
+        )
+    return account
+
+
 async def post_deposit(db: AsyncSession, onchain_tx: OnchainTx) -> LedgerTransaction:
     """把 PROVISIONAL onchain_tx 升 POSTED 並寫入 ledger(雙複式)。
 
@@ -308,3 +327,123 @@ async def get_pending_amount(
         )
     )
     return Decimal(result.scalar_one() or 0)
+
+
+# ─────────────────────────────────────────────────────────
+# F-4b: perf_fee 收取 + referral 撥款 (Path A)
+# ─────────────────────────────────────────────────────────
+
+
+async def post_perf_fee(
+    db: AsyncSession,
+    *,
+    user_id: int,
+    amount: Decimal,
+    currency: str = CURRENCY,
+) -> LedgerTransaction:
+    """從 user 的 Quiver wallet 收 perf_fee。
+
+    DR USER (請求權減少 amount)
+    CR PLATFORM_FEE_REVENUE (Quiver 收入增加 amount)
+
+    Caller 須先確認 user 餘額足夠;此 fn 會直接寫(不檢查 insufficient)。
+    """
+    if amount <= 0:
+        raise LedgerError(f"perf_fee amount must be positive, got {amount}")
+
+    user_acct = await get_or_create_user_account(db, user_id, currency)
+    fee_revenue_acct = await _platform_fee_revenue_account(db, currency)
+
+    ledger_tx = LedgerTransaction(
+        type=LedgerTxType.EARN_PERF_FEE.value,
+        status=LedgerTxStatus.POSTED.value,
+        amount=amount,
+        currency=currency,
+    )
+    db.add(ledger_tx)
+    await db.flush()
+
+    db.add_all(
+        [
+            LedgerEntry(
+                ledger_tx_id=ledger_tx.id,
+                account_id=user_acct.id,
+                direction=EntryDirection.DEBIT.value,
+                amount=amount,
+                currency=currency,
+            ),
+            LedgerEntry(
+                ledger_tx_id=ledger_tx.id,
+                account_id=fee_revenue_acct.id,
+                direction=EntryDirection.CREDIT.value,
+                amount=amount,
+                currency=currency,
+            ),
+        ]
+    )
+
+    logger.info(
+        "perf_fee_posted",
+        ledger_tx_id=ledger_tx.id,
+        user_id=user_id,
+        amount=str(amount),
+    )
+    return ledger_tx
+
+
+async def post_referral_payout(
+    db: AsyncSession,
+    *,
+    referrer_user_id: int,
+    amount: Decimal,
+    currency: str = CURRENCY,
+) -> LedgerTransaction:
+    """把 perf_fee 的 X% 從 PLATFORM_FEE_REVENUE 撥給 L1/L2 referrer 主錢包。
+
+    DR PLATFORM_FEE_REVENUE (Quiver 收入減少 amount)
+    CR USER(referrer) (請求權增加 amount)
+
+    Caller 負責計算 amount 跟 idempotency(透過 referral_payouts 表的 unique
+    constraint 保證同一 perf_fee accrual 不會重複觸發)。
+    """
+    if amount <= 0:
+        raise LedgerError(f"referral payout amount must be positive, got {amount}")
+
+    referrer_acct = await get_or_create_user_account(db, referrer_user_id, currency)
+    fee_revenue_acct = await _platform_fee_revenue_account(db, currency)
+
+    ledger_tx = LedgerTransaction(
+        type=LedgerTxType.REFERRAL_PAYOUT.value,
+        status=LedgerTxStatus.POSTED.value,
+        amount=amount,
+        currency=currency,
+    )
+    db.add(ledger_tx)
+    await db.flush()
+
+    db.add_all(
+        [
+            LedgerEntry(
+                ledger_tx_id=ledger_tx.id,
+                account_id=fee_revenue_acct.id,
+                direction=EntryDirection.DEBIT.value,
+                amount=amount,
+                currency=currency,
+            ),
+            LedgerEntry(
+                ledger_tx_id=ledger_tx.id,
+                account_id=referrer_acct.id,
+                direction=EntryDirection.CREDIT.value,
+                amount=amount,
+                currency=currency,
+            ),
+        ]
+    )
+
+    logger.info(
+        "referral_payout_posted",
+        ledger_tx_id=ledger_tx.id,
+        referrer_user_id=referrer_user_id,
+        amount=str(amount),
+    )
+    return ledger_tx

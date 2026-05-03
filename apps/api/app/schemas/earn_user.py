@@ -113,11 +113,23 @@ class EarnConnectIn(BaseModel):
         ..., pattern=r"^T[1-9A-HJ-NP-Za-km-z]{33}$",
         description="34-char Tron address starting with T",
     )
+    # Optional referral code (F-4b) — pasted during onboarding. If valid,
+    # binds the user to the code owner as their L1 referrer. Bind failures
+    # are non-fatal: connect still succeeds, error surfaced as a warning.
+    referral_code: str | None = Field(default=None, min_length=4, max_length=12)
 
     @field_validator("bitfinex_api_key", "bitfinex_api_secret", "bitfinex_funding_address")
     @classmethod
     def _strip_whitespace(cls, v: str) -> str:
         return v.strip()
+
+    @field_validator("referral_code")
+    @classmethod
+    def _strip_optional(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        stripped = v.strip()
+        return stripped if stripped else None
 
 
 class EarnConnectOut(BaseModel):
@@ -129,6 +141,10 @@ class EarnConnectOut(BaseModel):
     # Tier + fee assigned at connect time (F-4a).
     earn_tier: str
     perf_fee_bps: int
+    # Referral bind result (F-4b). null if user didn't paste a code; "ok" if
+    # bound; an error code (e.g. "referral.codeNotFound") if paste failed.
+    # connect itself always succeeds — failed bind is a soft warning.
+    referral_bind_status: str | None = None
 
 
 # ─────────────────────────────────────────────────────────

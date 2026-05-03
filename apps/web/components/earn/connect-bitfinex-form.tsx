@@ -22,6 +22,9 @@ const STRINGS: Record<Locale, {
   fundingAddrHelpStrong: string;
   fundingAddrHelpAfter: string;
   fundingAddrInvalid: string;
+  referralCodeLabel: string;
+  referralCodeHelp: string;
+  referralBindOk: string;
   successPrefix: string;
   errVerifyPrefix: string;
   errVerifyDefault: string;
@@ -40,6 +43,9 @@ const STRINGS: Record<Locale, {
     fundingAddrHelpStrong: "Funding wallet address",
     fundingAddrHelpAfter: "(不是 Exchange / Margin)。",
     fundingAddrInvalid: "⚠ 格式不對(34 字元 T 開頭)",
+    referralCodeLabel: "推薦碼(可選)",
+    referralCodeHelp: "如果朋友邀你來,輸入他們的推薦碼。連接後仍可在「推薦」頁面綁定。",
+    referralBindOk: "✓ 推薦碼綁定成功",
     successPrefix: "連接成功!Bitfinex Funding wallet 餘額:",
     errVerifyPrefix: "Bitfinex 驗證失敗:",
     errVerifyDefault: "請檢查 key + secret 是否正確,以及 IP allowlist 是否設了 45.77.30.174",
@@ -58,6 +64,9 @@ const STRINGS: Record<Locale, {
     fundingAddrHelpStrong: "Funding wallet address",
     fundingAddrHelpAfter: " (not Exchange / Margin).",
     fundingAddrInvalid: "⚠ Wrong format (must be 34 chars starting with T)",
+    referralCodeLabel: "Referral code (optional)",
+    referralCodeHelp: "If a friend invited you, paste their code. You can also bind one later from the Referral page.",
+    referralBindOk: "✓ Referral code bound",
     successPrefix: "Connected! Bitfinex Funding wallet balance: ",
     errVerifyPrefix: "Bitfinex verification failed: ",
     errVerifyDefault:
@@ -77,6 +86,9 @@ const STRINGS: Record<Locale, {
     fundingAddrHelpStrong: "Funding ウォレットアドレス",
     fundingAddrHelpAfter: " をコピー(Exchange / Margin ではなく)。",
     fundingAddrInvalid: "⚠ 形式が無効(T で始まる 34 文字)",
+    referralCodeLabel: "リファラルコード(任意)",
+    referralCodeHelp: "友達に招待された場合、コードを入力してください。後からリファラルページでも紐付けできます。",
+    referralBindOk: "✓ リファラルコード紐付け済み",
     successPrefix: "接続成功!Bitfinex Funding ウォレット残高:",
     errVerifyPrefix: "Bitfinex 検証失敗:",
     errVerifyDefault:
@@ -98,6 +110,7 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
   const [apiKey, setApiKey] = React.useState("");
   const [apiSecret, setApiSecret] = React.useState("");
   const [fundingAddr, setFundingAddr] = React.useState("");
+  const [referralCode, setReferralCode] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -120,8 +133,11 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
         bitfinex_api_key: apiKey.trim(),
         bitfinex_api_secret: apiSecret.trim(),
         bitfinex_funding_address: fundingAddr.trim(),
+        referral_code: referralCode.trim() || undefined,
       });
-      setSuccess(`${s.successPrefix}${r.bitfinex_funding_balance} USDT`);
+      const bindNote =
+        r.referral_bind_status === "ok" ? `\n${s.referralBindOk}` : "";
+      setSuccess(`${s.successPrefix}${r.bitfinex_funding_balance} USDT${bindNote}`);
       setTimeout(() => router.push(`/${locale}/earn`), 1800);
     } catch (e) {
       const code = (e as { code?: string }).code ?? s.errGeneric;
@@ -186,6 +202,22 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
             <span className="ml-1 text-red-500">{s.fundingAddrInvalid}</span>
           )}
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="referral_code">{s.referralCodeLabel}</Label>
+        <Input
+          id="referral_code"
+          type="text"
+          autoComplete="off"
+          placeholder="ALICE12"
+          maxLength={12}
+          value={referralCode}
+          onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+          disabled={busy}
+          className="font-mono uppercase tracking-widest"
+        />
+        <p className="text-xs text-slate-500">{s.referralCodeHelp}</p>
       </div>
 
       {err && (

@@ -476,6 +476,28 @@ async def cron_heartbeat_watchdog(ctx: dict[str, Any]) -> str:
     return f"stale:{stale}"
 
 
+async def cron_earn_perf_fee(ctx: dict[str, Any]) -> str:
+    """每週一 02:00 UTC:結算上週 (Mon-Sun) perf_fee + 觸發 referral 撥款 (F-4b)。
+
+    Pipeline:
+      1. accrue_period(Mon-Sun) → 寫 EarnFeeAccrual rows (status=ACCRUED)
+      2. settle_outstanding() → 對每筆 ACCRUED 從 user wallet 扣款,成功
+         的觸發 referral payout (L1=10% + L2=5% of perf_fee)
+      3. 不夠扣的留 ACCRUED,下週重試
+    """
+    from app.services.earn.perf_fee import run_weekly_perf_fee_cycle
+    from app.services.heartbeat import write_heartbeat
+
+    async with db_session() as session:
+        summary = await run_weekly_perf_fee_cycle(session)
+
+    await write_heartbeat(ctx["redis"], "earn_perf_fee", expected_interval_s=604800)
+    return (
+        f"accrued:{summary['accrued']} settled:{summary['settled_ok']} "
+        f"skip:{summary['settled_skip']} payouts:{summary['payouts']}"
+    )
+
+
 async def reconcile_balances(ctx: dict[str, Any]) -> str:
     """每日對帳 cron task — 比對 ledger vs 鏈上,差異 > 0.01 USDT 寄信給 admin。"""
     from app.services.heartbeat import write_heartbeat
@@ -604,6 +626,7 @@ class WorkerSettings:
         cron_sweep_all,
         cron_heartbeat_watchdog,
         cron_earn_reconcile,
+        cron_earn_perf_fee,
         auto_lend_dispatcher,
         auto_lend_finalizer,
     ]
@@ -626,6 +649,14 @@ class WorkerSettings:
         cron(
             cron_earn_reconcile,
             minute={5, 35},
+            run_at_startup=False,
+        ),
+        # F-4b: 每週一 02:00 UTC 結算上週 perf_fee + 觸發 referral 撥款
+        cron(
+            cron_earn_perf_fee,
+            weekday="mon",
+            hour=2,
+            minute=0,
             run_at_startup=False,
         ),
     ]

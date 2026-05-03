@@ -90,6 +90,7 @@ export interface EarnConnectOut {
   bitfinex_funding_balance: string;
   earn_tier: EarnTier;
   perf_fee_bps: number;
+  referral_bind_status: string | null;
 }
 
 // ──── client (browser) ────
@@ -116,6 +117,7 @@ export async function connectBitfinex(
     bitfinex_api_key: string;
     bitfinex_api_secret: string;
     bitfinex_funding_address: string;
+    referral_code?: string;
   },
 ): Promise<EarnConnectOut> {
   return apiFetch<EarnConnectOut>("/api/earn/connect", {
