@@ -53,7 +53,7 @@ export function DevSimulator(_props: { userId: number }) {
             重新同步 Tatum 訂閱
           </p>
           <p className="text-xs text-slate-500">
-            ngrok 重啟後 URL 會變,點這個重新訂閱所有用戶地址
+            如果發現用戶入金沒被偵測到,可手動 re-sync 所有用戶地址
           </p>
           <Button onClick={handleSync} disabled={busy} variant="outline">
             {busy ? (

@@ -147,7 +147,9 @@ export default async function DashboardPage({
           {/* 最近活動 — 從 BalanceCard 拆出來,放在錢包操作下方 */}
           <RecentActivityCard />
 
-          {isAdmin ? <DevSimulator userId={user.id} /> : null}
+          {isAdmin && process.env.NEXT_PUBLIC_ENV !== "mainnet" ? (
+            <DevSimulator userId={user.id} />
+          ) : null}
         </>
       ) : null}
 
