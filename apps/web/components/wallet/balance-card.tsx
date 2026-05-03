@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Clock, Coins, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Clock, Coins, TrendingUp } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchMyBalance, type Balance } from "@/lib/api/wallet";
@@ -14,7 +14,12 @@ import { fetchEarnMe, type EarnMeOut } from "@/lib/api/earn-user";
 const POLL_INTERVAL_MS = 5_000;
 
 /**
- * 純餘額卡 — 顯示 Quiver 內可動用 + 在 Bitfinex Earn 賺利息中。
+ * 餘額卡 — Total-first design:
+ *   - 大字顯示總資產(Quiver 託管 + Bitfinex Earn + 處理中)
+ *   - 下方三個 chip 拆解:可動用 / 賺息中 / 處理中
+ *   - 賺息中 chip 是 link → /earn,有 ↗ 指示
+ *
+ * 處理中 / Earn chip 只在 > 0 時才顯示,避免空欄位視覺雜訊。
  */
 export function BalanceCard() {
   const t = useTranslations("balance");
@@ -52,13 +57,21 @@ export function BalanceCard() {
     };
   }, []);
 
-  const available = balance?.available ?? "0";
-  const pending = balance?.pending ?? "0";
-  const showPending = Number(pending) > 0;
+  const available = Number(balance?.available ?? 0);
+  const pending = Number(balance?.pending ?? 0);
   const earnLent = Number(earn?.lent_usdt ?? 0);
   const earnIdle = Number(earn?.funding_idle_usdt ?? 0);
   const earnTotal = earnLent + earnIdle;
-  const showEarn = earn?.has_earn_account && earnTotal > 0;
+  const total = available + earnTotal + pending;
+  const showEarn = Boolean(earn?.has_earn_account) && earnTotal > 0;
+  const showPending = pending > 0;
+  const hasAnyBreakdown = showEarn || showPending;
+
+  // 動態決定 title:有 Earn 部位用「總資產」更精確,沒就維持原本「餘額」
+  const cardTitle = hasAnyBreakdown ? "總資產" : t("title");
+  const cardDesc = hasAnyBreakdown
+    ? "Quiver 託管 + Bitfinex Earn 持有的 USDT 總額"
+    : t("desc");
 
   return (
     <Card className="bg-macaron-mint dark:bg-slate-900">
@@ -67,65 +80,103 @@ export function BalanceCard() {
           <Coins className="h-6 w-6 text-emerald-700" />
         </span>
         <div className="flex-1">
-          <CardTitle>{t("title")}</CardTitle>
-          <CardDescription>{t("desc")}</CardDescription>
+          <CardTitle>{cardTitle}</CardTitle>
+          <CardDescription>{cardDesc}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              {t("available")}
+      <CardContent className="space-y-4">
+        {/* PRIMARY:大字顯示總資產 */}
+        <div>
+          <p className="font-display text-4xl font-semibold tabular-nums tracking-tight">
+            {fmt(total)}{" "}
+            <span className="text-base font-normal text-slate-500">USDT</span>
+          </p>
+          {rate !== null ? (
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              ≈ {fmtTwd(String(total), rate)}{" "}
+              <span className="text-[10px]">@ {rate.toFixed(2)}</span>
             </p>
-            <p className="text-3xl font-semibold tabular-nums">
-              {fmt(available)}{" "}
-              <span className="text-sm font-normal text-slate-500">USDT</span>
-            </p>
-            {rate !== null ? (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                ≈ {fmtTwd(available, rate)}{" "}
-                <span className="text-[10px]">@ {rate.toFixed(2)}</span>
-              </p>
-            ) : null}
-          </div>
-          {showPending ? (
-            <div>
-              <p className="flex items-center gap-1 text-xs uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                <Clock className="h-3 w-3" /> {t("pending")}
-              </p>
-              <p className="text-xl font-semibold tabular-nums text-amber-700 dark:text-amber-400">
-                +{fmt(pending)}{" "}
-                <span className="text-sm font-normal">USDT</span>
-              </p>
-            </div>
-          ) : null}
-          {showEarn ? (
-            <Link
-              href={`/${locale}/earn`}
-              className="rounded-lg border border-emerald-300/60 bg-emerald-50/60 px-3 py-2 hover:bg-emerald-100/60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50"
-            >
-              <p className="flex items-center gap-1 text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                <TrendingUp className="h-3 w-3" /> 在 Bitfinex Earn 中
-              </p>
-              <p className="text-xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
-                {fmt(String(earnTotal))}{" "}
-                <span className="text-sm font-normal">USDT</span>
-              </p>
-              <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400/80">
-                {earnLent > 0 ? `已借出 ${fmt(String(earnLent))}` : ""}
-                {earnLent > 0 && earnIdle > 0 ? " · " : ""}
-                {earnIdle > 0 ? `等掛單 ${fmt(String(earnIdle))}` : ""}
-              </p>
-            </Link>
           ) : null}
         </div>
+
+        {/* SECONDARY:breakdown chips(只在有需要時顯示) */}
+        {hasAnyBreakdown ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <BalanceChip label={t("available")} value={available} tone="neutral" />
+            {showEarn ? (
+              <BalanceChip
+                label="Bitfinex 賺息"
+                value={earnTotal}
+                tone="success"
+                href={`/${locale}/earn`}
+                icon={<TrendingUp className="h-3 w-3" />}
+                subtitle={
+                  earnLent > 0
+                    ? `已借出 ${fmt(earnLent)}`
+                    : earnIdle > 0
+                      ? `等掛單 ${fmt(earnIdle)}`
+                      : undefined
+                }
+              />
+            ) : null}
+            {showPending ? (
+              <BalanceChip
+                label={t("pending")}
+                value={pending}
+                tone="warning"
+                icon={<Clock className="h-3 w-3" />}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
 
-function fmt(s: string): string {
-  const n = Number(s);
-  if (Number.isNaN(n)) return s;
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+interface BalanceChipProps {
+  label: string;
+  value: number;
+  tone: "neutral" | "success" | "warning";
+  href?: string;
+  icon?: React.ReactNode;
+  subtitle?: string;
+}
+
+function BalanceChip({ label, value, tone, href, icon, subtitle }: BalanceChipProps) {
+  const toneClasses: Record<typeof tone, string> = {
+    neutral:
+      "border-cream-edge/60 bg-paper/40 text-slate-700 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300",
+    success:
+      "border-emerald-300/40 bg-emerald-50/60 text-emerald-800 hover:bg-emerald-100/60 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-950/50",
+    warning:
+      "border-amber-300/40 bg-amber-50/60 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300",
+  };
+
+  const content = (
+    <div
+      className={`rounded-xl border px-3 py-2.5 transition-colors ${toneClasses[tone]} ${href ? "cursor-pointer" : ""}`}
+    >
+      <div className="flex items-center justify-between gap-1">
+        <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider opacity-80">
+          {icon}
+          {label}
+        </div>
+        {href ? <ArrowUpRight className="h-3 w-3 opacity-60" /> : null}
+      </div>
+      <p className="mt-1 text-xl font-semibold tabular-nums">{fmt(value)}</p>
+      {subtitle ? <p className="mt-0.5 text-[10px] opacity-70">{subtitle}</p> : null}
+    </div>
+  );
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+  return content;
+}
+
+function fmt(value: string | number): string {
+  const n = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(n)) return String(value);
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
