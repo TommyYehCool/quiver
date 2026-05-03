@@ -1,9 +1,21 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "next-intl";
 import { ArrowDownLeft, ArrowDownToLine, ArrowUpRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+type Locale = "zh-TW" | "en" | "ja";
+const HEADERS: Record<Locale, { type: string; counterparty: string; note: string; time: string; amount: string }> = {
+  "zh-TW": { type: "類型", counterparty: "對方 / Tx", note: "備註", time: "時間", amount: "金額" },
+  en: { type: "Type", counterparty: "Counterparty / Tx", note: "Note", time: "Time", amount: "Amount" },
+  ja: { type: "種類", counterparty: "相手 / Tx", note: "メモ", time: "時刻", amount: "金額" },
+};
+function pickLocale(l: string): Locale {
+  if (l === "en" || l === "ja") return l;
+  return "zh-TW";
+}
 
 export interface HistoryItem {
   id: string;
@@ -30,16 +42,17 @@ interface Labels {
 }
 
 export function HistoryTable({ items, t }: { items: HistoryItem[]; t: Labels }) {
+  const h = HEADERS[pickLocale(useLocale())];
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-cream-edge text-left text-xs uppercase tracking-wider text-slate-500 dark:border-slate-800">
-            <th className="py-2 pr-4">類型</th>
-            <th className="py-2 pr-4">對方 / Tx</th>
-            <th className="py-2 pr-4">備註</th>
-            <th className="py-2 pr-4">時間</th>
-            <th className="py-2 pr-4 text-right">金額</th>
+            <th className="py-2 pr-4">{h.type}</th>
+            <th className="py-2 pr-4">{h.counterparty}</th>
+            <th className="py-2 pr-4">{h.note}</th>
+            <th className="py-2 pr-4">{h.time}</th>
+            <th className="py-2 pr-4 text-right">{h.amount}</th>
           </tr>
         </thead>
         <tbody>

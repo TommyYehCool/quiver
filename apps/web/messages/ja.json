@@ -267,6 +267,8 @@
       "to": "宛先",
       "amount": "金額",
       "note": "メモ",
+      "twofaLabel": "二段階認証",
+      "twofaPlaceholder": "6 桁コードまたは 8 桁バックアップコード",
       "cancel": "キャンセル",
       "send": "確認して送信"
     },
@@ -326,6 +328,9 @@
       "fee": "手数料",
       "total": "合計差引額",
       "largeNotice": "1000 USDT 以上はブロードキャスト前に管理者審査が必要",
+      "twofaLabel": "二段階認証",
+      "twofaPlaceholder": "6 桁コードまたは 8 桁バックアップコード",
+      "twofaHint": "Google Authenticator / Authy を開いて現在の 6 桁コードを入力してください。アクセスできない場合はバックアップコードが使えます。",
       "cancel": "キャンセル",
       "send": "確認して送信"
     },

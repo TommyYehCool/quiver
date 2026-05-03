@@ -68,7 +68,8 @@ export function TransferCard() {
       setRecipient(r);
       setStage("confirm");
     } catch (e) {
-      setError((e as { code?: string }).code ?? "操作失敗");
+      const code = (e as { code?: string }).code;
+      setError(code ? (t.has(`errors.${code}`) ? t(`errors.${code}` as never) : code) : t("errors.transfer.commitFailed"));
     }
   }
 
@@ -264,13 +265,13 @@ function ConfirmModal({
 
         {twofaEnabled ? (
           <div className="mt-4 space-y-1.5">
-            <Label htmlFor="transfer-totp">兩步驟驗證</Label>
+            <Label htmlFor="transfer-totp">{t("confirm.twofaLabel")}</Label>
             <Input
               id="transfer-totp"
               inputMode="numeric"
               value={totpCode}
               onChange={(e) => onTotpCodeChange(e.target.value)}
-              placeholder="6 位驗證碼或 8 位備用碼"
+              placeholder={t("confirm.twofaPlaceholder")}
               maxLength={20}
               className="font-mono tracking-widest"
               autoFocus

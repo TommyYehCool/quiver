@@ -267,6 +267,8 @@
       "to": "To",
       "amount": "Amount",
       "note": "Note",
+      "twofaLabel": "Two-Factor Authentication",
+      "twofaPlaceholder": "6-digit code or 8-digit backup code",
       "cancel": "Cancel",
       "send": "Confirm & send"
     },
@@ -326,6 +328,9 @@
       "fee": "Fee",
       "total": "Total deducted",
       "largeNotice": "Amounts ≥ 1000 USDT require admin review before broadcast",
+      "twofaLabel": "Two-Factor Authentication",
+      "twofaPlaceholder": "6-digit code or 8-digit backup code",
+      "twofaHint": "Open Google Authenticator / Authy and enter the current 6-digit code. Use a backup code if you can't access the app.",
       "cancel": "Cancel",
       "send": "Confirm & send"
     },

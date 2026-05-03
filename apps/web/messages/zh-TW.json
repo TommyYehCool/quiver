@@ -269,6 +269,8 @@
       "to": "收件人",
       "amount": "金額",
       "note": "備註",
+      "twofaLabel": "兩步驟驗證",
+      "twofaPlaceholder": "6 位驗證碼或 8 位備用碼",
       "cancel": "取消",
       "send": "確認送出"
     },
@@ -328,6 +330,9 @@
       "fee": "手續費",
       "total": "總計從餘額扣",
       "largeNotice": "金額 ≥ 1000 USDT,需管理員人工審核才會送鏈上",
+      "twofaLabel": "兩步驟驗證",
+      "twofaPlaceholder": "6 位驗證碼或 8 位備用碼",
+      "twofaHint": "開 Google Authenticator / Authy 看當前 6 位數字。沒辦法存取的話可以用備用碼。",
       "cancel": "取消",
       "send": "確認送出"
     },

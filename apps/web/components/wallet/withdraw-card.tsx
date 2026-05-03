@@ -258,19 +258,19 @@ function ConfirmModalWithRate({
 
         {twofaEnabled ? (
           <div className="mt-4 space-y-1.5">
-            <Label htmlFor="totp">兩步驟驗證</Label>
+            <Label htmlFor="totp">{t("confirm.twofaLabel")}</Label>
             <Input
               id="totp"
               inputMode="numeric"
               value={totpCode}
               onChange={(e) => onTotpCodeChange(e.target.value)}
-              placeholder="6 位驗證碼或 8 位備用碼"
+              placeholder={t("confirm.twofaPlaceholder")}
               maxLength={20}
               className="font-mono tracking-widest"
               autoFocus
             />
             <p className="text-[11px] text-slate-500">
-              開 Google Authenticator / Authy 看當前 6 位數字。沒辦法存取的話可以用備用碼。
+              {t("confirm.twofaHint")}
             </p>
           </div>
         ) : null}

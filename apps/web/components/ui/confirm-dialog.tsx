@@ -1,9 +1,21 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "next-intl";
 import { AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+
+type Locale = "zh-TW" | "en" | "ja";
+const FALLBACK_LABELS: Record<Locale, { cancel: string; confirm: string }> = {
+  "zh-TW": { cancel: "取消", confirm: "確定" },
+  en: { cancel: "Cancel", confirm: "Confirm" },
+  ja: { cancel: "キャンセル", confirm: "OK" },
+};
+function pickLocale(l: string): Locale {
+  if (l === "en" || l === "ja") return l;
+  return "zh-TW";
+}
 
 type Variant = "default" | "danger";
 
@@ -78,6 +90,7 @@ function ConfirmModal({
   onClose: (ok: boolean) => void;
 }) {
   const danger = opts.variant === "danger";
+  const fallback = FALLBACK_LABELS[pickLocale(useLocale())];
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -122,14 +135,14 @@ function ConfirmModal({
 
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onClose(false)}>
-            {opts.cancelLabel ?? "取消"}
+            {opts.cancelLabel ?? fallback.cancel}
           </Button>
           <Button
             onClick={() => onClose(true)}
             autoFocus
             className={danger ? "bg-rose-600 text-white hover:bg-rose-700" : undefined}
           >
-            {opts.confirmLabel ?? "確定"}
+            {opts.confirmLabel ?? fallback.confirm}
           </Button>
         </div>
       </div>
