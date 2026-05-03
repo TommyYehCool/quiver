@@ -130,12 +130,21 @@ USDT_DECIMALS = 6
 async def get_trx_balance(address: str) -> Decimal:
     """查 Tron 地址的 TRX(原生)餘額。
 
-    Tatum 回 `balance` 是 sun (1 TRX = 1_000_000 sun)。地址沒啟用會回 0。
+    Tatum 回 `balance` 是 sun (1 TRX = 1_000_000 sun)。
+    地址在 Tron 上未 init(從沒收過 native TRX)時 Tatum 回 403,我們 fallback
+    用 trongrid 公開 API — uninit 地址 native TRX 必為 0,但 trongrid 也會
+    把該回的 0 直接回傳,行為等價且不會吞 Tatum 的真實 down 訊號。
     """
     async with _client() as client:
         res = await client.get(f"/v3/tron/account/{address}")
     if res.status_code == 403:
-        return Decimal("0")
+        from app.services.tron_public import TronPublicError, get_trx_balance_public
+
+        try:
+            return await get_trx_balance_public(address)
+        except TronPublicError as e:
+            logger.warning("trx_balance_public_fallback_failed", address=address, error=str(e))
+            return Decimal("0")
     if res.status_code >= 400:
         raise TatumError(f"get_tron_account failed: {res.status_code}")
     body = res.json()
@@ -201,13 +210,20 @@ async def get_trc20_balance(address: str, contract: str) -> Decimal:
     Tatum 回 `trc20: [{contract: raw_balance_str}, ...]`,raw 是「smallest unit」字串。
     USDT 6 位小數 → 1000000000 = 1000 USDT。
 
-    地址沒在鏈上(沒被啟用 / 找不到)會回 0。
+    Tron 規則:單純收 TRC20 不會 init account,native TRX = 0 → Tatum 回 403,
+    但鏈上**可能仍持有 TRC20**(很常見:用戶從交易所提 USDT 進來,未收 TRX)。
+    所以 403 不能直接當「餘額 0」,要 fallback 到 trongrid 公開 API 確認。
     """
     async with _client() as client:
         res = await client.get(f"/v3/tron/account/{address}")
     if res.status_code == 403:
-        # tron.account.not.found — 還沒收到任何 tx,當 0
-        return Decimal("0")
+        from app.services.tron_public import TronPublicError, get_trc20_balance_public
+
+        try:
+            return await get_trc20_balance_public(address, contract)
+        except TronPublicError as e:
+            logger.warning("trc20_balance_public_fallback_failed", address=address, error=str(e))
+            return Decimal("0")
     if res.status_code >= 400:
         raise TatumError(f"get_tron_account failed: {res.status_code}")
 
