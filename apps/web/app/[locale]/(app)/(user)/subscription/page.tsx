@@ -37,7 +37,7 @@ const STRINGS = {
       bullet4: "✓ 取消後仍可享受到當期結束",
     },
     notSubscribed: {
-      cta: (price: string) => `訂閱 — $${price} USDT / 月`,
+      ctaTemplate: "訂閱 — ${price} USDT / 月",
       ctaNote: "立即從你 Quiver 主錢包扣款,確認後即享 0% perf fee。",
     },
     activeSection: {
@@ -90,7 +90,7 @@ const STRINGS = {
       bullet4: "✓ Cancel keeps benefits until period end",
     },
     notSubscribed: {
-      cta: (price: string) => `Subscribe — $${price} USDT / month`,
+      ctaTemplate: "Subscribe — ${price} USDT / month",
       ctaNote: "Charged immediately from your Quiver main wallet. 0% perf fee starts on confirmation.",
     },
     activeSection: {
@@ -144,7 +144,7 @@ const STRINGS = {
       bullet4: "✓ キャンセル後も当期終了まで利用可能",
     },
     notSubscribed: {
-      cta: (price: string) => `サブスク登録 — $${price} USDT / 月`,
+      ctaTemplate: "サブスク登録 — ${price} USDT / 月",
       ctaNote: "即時に Quiver メインウォレットから引落。確認後 0% perf fee 開始。",
     },
     activeSection: {
@@ -331,7 +331,7 @@ export default async function SubscriptionPage({
             {sub.cancel_at_period_end ? (
               <UncancelButton
                 strings={{
-                  subscribeCta: () => "",
+                  subscribeCtaTemplate: "",
                   cancelCta: "",
                   uncancelCta: s.activeSection.uncancelCta,
                   errors: s.actionErrors,
@@ -340,7 +340,7 @@ export default async function SubscriptionPage({
             ) : sub.status === "ACTIVE" ? (
               <CancelButton
                 strings={{
-                  subscribeCta: () => "",
+                  subscribeCtaTemplate: "",
                   cancelCta: s.activeSection.cancelCta,
                   uncancelCta: "",
                   errors: s.actionErrors,
@@ -358,7 +358,7 @@ export default async function SubscriptionPage({
             <SubscribeButton
               price={Number(me.plan_price_usdt).toFixed(2)}
               strings={{
-                subscribeCta: s.notSubscribed.cta,
+                subscribeCtaTemplate: s.notSubscribed.ctaTemplate,
                 cancelCta: "",
                 uncancelCta: "",
                 errors: s.actionErrors,

@@ -5,16 +5,16 @@
   },
   "marketing": {
     "hero": {
-      "badge": "為台灣新手打造",
+      "badge": "為新手打造",
       "title": "把加密貨幣，變成你看得懂的數字",
-      "subtitle": "以新台幣為主、不用懂區塊鏈，3 分鐘開好你的第一個帳戶。",
+      "subtitle": "簡單易用、不用懂區塊鏈，3 分鐘開好你的第一個帳戶。",
       "cta": "免費開始使用",
       "secondary": "了解更多"
     },
     "features": {
       "f1": {
-        "title": "永遠用台幣顯示",
-        "desc": "看到的數字就是台幣，不用換算、不用心算。"
+        "title": "用熟悉的法幣顯示",
+        "desc": "看到的數字就是你熟悉的本地貨幣，不用換算、不用心算。"
       },
       "f2": {
         "title": "免手續費轉給朋友",
@@ -34,9 +34,9 @@
     },
     "painPoint": {
       "title": "為什麼用加密貨幣這麼麻煩？",
-      "subtitle": "我們把那些「行內人才知道」的細節全部處理好，讓你像用 Line Pay 一樣輕鬆。",
+      "subtitle": "我們把那些「行內人才知道」的細節全部處理好，讓你像用 Apple Pay 一樣輕鬆。",
       "p1Problem": "看到 USDT、TRC20、TRX、Wei、gwei 一頭霧水",
-      "p1Solution": "Quiver 全程顯示 NTD，所有區塊鏈名詞翻譯成日常語言。",
+      "p1Solution": "Quiver 全程顯示熟悉的本地貨幣，所有區塊鏈名詞翻譯成日常語言。",
       "p2Problem": "每筆交易都要付鏈上手續費，新手經常燒錢學經驗",
       "p2Solution": "用戶間轉帳完全免費；提領時所有 gas 費由我們承擔。",
       "p3Problem": "錢包私鑰自己保管，掉了就永遠沒了",
@@ -67,7 +67,7 @@
       "step4Desc": "Quiver 不替你做投資決策。看數據、了解市場、自己選何時加碼或撤回。",
       "h1": {
         "title": "真實市場利率",
-        "desc": "Bitfinex Funding 把 USDT 借給 margin trader，APY 隨市場波動。AAVE V3 Polygon 純鏈上借貸，TVL $1.2B。實際 net APY 比台灣定存高很多。"
+        "desc": "Bitfinex Funding 把 USDT 借給 margin trader，APY 隨市場波動。AAVE V3 Polygon 純鏈上借貸，TVL $1.2B。實際 net APY 高過一般銀行定存很多。"
       },
       "h2": {
         "title": "你的錢始終在你帳戶",
@@ -91,7 +91,7 @@
       },
       "compareTitle": "跟其他選擇比較",
       "compare": {
-        "row1Name": "台灣銀行 1 年定存",
+        "row1Name": "傳統銀行 1 年定存",
         "row1Rate": "1.6%",
         "row1Note": "穩，但通膨吃光",
         "row2Name": "CEX Earn (Binance, OKX)",

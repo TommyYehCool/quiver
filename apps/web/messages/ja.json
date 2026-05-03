@@ -5,7 +5,7 @@
   },
   "marketing": {
     "hero": {
-      "badge": "台湾の初心者向けに設計",
+      "badge": "暗号資産の初心者向けに設計",
       "title": "暗号資産を、わかる数字で。",
       "subtitle": "残高は常に法定通貨で表示。ブロックチェーンの知識は不要。3 分で開始できます。",
       "cta": "無料で始める",
@@ -34,9 +34,9 @@
     },
     "painPoint": {
       "title": "なぜ暗号資産はこんなに難しいのか?",
-      "subtitle": "面倒な技術詳細は当社が処理。Line Pay と同じくらい簡単に。",
+      "subtitle": "面倒な技術詳細は当社が処理。Apple Pay と同じくらい簡単に。",
       "p1Problem": "USDT、TRC20、TRX、Wei、gwei — 何のことかわからない",
-      "p1Solution": "Quiver はすべてを TWD で表示し、ブロックチェーン用語を平易な言葉に翻訳します。",
+      "p1Solution": "Quiver はすべてを現地通貨で表示し、ブロックチェーン用語を平易な言葉に翻訳します。",
       "p2Problem": "取引のたびにガス代がかかる — 初心者は学習中にお金が消える",
       "p2Solution": "内部送金は無料。出金時のガス代も当社負担。",
       "p3Problem": "秘密鍵の自己管理 — 失くしたらお金は永久に消える",
@@ -67,7 +67,7 @@
       "step4Desc": "Quiver は投資判断を代行しません。データを読み、市場を理解し、自分で動きを決めてください。",
       "h1": {
         "title": "本物の市場金利",
-        "desc": "Bitfinex Funding は USDT を margin トレーダーに貸し出し、APY は市場により変動。AAVE V3 Polygon は完全オンチェーン、TVL $1.2B。台湾定期預金より 3-10 倍高い純 APY。"
+        "desc": "Bitfinex Funding は USDT を margin トレーダーに貸し出し、APY は市場により変動。AAVE V3 Polygon は完全オンチェーン、TVL $1.2B。従来の銀行定期預金より 3-10 倍高い純 APY。"
       },
       "h2": {
         "title": "あなたの資金はあなたのアカウントに",
@@ -91,7 +91,7 @@
       },
       "compareTitle": "他の選択肢との比較",
       "compare": {
-        "row1Name": "台湾の銀行 1 年定期預金",
+        "row1Name": "従来銀行 1 年定期預金",
         "row1Rate": "1.6%",
         "row1Note": "安定だがインフレに負ける",
         "row2Name": "CEX Earn (Binance, OKX)",

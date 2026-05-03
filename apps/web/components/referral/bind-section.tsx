@@ -10,10 +10,13 @@ import { Label } from "@/components/ui/label";
 import { bindReferralCode } from "@/lib/api/referral";
 import type { ReferrerInfo } from "@/lib/api/referral";
 
+/** Strings passed across the RSC boundary must be plain serialisable values —
+ * no functions. Use {placeholder} templates and client-side .replace() instead. */
 interface BindSectionStrings {
   alreadyBoundTitle: string;
   alreadyBoundDesc: string;
-  windowActive: (expiresAt: string) => string;
+  /** Template containing "{date}" — replaced at render time with formatted expiry. */
+  windowActiveTemplate: string;
   windowExpired: string;
   windowNotStarted: string;
   bindTitle: string;
@@ -67,7 +70,7 @@ export function BindSection({
       const expires = new Date(referrer.revshare_expires_at);
       windowText = expires.getTime() < Date.now()
         ? strings.windowExpired
-        : strings.windowActive(expires.toLocaleDateString());
+        : strings.windowActiveTemplate.replace("{date}", expires.toLocaleDateString());
     } else {
       windowText = strings.windowNotStarted;
     }

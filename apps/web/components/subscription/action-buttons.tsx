@@ -11,8 +11,11 @@ import {
   uncancelSubscription,
 } from "@/lib/api/subscription";
 
+/** Strings passed across the RSC boundary must be plain serialisable values —
+ * no functions. Use {placeholder} templates and client-side .replace() instead. */
 interface ActionStrings {
-  subscribeCta: (price: string) => string;
+  /** Template containing "{price}" — replaced at render time with the price arg. */
+  subscribeCtaTemplate: string;
   cancelCta: string;
   uncancelCta: string;
   errors: Record<string, string>;
@@ -49,7 +52,7 @@ export function SubscribeButton({
     <div className="space-y-2">
       <Button onClick={handleClick} disabled={busy} size="lg">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        {strings.subscribeCta(price)}
+        {strings.subscribeCtaTemplate.replace("{price}", price)}
       </Button>
       {error ? (
         <p className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">

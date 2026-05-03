@@ -61,7 +61,7 @@ const STRINGS = {
     bind: {
       alreadyBoundTitle: "你已綁定推薦人",
       alreadyBoundDesc: "你的 perf fee 結算時,會自動撥分潤給你的推薦人。",
-      windowActive: (date: string) => `分潤窗口開啟中 — 至 ${date} 結束。`,
+      windowActiveTemplate: "分潤窗口開啟中 — 至 {date} 結束。",
       windowExpired: "分潤窗口已過期。",
       windowNotStarted: "分潤窗口尚未開始(等你產生第一筆 perf fee)。",
       bindTitle: "輸入別人的推薦碼",
@@ -128,7 +128,7 @@ const STRINGS = {
     bind: {
       alreadyBoundTitle: "You're bound to a referrer",
       alreadyBoundDesc: "When your perf fee settles, your referrer automatically receives revshare.",
-      windowActive: (date: string) => `Revshare window active — ends ${date}.`,
+      windowActiveTemplate: "Revshare window active — ends {date}.",
       windowExpired: "Revshare window expired.",
       windowNotStarted: "Revshare window hasn't started yet (waiting for your first perf fee).",
       bindTitle: "Paste someone's referral code",
@@ -195,7 +195,7 @@ const STRINGS = {
     bind: {
       alreadyBoundTitle: "リファラーに紐付け済み",
       alreadyBoundDesc: "あなたの perf fee 決済時、リファラーに自動でレベニューシェアが振り込まれます。",
-      windowActive: (date: string) => `レベニューシェア窓口アクティブ — ${date} に終了。`,
+      windowActiveTemplate: "レベニューシェア窓口アクティブ — {date} に終了。",
       windowExpired: "レベニューシェア窓口は期限切れです。",
       windowNotStarted: "レベニューシェア窓口はまだ開始していません(最初の perf fee を待機中)。",
       bindTitle: "他人のリファラルコードを入力",

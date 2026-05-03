@@ -5,7 +5,7 @@
   },
   "marketing": {
     "hero": {
-      "badge": "Built for Taiwan beginners",
+      "badge": "Built for crypto beginners",
       "title": "Crypto, in numbers you understand.",
       "subtitle": "Always shown in your local currency. No blockchain knowledge required. 3 minutes to start.",
       "cta": "Get started — it's free",
@@ -14,7 +14,7 @@
     "features": {
       "f1": {
         "title": "Always your local currency",
-        "desc": "See balances in TWD or USD — no mental math needed."
+        "desc": "See balances in the fiat currency you know — no mental math needed."
       },
       "f2": {
         "title": "Free transfers between users",
@@ -34,9 +34,9 @@
     },
     "painPoint": {
       "title": "Why is using crypto so painful?",
-      "subtitle": "We handle all the insider details so it feels as easy as Line Pay.",
+      "subtitle": "We handle all the insider details so it feels as easy as Apple Pay.",
       "p1Problem": "USDT, TRC20, TRX, Wei, gwei — what does any of this mean?",
-      "p1Solution": "Quiver shows everything in NTD and translates blockchain jargon to plain language.",
+      "p1Solution": "Quiver shows everything in your local currency and translates blockchain jargon to plain language.",
       "p2Problem": "Every transaction costs gas — beginners burn money learning",
       "p2Solution": "Internal transfers are free; we cover gas fees on withdrawals.",
       "p3Problem": "Self-custody private keys — lose them and your money is gone forever",
@@ -67,7 +67,7 @@
       "step4Desc": "Quiver doesn't make investment decisions for you. Read data, understand markets, choose your own moves.",
       "h1": {
         "title": "Real market rates",
-        "desc": "Bitfinex Funding lends USDT to margin traders, APY varies with market. AAVE V3 Polygon is pure on-chain lending, $1.2B TVL. Net APY beats Taiwan time deposit by 3-10x."
+        "desc": "Bitfinex Funding lends USDT to margin traders, APY varies with market. AAVE V3 Polygon is pure on-chain lending, $1.2B TVL. Net APY beats traditional bank deposits by 3-10x."
       },
       "h2": {
         "title": "Your money stays in your account",
@@ -91,7 +91,7 @@
       },
       "compareTitle": "Compared to other options",
       "compare": {
-        "row1Name": "Taiwan Bank 1-Year Time Deposit",
+        "row1Name": "Traditional Bank 1-Year Deposit",
         "row1Rate": "1.6%",
         "row1Note": "Stable, but eaten by inflation",
         "row2Name": "CEX Earn (Binance, OKX)",
