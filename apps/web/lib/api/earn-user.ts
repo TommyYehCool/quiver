@@ -61,6 +61,7 @@ export interface EarnMeOut {
   bitfinex_funding_address: string | null;
   earn_tier: EarnTier | null;
   perf_fee_bps: number | null;
+  is_premium: boolean;
   funding_idle_usdt: string | null;
   lent_usdt: string | null;
   daily_earned_usdt: string | null;

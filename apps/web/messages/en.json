@@ -33,7 +33,7 @@
       "tagline": "Your money isn't on some exchange or buried in some protocol — it's in your own Quiver."
     },
     "painPoint": {
-      "title": "Why is crypto so painful in Taiwan?",
+      "title": "Why is using crypto so painful?",
       "subtitle": "We handle all the insider details so it feels as easy as Line Pay.",
       "p1Problem": "USDT, TRC20, TRX, Wei, gwei — what does any of this mean?",
       "p1Solution": "Quiver shows everything in NTD and translates blockchain jargon to plain language.",
@@ -159,6 +159,7 @@
     "dashboard": "Dashboard",
     "wallet": "Wallet",
     "earn": "Earn",
+    "premium": "Premium",
     "referral": "Referral",
     "guide": "Guide",
     "kyc": "Verify",

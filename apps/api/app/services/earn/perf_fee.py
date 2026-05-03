@@ -77,6 +77,10 @@ async def accrue_period(
     Idempotent: the (account_id, period_start, period_end) unique constraint on
     EarnFeeAccrual prevents double-accrual. If a row already exists, skip.
     """
+    # Late import to keep services/earn/perf_fee.py from depending on
+    # subscription package at module-import time.
+    from app.services.premium import repo as sub_repo
+
     q = await db.execute(
         select(EarnAccount).where(
             EarnAccount.archived_at.is_(None),
@@ -87,6 +91,19 @@ async def accrue_period(
     results: list[AccrualResult] = []
 
     for account in accounts:
+        # F-4c: skip accrual if user has active subscription. ACTIVE/PAST_DUE
+        # within current_period_end count. Simple "now-time" check; future
+        # work could check day-by-day for partial-month sub starts.
+        if await sub_repo.is_user_premium(db, account.user_id):
+            logger.info(
+                "perf_fee_accrual_skipped_premium",
+                account_id=account.id,
+                user_id=account.user_id,
+                period_start=str(period_start),
+                period_end=str(period_end),
+            )
+            continue
+
         # Skip if already accrued for this period (idempotency)
         existing_q = await db.execute(
             select(EarnFeeAccrual.id).where(

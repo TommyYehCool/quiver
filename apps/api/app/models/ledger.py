@@ -44,6 +44,10 @@ class LedgerTxType(str, enum.Enum):
     # F-4b:Quiver 把 perf_fee 的 10%/5% 撥給 L1/L2 referrer
     #   DR PLATFORM_FEE_REVENUE
     #   CR USER(referrer)
+    SUBSCRIPTION_FEE = "SUBSCRIPTION_FEE"
+    # F-4c:Premium 訂閱月費(訂閱即收 / 自動續訂)
+    #   DR USER (請求權減少 monthly_usdt)
+    #   CR PLATFORM_FEE_REVENUE
 
 
 class LedgerTxStatus(str, enum.Enum):

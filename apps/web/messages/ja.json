@@ -33,7 +33,7 @@
       "tagline": "あなたのお金は取引所やプロトコルの奥深くではなく、自分の Quiver の中にあります。"
     },
     "painPoint": {
-      "title": "なぜ台湾の暗号資産はこんなに難しいのか?",
+      "title": "なぜ暗号資産はこんなに難しいのか?",
       "subtitle": "面倒な技術詳細は当社が処理。Line Pay と同じくらい簡単に。",
       "p1Problem": "USDT、TRC20、TRX、Wei、gwei — 何のことかわからない",
       "p1Solution": "Quiver はすべてを TWD で表示し、ブロックチェーン用語を平易な言葉に翻訳します。",
@@ -159,6 +159,7 @@
     "dashboard": "ダッシュボード",
     "wallet": "ウォレット",
     "earn": "Earn",
+    "premium": "Premium",
     "referral": "リファラル",
     "guide": "ガイド",
     "kyc": "本人確認",

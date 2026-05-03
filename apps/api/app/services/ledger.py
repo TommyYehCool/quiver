@@ -391,6 +391,64 @@ async def post_perf_fee(
     return ledger_tx
 
 
+async def post_subscription_fee(
+    db: AsyncSession,
+    *,
+    user_id: int,
+    amount: Decimal,
+    currency: str = CURRENCY,
+) -> LedgerTransaction:
+    """從 user wallet 收 Premium 訂閱月費 (F-4c).
+
+    DR USER (請求權減少 monthly_usdt)
+    CR PLATFORM_FEE_REVENUE
+
+    Caller 須先確認 user 餘額足夠;此 fn 不檢查 insufficient。同樣的 ledger
+    pattern 也用在 perf_fee — 兩種收入都流到 PLATFORM_FEE_REVENUE。
+    """
+    if amount <= 0:
+        raise LedgerError(f"subscription_fee amount must be positive, got {amount}")
+
+    user_acct = await get_or_create_user_account(db, user_id, currency)
+    fee_revenue_acct = await _platform_fee_revenue_account(db, currency)
+
+    ledger_tx = LedgerTransaction(
+        type=LedgerTxType.SUBSCRIPTION_FEE.value,
+        status=LedgerTxStatus.POSTED.value,
+        amount=amount,
+        currency=currency,
+    )
+    db.add(ledger_tx)
+    await db.flush()
+
+    db.add_all(
+        [
+            LedgerEntry(
+                ledger_tx_id=ledger_tx.id,
+                account_id=user_acct.id,
+                direction=EntryDirection.DEBIT.value,
+                amount=amount,
+                currency=currency,
+            ),
+            LedgerEntry(
+                ledger_tx_id=ledger_tx.id,
+                account_id=fee_revenue_acct.id,
+                direction=EntryDirection.CREDIT.value,
+                amount=amount,
+                currency=currency,
+            ),
+        ]
+    )
+
+    logger.info(
+        "subscription_fee_posted",
+        ledger_tx_id=ledger_tx.id,
+        user_id=user_id,
+        amount=str(amount),
+    )
+    return ledger_tx
+
+
 async def post_referral_payout(
     db: AsyncSession,
     *,

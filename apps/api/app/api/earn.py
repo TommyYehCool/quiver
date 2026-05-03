@@ -45,6 +45,7 @@ from app.services.earn import fee_policy
 from app.services.earn import repo as earn_repo
 from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
 from app.services.referral import binding as referral_binding
+from app.services.premium import repo as sub_repo
 
 router = APIRouter(prefix="/api/earn", tags=["earn-user"])
 logger = get_logger(__name__)
@@ -88,6 +89,8 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
     can_connect = kyc_status == KycStatus.APPROVED.value
 
     account = await earn_repo.get_account_by_user_id(db, user.id)
+    is_premium = await sub_repo.is_user_premium(db, user.id)
+
     if account is None:
         return ApiResponse[EarnMeOut].ok(
             EarnMeOut(
@@ -99,6 +102,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 bitfinex_funding_address=None,
                 earn_tier=None,
                 perf_fee_bps=None,
+                is_premium=is_premium,
                 funding_idle_usdt=None,
                 lent_usdt=None,
                 daily_earned_usdt=None,
@@ -163,6 +167,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             bitfinex_funding_address=account.bitfinex_funding_address,
             earn_tier=user.earn_tier,
             perf_fee_bps=account.perf_fee_bps,
+            is_premium=is_premium,
             funding_idle_usdt=funding_idle,
             lent_usdt=lent,
             daily_earned_usdt=daily_earned,

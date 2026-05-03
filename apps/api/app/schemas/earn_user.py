@@ -67,6 +67,8 @@ class EarnMeOut(BaseModel):
     # /api/earn/connect-preview to see what the user *would* get on connect.
     earn_tier: str | None  # "friend" | "public" | "internal" | "commercial"
     perf_fee_bps: int | None  # 500 = 5%, 1500 = 15%
+    # Premium subscription status (F-4c). True = perf_fee skipped this period.
+    is_premium: bool
 
     # Live position summary (latest snapshot or computed)
     funding_idle_usdt: Decimal | None  # USDT in funding wallet, not lent

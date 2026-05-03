@@ -481,6 +481,7 @@ async def cron_earn_perf_fee(ctx: dict[str, Any]) -> str:
 
     Pipeline:
       1. accrue_period(Mon-Sun) → 寫 EarnFeeAccrual rows (status=ACCRUED)
+         (F-4c) skip 訂閱中的 user — 整個 period 不收 perf_fee
       2. settle_outstanding() → 對每筆 ACCRUED 從 user wallet 扣款,成功
          的觸發 referral payout (L1=10% + L2=5% of perf_fee)
       3. 不夠扣的留 ACCRUED,下週重試
@@ -495,6 +496,30 @@ async def cron_earn_perf_fee(ctx: dict[str, Any]) -> str:
     return (
         f"accrued:{summary['accrued']} settled:{summary['settled_ok']} "
         f"skip:{summary['settled_skip']} payouts:{summary['payouts']}"
+    )
+
+
+async def cron_subscription_renewal(ctx: dict[str, Any]) -> str:
+    """每日 01:00 UTC:對 current_period_end <= now 的 subscription 跑 renew (F-4c)。
+
+    Pipeline (詳見 services/subscription/billing.renew_due_subscriptions):
+      - cancel_at_period_end → CANCELLED
+      - PAST_DUE > grace → EXPIRED
+      - 否則嘗試扣款:成功 → 推進 period;失敗 → PAST_DUE,7 天後 EXPIRED
+    """
+    from app.services.heartbeat import write_heartbeat
+    from app.services.premium.billing import renew_due_subscriptions
+
+    async with db_session() as session:
+        counts = await renew_due_subscriptions(session)
+
+    await write_heartbeat(
+        ctx["redis"], "subscription_renewal", expected_interval_s=86400
+    )
+    return (
+        f"due:{counts['due']} renewed:{counts['renewed']} "
+        f"cancelled:{counts['cancelled']} past_due:{counts['past_due']} "
+        f"expired:{counts['expired']}"
     )
 
 
@@ -627,6 +652,7 @@ class WorkerSettings:
         cron_heartbeat_watchdog,
         cron_earn_reconcile,
         cron_earn_perf_fee,
+        cron_subscription_renewal,
         auto_lend_dispatcher,
         auto_lend_finalizer,
     ]
@@ -656,6 +682,13 @@ class WorkerSettings:
             cron_earn_perf_fee,
             weekday="mon",
             hour=2,
+            minute=0,
+            run_at_startup=False,
+        ),
+        # F-4c: 每日 01:00 UTC 跑 subscription renewal
+        cron(
+            cron_subscription_renewal,
+            hour=1,
             minute=0,
             run_at_startup=False,
         ),

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
+  Crown,
   Gift,
   LayoutDashboard,
   Menu,
@@ -46,6 +47,7 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
     { href: `/${locale}/dashboard`, i18nKey: "dashboard", Icon: LayoutDashboard },
     { href: `/${locale}/wallet`, i18nKey: "wallet", Icon: Wallet },
     { href: `/${locale}/earn`, i18nKey: "earn", Icon: TrendingUp },
+    { href: `/${locale}/subscription`, i18nKey: "premium", Icon: Crown },
     { href: `/${locale}/referral`, i18nKey: "referral", Icon: Gift },
     { href: `/${locale}/earn/setup-guide`, i18nKey: "guide", Icon: BookOpen },
   ];

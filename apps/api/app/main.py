@@ -21,6 +21,7 @@ from app.api import (
     notifications,
     rates,
     referral,
+    subscription,
     transfers,
     twofa,
     wallet,
@@ -203,6 +204,7 @@ app.include_router(rates.router)
 app.include_router(notifications.router)
 app.include_router(earn.router)
 app.include_router(referral.router)
+app.include_router(subscription.router)
 app.include_router(webhooks.router)
 app.include_router(admin_kyc.router)
 app.include_router(admin_setup.router)

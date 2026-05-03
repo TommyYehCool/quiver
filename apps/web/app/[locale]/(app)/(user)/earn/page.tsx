@@ -39,6 +39,8 @@ interface PageStrings {
     friend: string;
     public: string;
     internal: string;
+    premium: string;
+    premiumSuffix: string;
     feeSuffix: (pct: string) => string;
   };
   kycGate: { title: string; descPrefix: string; cta: string };
@@ -65,6 +67,8 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       friend: "Friend 等級",
       public: "Public 等級",
       internal: "Internal",
+      premium: "Premium",
+      premiumSuffix: "· 0% perf fee",
       feeSuffix: (pct) => `· perf fee ${pct}%`,
     },
     kycGate: { title: "先完成 KYC 驗證", descPrefix: "Earn 功能需要先通過 KYC。當前狀態:", cta: "去 KYC" },
@@ -115,6 +119,8 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       friend: "Friend tier",
       public: "Public tier",
       internal: "Internal",
+      premium: "Premium",
+      premiumSuffix: "· 0% perf fee",
       feeSuffix: (pct) => `· perf fee ${pct}%`,
     },
     kycGate: { title: "Complete KYC first", descPrefix: "Earn requires KYC approval. Current status: ", cta: "Go to KYC" },
@@ -165,6 +171,8 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       friend: "Friend ティア",
       public: "Public ティア",
       internal: "Internal",
+      premium: "Premium",
+      premiumSuffix: "· 0% perf fee",
       feeSuffix: (pct) => `· perf fee ${pct}%`,
     },
     kycGate: { title: "先に本人確認を完了", descPrefix: "Earn の利用には KYC 承認が必要です。現在のステータス:", cta: "本人確認へ" },
@@ -253,6 +261,7 @@ export default async function EarnPage({
               <TierBadge
                 tier={earn.earn_tier}
                 feeBps={earn.perf_fee_bps ?? 0}
+                isPremium={earn.is_premium}
                 strings={s.tierBadge}
               />
             ) : null}
@@ -463,12 +472,24 @@ export default async function EarnPage({
 function TierBadge({
   tier,
   feeBps,
+  isPremium,
   strings,
 }: {
   tier: string;
   feeBps: number;
+  isPremium: boolean;
   strings: PageStrings["tierBadge"];
 }) {
+  // Premium overrides the tier badge — user pays 0% regardless of underlying tier
+  if (isPremium) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+        ✦ {strings.premium}
+        <span className="text-[10px] opacity-70">{strings.premiumSuffix}</span>
+      </span>
+    );
+  }
+
   const label =
     tier === "friend"
       ? strings.friend
