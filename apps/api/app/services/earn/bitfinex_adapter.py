@@ -188,13 +188,22 @@ class BitfinexFundingAdapter:
     # ──── read methods ────
 
     async def get_funding_position(self) -> BitfinexPosition:
-        """讀 funding wallet idle + active credits 加總。"""
+        """讀 funding wallet 餘額 + 已借出總額。
+
+        Bitfinex 的 funding 部位實際會出現在 `/funding/credits/` 或 `/funding/loans/`,
+        看 Bitfinex 內部分類(我們無法控制)。為了求穩,兩個都查,把 SIDE=1 (lender side)
+        的 amount 全部加總當作 lent_total。
+        Row format(兩個 endpoint 同):[ID, SYMBOL, SIDE, MTS_CREATE, MTS_UPDATE, AMOUNT, ...]
+        """
         async with httpx.AsyncClient() as client:
             wallets = await self._auth_post(client, "v2/auth/r/wallets")
             credits = await self._auth_post(
                 client, f"v2/auth/r/funding/credits/{SYMBOL_AUTH}"
             )
-        # wallets: [WALLET_TYPE, CURRENCY, BALANCE, UNSETTLED_INTEREST, AVAILABLE, ...]
+            loans = await self._auth_post(
+                client, f"v2/auth/r/funding/loans/{SYMBOL_AUTH}"
+            )
+
         funding_balance = Decimal(0)
         funding_available = Decimal(0)
         for w in wallets or []:
@@ -204,12 +213,18 @@ class BitfinexFundingAdapter:
                 funding_balance = Decimal(str(w[2] or 0))
                 funding_available = Decimal(str(w[4] or 0))
                 break
-        # credits: [ID, SYMBOL, SIDE, MTS_CREATE, MTS_UPDATE, AMOUNT, ...]
+
         lent_total = Decimal(0)
-        for c in credits or []:
-            if len(c) < 6:
+        for row in (credits or []) + (loans or []):
+            if not isinstance(row, list) or len(row) < 6:
                 continue
-            lent_total += Decimal(str(c[5] or 0))
+            # SIDE: 1 = lender (we lent it out), -1 = borrower (we took loan).
+            # We only count lender-side positions toward lent_total.
+            side = row[2] if len(row) > 2 else None
+            if side != 1:
+                continue
+            lent_total += Decimal(str(row[5] or 0))
+
         return BitfinexPosition(
             funding_balance=funding_balance,
             funding_available=funding_available,

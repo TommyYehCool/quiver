@@ -45,7 +45,9 @@ async def sync_one_account(
         try:
             adapter = await BitfinexFundingAdapter.from_connection(db, conn)
             position = await adapter.get_funding_position()
-            bf_funding = position.funding_balance
+            # snapshot 想表達「真正 idle 可動用」跟「真正 lent 出去」,所以
+            # 用 funding_available 不用 funding_balance(後者包含 lent 部分)
+            bf_funding = position.funding_available
             bf_lent = position.lent_total
         except Exception as e:
             bf_error = str(e)[:200]
