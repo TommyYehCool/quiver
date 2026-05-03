@@ -1,0 +1,31 @@
+# docker-compose.prod.yml — overrides for quiverdefi.com (prod).
+#
+# Usage on prod:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build web
+#
+# What it overrides:
+#   web:
+#     - Builds the `prod` Dockerfile stage (next start, not next dev)
+#     - Removes the bind-mount so source isn't shadowed by /app contents
+#     - Removes the dev command so `node server.js` from CMD takes over
+#
+# Trade-off vs. dev mode:
+#   ✓ Page transitions <200ms (was 15-30s on first nav due to JIT compile)
+#   ✗ .tsx changes require `docker compose build web && --force-recreate`
+#     (~3-5 min) instead of bind-mount hot-reload
+#
+# api/worker keep --reload because Python dev mode is cheap (no JIT compile)
+# and the convenience outweighs the cost; only Next.js dev mode is expensive.
+
+services:
+  web:
+    build:
+      target: prod
+    # Drop the bind-mount + cached volumes from the base compose — prod runs
+    # the baked-in standalone bundle, not source. `!reset` (Compose v2.20+)
+    # replaces the inherited list instead of merging — without it the host's
+    # ./apps/web bind-mount would shadow /app and hide server.js from the
+    # standalone build, causing "Cannot find module '/app/server.js'".
+    volumes: !reset []
+    # CMD from the prod stage runs `node server.js`; clear the dev command.
+    command: ["node", "server.js"]

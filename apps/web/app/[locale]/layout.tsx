@@ -27,6 +27,13 @@ export const metadata: Metadata = {
   description: "A crypto wallet built for everyone",
 };
 
+// Most pages read cookies() (auth gates) and use next-intl in server components,
+// both of which require dynamic rendering. Force dynamic for the entire
+// `[locale]` tree so the prod build stops trying (and failing) to statically
+// pre-render auth-gated routes. We're not on a CDN that benefits from static
+// pre-render anyway — every request goes through the same `node server.js`.
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }

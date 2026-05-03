@@ -194,6 +194,20 @@ function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
+// Explicit wide type — using `(typeof STRINGS)["zh-TW"]["activeSection"]` would
+// narrow to literal string types from `as const` and reject other locales' values.
+interface ActiveSectionStrings {
+  titleActive: string;
+  titlePastDue: string;
+  titleScheduled: string;
+  activeDesc: (renewDate: string) => string;
+  pastDueDesc: (graceEnd: string) => string;
+  scheduledDesc: (endDate: string) => string;
+  cancelCta: string;
+  uncancelCta: string;
+  premiumBadgePeriod: (start: string, end: string) => string;
+}
+
 function ActiveStateCard({
   sub,
   graceDays,
@@ -201,7 +215,7 @@ function ActiveStateCard({
 }: {
   sub: SubscriptionStateOut;
   graceDays: number;
-  strings: (typeof STRINGS)["zh-TW"]["activeSection"];
+  strings: ActiveSectionStrings;
 }) {
   const periodEnd = fmtDate(sub.current_period_end);
   const periodStart = fmtDate(sub.current_period_start);

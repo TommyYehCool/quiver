@@ -75,6 +75,9 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      # Default to the dev stage for local development (bind-mount + hot reload).
+      # docker-compose.prod.yml overrides this to `prod`.
+      target: dev
     restart: unless-stopped
     env_file: .env
     depends_on:
