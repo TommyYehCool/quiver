@@ -86,12 +86,7 @@ function Hero({ locale }: { locale: string }) {
   return (
     <section className="container py-20 md:py-28">
       <div className="mx-auto max-w-2xl text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-macaron-mint px-4 py-1.5 text-sm font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
-          <Sparkles className="h-3.5 w-3.5" />
-          {t("badge")}
-        </div>
-
-        <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight md:text-6xl">
+        <h1 className="text-balance text-4xl font-bold tracking-tight md:text-6xl">
           {t("title")}
         </h1>
         <p className="mt-6 text-balance text-lg text-slate-600 dark:text-slate-300 md:text-xl">
