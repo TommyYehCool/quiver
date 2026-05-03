@@ -15,6 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.api import (
     account,
     auth,
+    earn,
     kyc,
     me,
     notifications,
@@ -199,6 +200,7 @@ app.include_router(transfers.router)
 app.include_router(withdrawals.router)
 app.include_router(rates.router)
 app.include_router(notifications.router)
+app.include_router(earn.router)
 app.include_router(webhooks.router)
 app.include_router(admin_kyc.router)
 app.include_router(admin_setup.router)

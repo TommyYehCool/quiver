@@ -39,6 +39,7 @@ from app.services.earn import repo as earn_repo
 from app.services.earn.bitfinex_adapter import (
     BitfinexFundingAdapter,
     FundingDepositAddress,
+    fetch_market_frr,
 )
 from app.services.ledger import get_user_balance, post_earn_outbound
 from app.services.tatum import TatumError, TatumNotConfigured
@@ -63,6 +64,11 @@ DEFAULT_OFFER_PERIOD_DAYS = 2
 
 # Bitfinex method name for USDT-TRX
 BITFINEX_USDT_TRX_METHOD = "tetherusx"
+
+# 掛單時想要的 markdown(below market last) — 確保被借方優先接走。
+# 0 = 直接照 last;正值 = 比 last 再低一點(更積極搶 match)。
+# 5 bps daily = 1.8% APR — 對 FRR 9% APR 環境差別微小,但能保證 fill 速度。
+COMPETITIVE_RATE_MARKDOWN_BPS = Decimal("0")
 
 
 # ─────────────────────────────────────────────────────────
@@ -288,20 +294,23 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         pos.bitfinex_credited_at = datetime.now(timezone.utc)
         await db.commit()
 
+    competitive_rate = await _compute_competitive_rate()
+    logger.info(
+        "auto_lend_competitive_rate",
+        position_id=position_id,
+        rate_daily=str(competitive_rate) if competitive_rate is not None else "FRR",
+    )
     try:
         offer_id = await adapter.submit_funding_offer(
             amount=position_amount,
             period_days=DEFAULT_OFFER_PERIOD_DAYS,
+            rate=competitive_rate,
         )
     except Exception as e:
         logger.exception("auto_lend_submit_offer_failed", position_id=position_id, error=str(e))
-        async with AsyncSessionLocal() as db:
-            pos = (await db.execute(select(EarnPosition).where(EarnPosition.id == position_id))).scalar_one()
-            pos.last_error = f"submit_offer_failed:{e}"[:1000]
-            pos.retry_count = retry_count + 1
-            await db.commit()
-        # leave status = funding_idle, retry later via reconciliation
-        return f"failed:submit_offer:{e}"
+        # 常見原因:Bitfinex 對剛 cancel 的 offer 有 1-2 min settling 延遲,
+        # 期間 wallet.available=0 但 wallet.balance=200。re-enqueue 重試。
+        return await _maybe_retry(ctx, position_id, retry_count, f"submit_offer:{e}"[:200])
 
     async with AsyncSessionLocal() as db:
         pos = (await db.execute(select(EarnPosition).where(EarnPosition.id == position_id))).scalar_one()
@@ -317,6 +326,41 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         amount=str(position_amount),
     )
     return f"lent:{offer_id}"
+
+
+async def _compute_competitive_rate() -> Decimal | None:
+    """Pull Bitfinex's public ticker for fUST and return a rate likely to
+    clear immediately at the highest yield available.
+
+    Strategy: match `bid_daily` — Bitfinex semantic 上 bid = 借方最高願付。
+    Lender 直接 match 這個 rate = 即時成交 + 拿到借方願付的最高利率,雙贏。
+
+    Why not `last_daily`?
+      `last_daily` 是最近一筆成交,可能是 outlier(例如某 lender 急 dump 出在
+      低於 market 的價)。實測曾拿到 0.000076(= 0.0076% / day)的 last,把
+      offer 掛在這價會被秒接,但 yield 慘 (~2.8% APR vs market ~8%)。
+
+    Why not `ask_daily`?
+      `ask_daily` = 最便宜 lender 在掛的 rate。掛在這價 = 跟最便宜的 lender 並
+      列,可能要等他被掃完才輪到我們。yield 也比 bid 低。
+
+    Why not FRR?
+      FRR 是平滑均價,會 lag market;quiet period 時 FRR > 實際 clearing,offer
+      容易卡 idle。
+
+    Fallback chain:bid_daily > last_daily > None(讓 caller 用 FRR 兜底)
+    """
+    market = await fetch_market_frr()
+    if market is None:
+        logger.warning("auto_lend_market_fetch_failed_falling_back_to_frr")
+        return None
+    if market.bid_daily > 0:
+        rate = market.bid_daily - (COMPETITIVE_RATE_MARKDOWN_BPS / Decimal(10000))
+        return rate if rate > 0 else market.bid_daily
+    if market.last_daily > 0:
+        logger.info("auto_lend_no_bid_using_last", last=str(market.last_daily))
+        return market.last_daily
+    return None
 
 
 async def _maybe_retry(

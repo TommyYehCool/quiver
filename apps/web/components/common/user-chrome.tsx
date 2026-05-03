@@ -10,6 +10,7 @@ import {
   Settings,
   Shield,
   ShieldCheck,
+  TrendingUp,
   UserCog,
   Wallet,
   X,
@@ -42,6 +43,7 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
   const items: NavItem[] = [
     { href: `/${locale}/dashboard`, i18nKey: "dashboard", Icon: LayoutDashboard },
     { href: `/${locale}/wallet`, i18nKey: "wallet", Icon: Wallet },
+    { href: `/${locale}/earn`, i18nKey: "earn", Icon: TrendingUp },
   ];
   if (showKycEntry) {
     items.push({ href: `/${locale}/kyc`, i18nKey: "kyc", Icon: ShieldCheck });
