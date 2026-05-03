@@ -329,36 +329,37 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
 
 
 async def _compute_competitive_rate() -> Decimal | None:
-    """Pull Bitfinex's public ticker for fUST and return a rate likely to
-    clear immediately at the highest yield available.
+    """Pull Bitfinex's public fUST ticker and return a rate likely to clear
+    quickly while still keeping yield healthy.
 
-    Strategy: match `bid_daily` — Bitfinex semantic 上 bid = 借方最高願付。
-    Lender 直接 match 這個 rate = 即時成交 + 拿到借方願付的最高利率,雙贏。
+    Strategy: match `ask_daily` — Bitfinex 語義上 ask = 「最便宜的 lender
+    現在在掛的價」。我們也掛在這價 = 跟最便宜的 lender 並列,下一個 borrower
+    來就會輪到我們(或同價分配)。**通常幾分鐘到 30 分鐘成交**,且拿到的是
+    market clearing rate(實測 ~5-6% APR),不會被 outlier 拖低。
+
+    Why not `bid_daily`?
+      bid_daily = 借方願付的最高 rate(~8% APR)。看似 yield 高,但只有少數
+      借方真的願付這麼高,我們會卡在 lender book 中段等 hours。
+      **Effective yield = 8% × 50% utilization = 4%**,比 ask_daily 的
+      5% × 100% utilization 還差。
 
     Why not `last_daily`?
-      `last_daily` 是最近一筆成交,可能是 outlier(例如某 lender 急 dump 出在
-      低於 market 的價)。實測曾拿到 0.000076(= 0.0076% / day)的 last,把
-      offer 掛在這價會被秒接,但 yield 慘 (~2.8% APR vs market ~8%)。
-
-    Why not `ask_daily`?
-      `ask_daily` = 最便宜 lender 在掛的 rate。掛在這價 = 跟最便宜的 lender 並
-      列,可能要等他被掃完才輪到我們。yield 也比 bid 低。
+      可能是 outlier(實測踩過 0.000076 = 2.92% APR 爛價)。
 
     Why not FRR?
-      FRR 是平滑均價,會 lag market;quiet period 時 FRR > 實際 clearing,offer
-      容易卡 idle。
+      FRR 是平滑均價,quiet 期會 lag,offer 容易卡 idle。
 
-    Fallback chain:bid_daily > last_daily > None(讓 caller 用 FRR 兜底)
+    Fallback chain:ask_daily > last_daily > None(讓 caller 用 FRR 兜底)
     """
     market = await fetch_market_frr()
     if market is None:
         logger.warning("auto_lend_market_fetch_failed_falling_back_to_frr")
         return None
-    if market.bid_daily > 0:
-        rate = market.bid_daily - (COMPETITIVE_RATE_MARKDOWN_BPS / Decimal(10000))
-        return rate if rate > 0 else market.bid_daily
+    if market.ask_daily > 0:
+        rate = market.ask_daily - (COMPETITIVE_RATE_MARKDOWN_BPS / Decimal(10000))
+        return rate if rate > 0 else market.ask_daily
     if market.last_daily > 0:
-        logger.info("auto_lend_no_bid_using_last", last=str(market.last_daily))
+        logger.info("auto_lend_no_ask_using_last", last=str(market.last_daily))
         return market.last_daily
     return None
 
