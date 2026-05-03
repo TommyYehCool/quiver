@@ -291,6 +291,74 @@ export default async function AdminEarnAccountDetailPage({
         </CardContent>
       </Card>
 
+      {/* F-Phase 3 Path A:auto-lend pipeline status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Auto-Lend Pipeline (F-3 Path A)
+          </CardTitle>
+          <CardDescription className="text-xs">
+            auto_lend_enabled: <code>{String(detail.auto_lend_enabled)}</code>
+            {" · "}funding_address:{" "}
+            <code className="font-mono text-[10px]">
+              {detail.bitfinex_funding_address ?? "(not set)"}
+            </code>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {detail.pipeline_positions.length === 0 ? (
+            <p className="text-xs text-slate-500">沒有 pipeline 紀錄</p>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-cream-edge text-left text-slate-500 dark:border-slate-700">
+                  <th className="py-2 font-normal">id</th>
+                  <th className="py-2 font-normal">status</th>
+                  <th className="py-2 text-right font-normal">amount</th>
+                  <th className="py-2 font-normal">offer_id</th>
+                  <th className="py-2 font-normal">tx_hash</th>
+                  <th className="py-2 font-normal">created</th>
+                  <th className="py-2 font-normal">last_error</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.pipeline_positions.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="border-b border-cream-edge/40 last:border-0 dark:border-slate-800"
+                  >
+                    <td className="py-2 font-mono">{p.id}</td>
+                    <td className="py-2">
+                      <code className="rounded bg-slate-100 px-1 text-[10px] dark:bg-slate-800">
+                        {p.status}
+                      </code>
+                      {p.retry_count > 0 && (
+                        <span className="ml-1 text-amber-600">↻{p.retry_count}</span>
+                      )}
+                    </td>
+                    <td className="py-2 text-right font-mono">{fmtUsd(p.amount)}</td>
+                    <td className="py-2 font-mono text-[10px]">
+                      {p.bitfinex_offer_id ?? "—"}
+                    </td>
+                    <td className="py-2 font-mono text-[10px]">
+                      {p.onchain_tx_hash
+                        ? `${p.onchain_tx_hash.slice(0, 8)}…${p.onchain_tx_hash.slice(-6)}`
+                        : "—"}
+                    </td>
+                    <td className="py-2 text-[10px] text-slate-500">
+                      {new Date(p.created_at).toLocaleString()}
+                    </td>
+                    <td className="py-2 text-[10px] text-red-500">
+                      {p.last_error?.slice(0, 60) ?? ""}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
       {detail.notes ? (
         <Card>
           <CardHeader>

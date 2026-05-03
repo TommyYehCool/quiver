@@ -123,10 +123,32 @@ class PositionSnapshotOut(BaseModel):
     total_usdt: Decimal | None
 
 
+class EarnPipelinePositionOut(BaseModel):
+    """F-Phase 3 Path A pipeline state — one row per deposit auto-lend cycle."""
+    id: int
+    status: str
+    amount: Decimal
+    currency: str
+    onchain_tx_hash: str | None
+    onchain_broadcast_at: datetime | None
+    bitfinex_credited_at: datetime | None
+    bitfinex_offer_id: int | None
+    bitfinex_offer_submitted_at: datetime | None
+    closed_at: datetime | None
+    closed_reason: str | None
+    last_error: str | None
+    retry_count: int
+    created_at: datetime
+
+
 class EarnAccountDetailOut(EarnAccountOut):
     bitfinex_connections: list[BitfinexConnectionOut]
     evm_addresses: list[EvmAddressOut]
     recent_snapshots: list[PositionSnapshotOut]  # 最近 30 天
+    # F-Phase 3 Path A:auto-lend pipeline positions (含 in-flight + recent closed)
+    auto_lend_enabled: bool
+    bitfinex_funding_address: str | None
+    pipeline_positions: list[EarnPipelinePositionOut]
 
 
 # ─────────────────────────────────────────────────────────

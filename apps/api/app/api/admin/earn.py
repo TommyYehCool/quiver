@@ -35,6 +35,7 @@ from app.schemas.earn import (
     EarnAccountDetailOut,
     EarnAccountListOut,
     EarnAccountOut,
+    EarnPipelinePositionOut,
     EvmAddressOut,
     FriendApySummary,
     FriendUserOption,
@@ -143,9 +144,35 @@ async def get_earn_account_detail(
     evm_addrs = await earn_repo.list_evm_addresses(db, account.id)
     snaps = await earn_repo.list_recent_snapshots(db, account.id, days=30)
 
+    # F-Phase 3 Path A:include the most recent 20 pipeline positions
+    from app.models.earn import EarnPosition
+    pipeline_q = await db.execute(
+        select(EarnPosition)
+        .where(EarnPosition.earn_account_id == account.id)
+        .order_by(EarnPosition.created_at.desc())
+        .limit(20)
+    )
+    pipeline_rows = list(pipeline_q.scalars().all())
+
     return ApiResponse.ok(
         EarnAccountDetailOut(
             **base.model_dump(),
+            auto_lend_enabled=account.auto_lend_enabled,
+            bitfinex_funding_address=account.bitfinex_funding_address,
+            pipeline_positions=[
+                EarnPipelinePositionOut(
+                    id=p.id, status=p.status, amount=p.amount, currency=p.currency,
+                    onchain_tx_hash=p.onchain_tx_hash,
+                    onchain_broadcast_at=p.onchain_broadcast_at,
+                    bitfinex_credited_at=p.bitfinex_credited_at,
+                    bitfinex_offer_id=p.bitfinex_offer_id,
+                    bitfinex_offer_submitted_at=p.bitfinex_offer_submitted_at,
+                    closed_at=p.closed_at, closed_reason=p.closed_reason,
+                    last_error=p.last_error, retry_count=p.retry_count,
+                    created_at=p.created_at,
+                )
+                for p in pipeline_rows
+            ],
             bitfinex_connections=[
                 BitfinexConnectionOut(
                     id=c.id,

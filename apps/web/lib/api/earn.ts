@@ -74,10 +74,31 @@ export interface PositionSnapshotOut {
   total_usdt: string | null;
 }
 
+export interface EarnPipelinePositionOut {
+  id: number;
+  status: string;
+  amount: string;
+  currency: string;
+  onchain_tx_hash: string | null;
+  onchain_broadcast_at: string | null;
+  bitfinex_credited_at: string | null;
+  bitfinex_offer_id: number | null;
+  bitfinex_offer_submitted_at: string | null;
+  closed_at: string | null;
+  closed_reason: string | null;
+  last_error: string | null;
+  retry_count: number;
+  created_at: string;
+}
+
 export interface EarnAccountDetailOut extends EarnAccountOut {
   bitfinex_connections: BitfinexConnectionOut[];
   evm_addresses: EvmAddressOut[];
   recent_snapshots: PositionSnapshotOut[];
+  // F-Phase 3 Path A
+  auto_lend_enabled: boolean;
+  bitfinex_funding_address: string | null;
+  pipeline_positions: EarnPipelinePositionOut[];
 }
 
 export interface SyncResultOut {
