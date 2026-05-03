@@ -36,8 +36,8 @@ interface Strings {
 
 const STRINGS: Record<Locale, Strings> = {
   "zh-TW": {
-    back: "回到連接頁面",
-    title: "Bitfinex API Key 設定教學",
+    back: "回教學首頁",
+    title: "③ Bitfinex API Key 設定教學",
     subtitle:
       "5 分鐘設好,讓 Quiver 自動幫你在 Bitfinex 放貸賺利息。你的錢始終在你自己 Bitfinex 帳號裡(Quiver 沒有提現權限)。",
     step1: {
@@ -123,8 +123,8 @@ const STRINGS: Record<Locale, Strings> = {
   },
 
   en: {
-    back: "Back to connect page",
-    title: "Bitfinex API Key Setup Guide",
+    back: "Back to guide hub",
+    title: "③ Bitfinex API Key Setup",
     subtitle:
       "Set up in 5 minutes so Quiver can auto-lend your USDT on Bitfinex Funding. Your money stays in your own Bitfinex account — Quiver has no withdrawal permission.",
     step1: {
@@ -214,8 +214,8 @@ const STRINGS: Record<Locale, Strings> = {
   },
 
   ja: {
-    back: "接続ページに戻る",
-    title: "Bitfinex API キー設定ガイド",
+    back: "ガイドトップに戻る",
+    title: "③ Bitfinex API キー設定ガイド",
     subtitle:
       "5 分で設定すれば、Quiver が Bitfinex Funding で自動貸付を行います。資金は常にあなたの Bitfinex アカウント内 — Quiver には出金権限はありません。",
     step1: {
@@ -322,7 +322,7 @@ export default function SetupGuidePage({
   return (
     <div className="container mx-auto max-w-3xl space-y-6 py-6">
       <Link
-        href={`/${locale}/earn/connect`}
+        href={`/${locale}/guide`}
         className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
       >
         <ArrowLeft className="h-3 w-3" /> {s.back}

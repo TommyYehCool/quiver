@@ -49,7 +49,7 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
     { href: `/${locale}/earn`, i18nKey: "earn", Icon: TrendingUp },
     { href: `/${locale}/subscription`, i18nKey: "premium", Icon: Crown },
     { href: `/${locale}/referral`, i18nKey: "referral", Icon: Gift },
-    { href: `/${locale}/earn/setup-guide`, i18nKey: "guide", Icon: BookOpen },
+    { href: `/${locale}/guide`, i18nKey: "guide", Icon: BookOpen },
   ];
   if (showKycEntry) {
     items.push({ href: `/${locale}/kyc`, i18nKey: "kyc", Icon: ShieldCheck });

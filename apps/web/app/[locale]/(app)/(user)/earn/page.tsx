@@ -307,7 +307,7 @@ export default async function EarnPage({
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href={`/${locale}/earn/setup-guide`}>{s.notSetup.viewGuide}</Link>
+              <Link href={`/${locale}/guide`}>{s.notSetup.viewGuide}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -456,7 +456,7 @@ export default async function EarnPage({
                 </code>
               </div>
               <Link
-                href={`/${locale}/earn/setup-guide`}
+                href={`/${locale}/guide/bitfinex-api-key`}
                 className="text-xs text-brand hover:underline"
               >
                 {s.footer.viewGuide}

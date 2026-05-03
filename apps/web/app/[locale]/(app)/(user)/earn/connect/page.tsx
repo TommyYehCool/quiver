@@ -268,7 +268,7 @@ export default async function EarnConnectPage({
         </CardHeader>
         <CardContent>
           <Link
-            href={`/${locale}/earn/setup-guide`}
+            href={`/${locale}/guide/bitfinex-api-key`}
             className="text-sm font-medium text-brand hover:underline"
           >
             {s.guideCard.cta}
