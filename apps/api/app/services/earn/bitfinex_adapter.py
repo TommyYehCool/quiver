@@ -52,9 +52,10 @@ SYMBOL_PUBLIC = "fUST"  # public ticker
 
 @dataclass(frozen=True)
 class BitfinexPosition:
-    funding_balance: Decimal  # idle in funding wallet
-    lent_total: Decimal  # active credits (借出去)
-    daily_earned_estimate: Decimal | None  # 估算當日結算(若可拿到)
+    funding_balance: Decimal       # 總額(包含 lent + idle)
+    funding_available: Decimal     # 真正可用的(扣掉 active loans / locked)
+    lent_total: Decimal            # active credits (借出去)
+    daily_earned_estimate: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -195,11 +196,13 @@ class BitfinexFundingAdapter:
             )
         # wallets: [WALLET_TYPE, CURRENCY, BALANCE, UNSETTLED_INTEREST, AVAILABLE, ...]
         funding_balance = Decimal(0)
+        funding_available = Decimal(0)
         for w in wallets or []:
-            if len(w) < 3:
+            if len(w) < 5:
                 continue
             if w[0] == "funding" and w[1] == "UST":
                 funding_balance = Decimal(str(w[2] or 0))
+                funding_available = Decimal(str(w[4] or 0))
                 break
         # credits: [ID, SYMBOL, SIDE, MTS_CREATE, MTS_UPDATE, AMOUNT, ...]
         lent_total = Decimal(0)
@@ -209,6 +212,7 @@ class BitfinexFundingAdapter:
             lent_total += Decimal(str(c[5] or 0))
         return BitfinexPosition(
             funding_balance=funding_balance,
+            funding_available=funding_available,
             lent_total=lent_total,
             daily_earned_estimate=None,
         )

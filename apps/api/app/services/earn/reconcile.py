@@ -136,7 +136,9 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     # ── 3. auto-renew: idle funds in Bitfinex → submit fresh offer ──
     if not account.auto_lend_enabled:
         return summary
-    if bf_position.funding_balance < MIN_AUTO_LEND_USDT:
+    # 用 available 不是 balance — balance 包含已 lent 出去的部分(借方還沒還的本金),
+    # 那些不能再掛 offer。available 才是真正 idle 可動用的。
+    if bf_position.funding_available < MIN_AUTO_LEND_USDT:
         return summary
 
     # Skip if there's already an active in-flight pipeline for this account —
@@ -156,9 +158,9 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     if in_flight_q.scalar_one_or_none() is not None:
         return summary
 
-    # Submit fresh offer for the idle funds
+    # Submit fresh offer for the idle funds (use available, not balance)
     rate = await _compute_competitive_rate()
-    amount = bf_position.funding_balance
+    amount = bf_position.funding_available
     try:
         offer_id = await adapter.submit_funding_offer(
             amount=amount,
