@@ -42,8 +42,9 @@ class EarnTier(str, enum.Enum):
 
     NONE = "none"           # 沒參與 Earn(預設,既有 wallet 用戶)
     INTERNAL = "internal"   # Tommy 自己 / admin
-    FRIEND = "friend"       # Friends Tooling(self-custody)
-    COMMERCIAL = "commercial"  # 未來 V0.5 公開用戶
+    FRIEND = "friend"       # 前 N 名 self-service 連接者(perf fee 5%,F-4a)
+    PUBLIC = "public"       # Self-service Path A 標準費率(perf fee 15%,F-4a)
+    COMMERCIAL = "commercial"  # 預留:未來 platform-custody mode(commingled)
 
 
 class CustodyMode(str, enum.Enum):

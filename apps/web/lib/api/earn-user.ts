@@ -50,6 +50,8 @@ export interface ActiveCreditOut {
   expected_interest_at_expiry: string;
 }
 
+export type EarnTier = "none" | "internal" | "friend" | "public" | "commercial";
+
 export interface EarnMeOut {
   kyc_status: KycStatusValue;
   can_connect: boolean;
@@ -57,6 +59,8 @@ export interface EarnMeOut {
   auto_lend_enabled: boolean;
   bitfinex_connected: boolean;
   bitfinex_funding_address: string | null;
+  earn_tier: EarnTier | null;
+  perf_fee_bps: number | null;
   funding_idle_usdt: string | null;
   lent_usdt: string | null;
   daily_earned_usdt: string | null;
@@ -64,6 +68,15 @@ export interface EarnMeOut {
   active_positions: EarnPositionUserOut[];
   active_credits: ActiveCreditOut[];
   recent_snapshots: EarnSnapshotUserOut[];
+}
+
+export interface EarnConnectPreviewOut {
+  already_connected: boolean;
+  tier: EarnTier;
+  perf_fee_bps: number;
+  perf_fee_pct: string; // Decimal serialised as string
+  friend_slots_total: number;
+  friend_slots_remaining: number;
 }
 
 export interface EarnSettingsOut {
@@ -75,12 +88,18 @@ export interface EarnConnectOut {
   bitfinex_funding_address: string;
   auto_lend_enabled: boolean;
   bitfinex_funding_balance: string;
+  earn_tier: EarnTier;
+  perf_fee_bps: number;
 }
 
 // ──── client (browser) ────
 
 export async function fetchEarnMe(): Promise<EarnMeOut> {
   return apiFetch<EarnMeOut>("/api/earn/me");
+}
+
+export async function fetchEarnConnectPreview(): Promise<EarnConnectPreviewOut> {
+  return apiFetch<EarnConnectPreviewOut>("/api/earn/connect-preview");
 }
 
 export async function updateEarnSettings(

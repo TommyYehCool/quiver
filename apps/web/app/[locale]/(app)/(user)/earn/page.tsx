@@ -35,6 +35,12 @@ type Locale = "zh-TW" | "en" | "ja";
 interface PageStrings {
   loadFailed: string;
   headerSubtitle: string;
+  tierBadge: {
+    friend: string;
+    public: string;
+    internal: string;
+    feeSuffix: (pct: string) => string;
+  };
   kycGate: { title: string; descPrefix: string; cta: string };
   notSetup: { title: string; desc: string; cta: string; viewGuide: string };
   bigNumbers: {
@@ -55,6 +61,12 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     loadFailed: "無法載入 Earn 資料,請稍後再試或聯絡 admin。",
     headerSubtitle:
       "Quiver 自動把你的 USDT 送到你 Bitfinex Funding wallet 並掛 funding offer 賺利息",
+    tierBadge: {
+      friend: "Friend 等級",
+      public: "Public 等級",
+      internal: "Internal",
+      feeSuffix: (pct) => `· perf fee ${pct}%`,
+    },
     kycGate: { title: "先完成 KYC 驗證", descPrefix: "Earn 功能需要先通過 KYC。當前狀態:", cta: "去 KYC" },
     notSetup: {
       title: "連接你的 Bitfinex 帳號",
@@ -99,6 +111,12 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     loadFailed: "Failed to load Earn data — please try again later or contact admin.",
     headerSubtitle:
       "Quiver automatically sends your USDT to your Bitfinex Funding wallet and posts a funding offer to earn interest",
+    tierBadge: {
+      friend: "Friend tier",
+      public: "Public tier",
+      internal: "Internal",
+      feeSuffix: (pct) => `· perf fee ${pct}%`,
+    },
     kycGate: { title: "Complete KYC first", descPrefix: "Earn requires KYC approval. Current status: ", cta: "Go to KYC" },
     notSetup: {
       title: "Connect your Bitfinex account",
@@ -143,6 +161,12 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     loadFailed: "Earn データの読み込みに失敗しました。後ほど再試行するか、管理者にお問い合わせください。",
     headerSubtitle:
       "Quiver があなたの USDT を Bitfinex Funding ウォレットに送り、funding offer を出して利息を得ます",
+    tierBadge: {
+      friend: "Friend ティア",
+      public: "Public ティア",
+      internal: "Internal",
+      feeSuffix: (pct) => `· perf fee ${pct}%`,
+    },
     kycGate: { title: "先に本人確認を完了", descPrefix: "Earn の利用には KYC 承認が必要です。現在のステータス:", cta: "本人確認へ" },
     notSetup: {
       title: "Bitfinex アカウントを接続",
@@ -222,8 +246,17 @@ export default async function EarnPage({
         <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-bubble-mint">
           <TrendingUp className="h-6 w-6 text-emerald-700" />
         </span>
-        <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight">Earn</h1>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-display text-3xl font-bold tracking-tight">Earn</h1>
+            {earn.has_earn_account && earn.earn_tier && earn.earn_tier !== "none" ? (
+              <TierBadge
+                tier={earn.earn_tier}
+                feeBps={earn.perf_fee_bps ?? 0}
+                strings={s.tierBadge}
+              />
+            ) : null}
+          </div>
           <p className="text-sm text-slate-500">{s.headerSubtitle}</p>
         </div>
       </div>
@@ -424,6 +457,39 @@ export default async function EarnPage({
         </>
       )}
     </div>
+  );
+}
+
+function TierBadge({
+  tier,
+  feeBps,
+  strings,
+}: {
+  tier: string;
+  feeBps: number;
+  strings: PageStrings["tierBadge"];
+}) {
+  const label =
+    tier === "friend"
+      ? strings.friend
+      : tier === "internal"
+        ? strings.internal
+        : strings.public;
+  const tone =
+    tier === "friend"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+      : tier === "internal"
+        ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
+        : "bg-slate-500/15 text-slate-700 dark:text-slate-300";
+  const pct = (feeBps / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>
+      {label}
+      <span className="text-[10px] opacity-70">{strings.feeSuffix(pct)}</span>
+    </span>
   );
 }
 

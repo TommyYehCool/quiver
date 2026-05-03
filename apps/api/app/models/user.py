@@ -69,8 +69,9 @@ class User(Base, TimestampMixin):
     # phase 9 / Friends Tooling: Earn 系統角色
     # 'none' = 沒參與 Earn(預設)
     # 'internal' = Tommy 自己 / admin
-    # 'friend' = friends-only(self-custody)
-    # 'commercial' = V0.5 公開用戶(platform-custody)
+    # 'friend' = 前 10 名 self-service 連接者,perf fee 5%(F-4a)
+    # 'public' = self-service Path A 標準費率,perf fee 15%(F-4a)
+    # 'commercial' = 預留:未來 platform-custody mode(commingled)
     earn_tier: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default="none"
     )

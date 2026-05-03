@@ -63,6 +63,11 @@ class EarnMeOut(BaseModel):
     bitfinex_connected: bool
     bitfinex_funding_address: str | None  # cached deposit address
 
+    # Tier + fee disclosure (F-4a). null when no earn_account yet — use
+    # /api/earn/connect-preview to see what the user *would* get on connect.
+    earn_tier: str | None  # "friend" | "public" | "internal" | "commercial"
+    perf_fee_bps: int | None  # 500 = 5%, 1500 = 15%
+
     # Live position summary (latest snapshot or computed)
     funding_idle_usdt: Decimal | None  # USDT in funding wallet, not lent
     lent_usdt: Decimal | None           # USDT actively lent out
@@ -121,3 +126,26 @@ class EarnConnectOut(BaseModel):
     auto_lend_enabled: bool
     # Confirmation that the Bitfinex key actually works (we tested it):
     bitfinex_funding_balance: Decimal
+    # Tier + fee assigned at connect time (F-4a).
+    earn_tier: str
+    perf_fee_bps: int
+
+
+# ─────────────────────────────────────────────────────────
+# GET /api/earn/connect-preview (F-4a)
+# ─────────────────────────────────────────────────────────
+
+
+class EarnConnectPreviewOut(BaseModel):
+    """Preview the tier + fee a user *would* get if they connect right now.
+
+    Used by /earn/connect page to disclose the rate before the user pastes
+    their Bitfinex key. If the user already has an earn_account, this echoes
+    their current tier instead of pre-assigning a new one.
+    """
+    already_connected: bool
+    tier: str  # "friend" | "public" | (or current tier if already_connected)
+    perf_fee_bps: int
+    perf_fee_pct: Decimal  # e.g. Decimal("5.00") for 5%
+    friend_slots_total: int
+    friend_slots_remaining: int

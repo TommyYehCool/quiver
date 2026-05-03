@@ -1,10 +1,13 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Sparkles } from "lucide-react";
 
 import { fetchMeServer } from "@/lib/auth";
-import { fetchEarnMeServer } from "@/lib/api/earn-user-server";
+import {
+  fetchEarnConnectPreviewServer,
+  fetchEarnMeServer,
+} from "@/lib/api/earn-user-server";
 import {
   Card,
   CardContent,
@@ -20,6 +23,14 @@ const STRINGS: Record<Locale, {
   back: string;
   title: string;
   subtitle: string;
+  feeCard: {
+    titleFriend: string;
+    titlePublic: string;
+    descFriend: (slotsRemaining: number, total: number) => string;
+    descPublic: string;
+    feeLabel: string;
+    feeNote: string;
+  };
   guideCard: { title: string; desc: string; cta: string };
   formCard: { title: string; desc: string };
   checklist: {
@@ -38,6 +49,15 @@ const STRINGS: Record<Locale, {
     back: "回 Earn",
     title: "連接 Bitfinex",
     subtitle: "提供你的 Bitfinex API key + Funding wallet TRC20 入金地址。Quiver 會驗證這個 key 能讀到你 funding wallet 餘額才會儲存。",
+    feeCard: {
+      titleFriend: "🎉 你會進入 Friend 名額",
+      titlePublic: "標準費率",
+      descFriend: (remaining, total) =>
+        `前 ${total} 名連接者享受 Friend 等級費率。目前還剩 ${remaining} 個名額。`,
+      descPublic: "Friend 名額已滿,你會以標準公開費率連接。Quiver 從你利息收入抽取 perf fee,本金永遠不抽。",
+      feeLabel: "Performance fee(只在你贖回時從利息扣)",
+      feeNote: "本金永遠不會被扣手續費。Fee 只在你的部位獲得利息且贖回時計算,從利息總額中抽取上述比例。",
+    },
     guideCard: {
       title: "第一次設定?先看完整教學",
       desc: "教學包含:Bitfinex 怎麼開 API key、權限要勾哪些 / 不能勾哪些(尤其 Withdrawal 永遠不要開)、IP allowlist 設定、入金地址在哪裡找。",
@@ -71,6 +91,15 @@ const STRINGS: Record<Locale, {
     back: "Back to Earn",
     title: "Connect Bitfinex",
     subtitle: "Provide your Bitfinex API key + Funding wallet TRC20 deposit address. Quiver verifies the key by reading your funding balance before storing.",
+    feeCard: {
+      titleFriend: "🎉 You'll get the Friend rate",
+      titlePublic: "Standard rate",
+      descFriend: (remaining, total) =>
+        `The first ${total} connectors get the Friend tier rate. ${remaining} slot${remaining === 1 ? "" : "s"} remaining.`,
+      descPublic: "All Friend slots are taken — you'll connect at the standard public rate. Quiver takes a perf fee from your interest income only; never from your principal.",
+      feeLabel: "Performance fee (charged from interest only, on redemption)",
+      feeNote: "Your principal is never charged. The fee is calculated only when your position earns interest and you redeem, taking the above percentage from gross interest.",
+    },
     guideCard: {
       title: "First time? Read the full guide",
       desc: "The guide covers: how to create the API key, which permissions to enable / never enable (especially Withdrawal — never), IP allowlist setup, and where to find the deposit address.",
@@ -104,6 +133,15 @@ const STRINGS: Record<Locale, {
     back: "Earn に戻る",
     title: "Bitfinex を接続",
     subtitle: "Bitfinex API キー + Funding ウォレットの TRC20 入金アドレスを提供してください。Quiver はキーが funding 残高を読み取れることを確認してから保存します。",
+    feeCard: {
+      titleFriend: "🎉 Friend 枠に入れます",
+      titlePublic: "標準レート",
+      descFriend: (remaining, total) =>
+        `先着 ${total} 名が Friend ティアのレートを利用できます。残り ${remaining} 枠。`,
+      descPublic: "Friend 枠は埋まっており、標準の public レートで接続されます。Quiver は元本ではなく利息収入からのみパフォーマンス手数料を取ります。",
+      feeLabel: "パフォーマンス手数料(償還時、利息のみから差引)",
+      feeNote: "元本に手数料がかかることはありません。手数料はポジションが利息を得て償還するときのみ計算され、利息総額から上記のパーセンテージが差し引かれます。",
+    },
     guideCard: {
       title: "初めての設定?先にガイドを読む",
       desc: "ガイドの内容:API キーの作成方法、有効にする / 絶対に有効にしない権限(特に Withdrawal は絶対に有効にしない)、IP allowlist の設定、入金アドレスの場所。",
@@ -160,6 +198,7 @@ export default async function EarnConnectPage({
     redirect(`/${locale}/earn`);
   }
 
+  const preview = await fetchEarnConnectPreviewServer(cookieHeader);
   const s = STRINGS[pickLocale(locale)];
 
   return (
@@ -175,6 +214,49 @@ export default async function EarnConnectPage({
         <h1 className="font-display text-2xl font-bold tracking-tight">{s.title}</h1>
         <p className="mt-1 text-sm text-slate-500">{s.subtitle}</p>
       </div>
+
+      {preview ? (
+        <Card
+          className={
+            preview.tier === "friend"
+              ? "border-emerald-300/60 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/30"
+              : "border-slate-300/60 bg-slate-50/60 dark:border-slate-700 dark:bg-slate-900/40"
+          }
+        >
+          <CardHeader className="flex-row items-start gap-3">
+            <Sparkles
+              className={
+                preview.tier === "friend"
+                  ? "h-5 w-5 flex-none text-emerald-600"
+                  : "h-5 w-5 flex-none text-slate-500"
+              }
+            />
+            <div className="flex-1">
+              <CardTitle className="text-base">
+                {preview.tier === "friend" ? s.feeCard.titleFriend : s.feeCard.titlePublic}
+              </CardTitle>
+              <CardDescription>
+                {preview.tier === "friend"
+                  ? s.feeCard.descFriend(preview.friend_slots_remaining, preview.friend_slots_total)
+                  : s.feeCard.descPublic}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-baseline justify-between rounded-md border border-cream-edge bg-white/60 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/40">
+              <span className="text-xs text-slate-500">{s.feeCard.feeLabel}</span>
+              <span className="text-xl font-semibold tabular-nums">
+                {Number(preview.perf_fee_pct).toLocaleString("en-US", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2,
+                })}
+                %
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{s.feeCard.feeNote}</p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="border-amber-300/60 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/30">
         <CardHeader className="flex-row items-start gap-3">

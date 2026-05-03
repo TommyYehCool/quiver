@@ -32,6 +32,7 @@ from app.schemas.earn_user import (
     ActiveCreditOut,
     EarnConnectIn,
     EarnConnectOut,
+    EarnConnectPreviewOut,
     EarnMeOut,
     EarnPositionUserOut,
     EarnSettingsOut,
@@ -39,6 +40,7 @@ from app.schemas.earn_user import (
     EarnSnapshotUserOut,
 )
 from app.services.earn import encryption as earn_crypto
+from app.services.earn import fee_policy
 from app.services.earn import repo as earn_repo
 from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
 
@@ -93,6 +95,8 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 auto_lend_enabled=False,
                 bitfinex_connected=False,
                 bitfinex_funding_address=None,
+                earn_tier=None,
+                perf_fee_bps=None,
                 funding_idle_usdt=None,
                 lent_usdt=None,
                 daily_earned_usdt=None,
@@ -155,6 +159,8 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             auto_lend_enabled=account.auto_lend_enabled,
             bitfinex_connected=conn is not None,
             bitfinex_funding_address=account.bitfinex_funding_address,
+            earn_tier=user.earn_tier,
+            perf_fee_bps=account.perf_fee_bps,
             funding_idle_usdt=funding_idle,
             lent_usdt=lent,
             daily_earned_usdt=daily_earned,
@@ -277,16 +283,24 @@ async def connect_bitfinex(
     # Step 4: persist
     account = await earn_repo.get_account_by_user_id(db, user.id)
     if account is None:
-        # Fresh user — create earn_account
+        # Fresh user — assign tier based on remaining friend slots (F-4a).
+        # First FRIEND_CAP self-service connectors get the friend slot at 5%;
+        # everyone else lands on the public tier at 15%.
+        assigned_tier = await fee_policy.assign_tier_for_new_connect(db)
+        assigned_fee_bps = fee_policy.default_fee_bps_for_tier(assigned_tier)
         account = await earn_repo.create_earn_account(
             db,
             user_id=user.id,
             custody_mode=CustodyMode.SELF.value,
-            perf_fee_bps=0,
+            perf_fee_bps=assigned_fee_bps,
             can_quiver_operate=True,  # self-service implies user wants Quiver to operate
             onboarded_by=user.id,  # self-onboarding
             notes=None,
         )
+        # Promote user.earn_tier to match the assigned slot. Internal/admin
+        # accounts that already have a tier set keep theirs.
+        if user.earn_tier == EarnTier.NONE.value:
+            user.earn_tier = assigned_tier
     account.bitfinex_funding_address = payload.bitfinex_funding_address
 
     # Bitfinex connection: revoke any existing active conn, then add new one
@@ -304,10 +318,6 @@ async def connect_bitfinex(
         permissions=BitfinexPermissions.READ_FUNDING_WRITE.value,
     )
 
-    # Promote user.earn_tier to 'friend' (default for self-service Path A MVP)
-    if user.earn_tier == EarnTier.NONE.value:
-        user.earn_tier = EarnTier.FRIEND.value
-
     await db.commit()
 
     logger.info(
@@ -324,5 +334,54 @@ async def connect_bitfinex(
             bitfinex_funding_address=account.bitfinex_funding_address,
             auto_lend_enabled=account.auto_lend_enabled,
             bitfinex_funding_balance=position.funding_balance,
+            earn_tier=user.earn_tier,
+            perf_fee_bps=account.perf_fee_bps,
+        )
+    )
+
+
+@router.get(
+    "/connect-preview", response_model=ApiResponse[EarnConnectPreviewOut]
+)
+async def connect_preview(
+    user: CurrentUserDep, db: DbDep
+) -> ApiResponse[EarnConnectPreviewOut]:
+    """Preview the tier + fee a user would receive if they connect right now.
+
+    Drives the fee disclosure UI on /earn/connect — the user sees "you will be
+    in the friend tier (5% fee)" or "all 10 friend slots are taken; you'll be
+    in the public tier (15% fee)" before they paste their Bitfinex API key.
+
+    If the user already has an earn_account, this echoes their current tier +
+    fee instead of pre-assigning a new one.
+    """
+    friend_count = await fee_policy.count_friend_accounts(db)
+    slots_remaining = max(0, fee_policy.FRIEND_CAP - friend_count)
+
+    account = await earn_repo.get_account_by_user_id(db, user.id)
+    if account is not None:
+        # Already connected — show their current rate, not the would-be rate.
+        return ApiResponse[EarnConnectPreviewOut].ok(
+            EarnConnectPreviewOut(
+                already_connected=True,
+                tier=user.earn_tier,
+                perf_fee_bps=account.perf_fee_bps,
+                perf_fee_pct=fee_policy.bps_to_pct(account.perf_fee_bps),
+                friend_slots_total=fee_policy.FRIEND_CAP,
+                friend_slots_remaining=slots_remaining,
+            )
+        )
+
+    # Fresh user — what would they get?
+    assigned_tier = await fee_policy.assign_tier_for_new_connect(db)
+    assigned_fee_bps = fee_policy.default_fee_bps_for_tier(assigned_tier)
+    return ApiResponse[EarnConnectPreviewOut].ok(
+        EarnConnectPreviewOut(
+            already_connected=False,
+            tier=assigned_tier,
+            perf_fee_bps=assigned_fee_bps,
+            perf_fee_pct=fee_policy.bps_to_pct(assigned_fee_bps),
+            friend_slots_total=fee_policy.FRIEND_CAP,
+            friend_slots_remaining=slots_remaining,
         )
     )
