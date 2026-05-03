@@ -42,16 +42,18 @@ def webhook_callback_for(public_base_url: str) -> str:
 
 
 async def resolve_callback_url() -> str | None:
-    """先看 env 是否硬寫了 WEBHOOK_CALLBACK_URL,沒設就從 ngrok 動態抓。
+    """決定 Tatum webhook 的 callback URL。
 
-    回 None 表示無法決定 callback URL(ngrok 沒起 + env 沒設),調用者該 skip 訂閱流程。
+    `WEBHOOK_CALLBACK_URL` env 是 **base URL**(例如 https://quiverdefi.com),
+    不是完整路徑 — 這個 function 一律會幫你套上 `/api/webhooks/tatum/<token>`。
+    沒設就從 ngrok 動態抓。
+
+    回 None 表示無法決定 base URL(ngrok 沒起 + env 沒設),調用者該 skip 訂閱流程。
     """
-    if settings.webhook_callback_url:
-        return settings.webhook_callback_url
-    public = await get_public_url()
-    if not public:
+    base = settings.webhook_callback_url or await get_public_url()
+    if not base:
         return None
-    return webhook_callback_for(public)
+    return webhook_callback_for(base)
 
 
 async def sync_user_subscription(
