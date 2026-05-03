@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { CheckCircle2, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,89 @@ import { connectBitfinex } from "@/lib/api/earn-user";
 
 const TRON_ADDR_RE = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 
+type Locale = "zh-TW" | "en" | "ja";
+const STRINGS: Record<Locale, {
+  apiKeyLabel: string;
+  apiSecretLabel: string;
+  apiSecretHelp: string;
+  fundingAddrLabel: string;
+  fundingAddrHelpBefore: string;
+  fundingAddrHelpStrong: string;
+  fundingAddrHelpAfter: string;
+  fundingAddrInvalid: string;
+  successPrefix: string;
+  errVerifyPrefix: string;
+  errVerifyDefault: string;
+  errKycRequired: string;
+  errGeneric: string;
+  busyLabel: string;
+  submitLabel: string;
+}> = {
+  "zh-TW": {
+    apiKeyLabel: "Bitfinex API Key",
+    apiSecretLabel: "Bitfinex API Secret",
+    apiSecretHelp: "Secret 只用 password input 顯示。送出後立刻 AES-GCM 加密儲存。",
+    fundingAddrLabel: "Bitfinex Funding wallet — TRC20 USDT 入金地址",
+    fundingAddrHelpBefore:
+      "在 Bitfinex 點 Wallets → Deposit → Tether (USDt) → Network: Tron (TRX) → 複製 ",
+    fundingAddrHelpStrong: "Funding wallet address",
+    fundingAddrHelpAfter: "(不是 Exchange / Margin)。",
+    fundingAddrInvalid: "⚠ 格式不對(34 字元 T 開頭)",
+    successPrefix: "連接成功!Bitfinex Funding wallet 餘額:",
+    errVerifyPrefix: "Bitfinex 驗證失敗:",
+    errVerifyDefault: "請檢查 key + secret 是否正確,以及 IP allowlist 是否設了 45.77.30.174",
+    errKycRequired: "請先完成 KYC 驗證",
+    errGeneric: "操作失敗",
+    busyLabel: "驗證 Bitfinex 中...",
+    submitLabel: "連接 Bitfinex",
+  },
+  en: {
+    apiKeyLabel: "Bitfinex API Key",
+    apiSecretLabel: "Bitfinex API Secret",
+    apiSecretHelp: "Secret is shown as a password field. On submit it's immediately encrypted with AES-GCM.",
+    fundingAddrLabel: "Bitfinex Funding wallet — TRC20 USDT deposit address",
+    fundingAddrHelpBefore:
+      "In Bitfinex go to Wallets → Deposit → Tether (USDt) → Network: Tron (TRX), then copy the ",
+    fundingAddrHelpStrong: "Funding wallet address",
+    fundingAddrHelpAfter: " (not Exchange / Margin).",
+    fundingAddrInvalid: "⚠ Wrong format (must be 34 chars starting with T)",
+    successPrefix: "Connected! Bitfinex Funding wallet balance: ",
+    errVerifyPrefix: "Bitfinex verification failed: ",
+    errVerifyDefault:
+      "Please check the key + secret are correct, and that 45.77.30.174 is in your IP allowlist.",
+    errKycRequired: "Please complete KYC first.",
+    errGeneric: "Operation failed",
+    busyLabel: "Verifying Bitfinex...",
+    submitLabel: "Connect Bitfinex",
+  },
+  ja: {
+    apiKeyLabel: "Bitfinex API キー",
+    apiSecretLabel: "Bitfinex API シークレット",
+    apiSecretHelp: "シークレットはパスワード入力で表示されます。送信時に即座に AES-GCM で暗号化されます。",
+    fundingAddrLabel: "Bitfinex Funding ウォレット — TRC20 USDT 入金アドレス",
+    fundingAddrHelpBefore:
+      "Bitfinex で Wallets → Deposit → Tether (USDt) → Network: Tron (TRX) を開き、",
+    fundingAddrHelpStrong: "Funding ウォレットアドレス",
+    fundingAddrHelpAfter: " をコピー(Exchange / Margin ではなく)。",
+    fundingAddrInvalid: "⚠ 形式が無効(T で始まる 34 文字)",
+    successPrefix: "接続成功!Bitfinex Funding ウォレット残高:",
+    errVerifyPrefix: "Bitfinex 検証失敗:",
+    errVerifyDefault:
+      "キーとシークレットが正しいか、IP allowlist に 45.77.30.174 が登録されているかご確認ください。",
+    errKycRequired: "先に本人確認を完了してください。",
+    errGeneric: "操作失敗",
+    busyLabel: "Bitfinex を検証中...",
+    submitLabel: "Bitfinex を接続",
+  },
+};
+function pickLocale(l: string): Locale {
+  if (l === "en" || l === "ja") return l;
+  return "zh-TW";
+}
+
 export function ConnectBitfinexForm({ locale }: { locale: string }) {
   const router = useRouter();
+  const s = STRINGS[pickLocale(useLocale())];
   const [apiKey, setApiKey] = React.useState("");
   const [apiSecret, setApiSecret] = React.useState("");
   const [fundingAddr, setFundingAddr] = React.useState("");
@@ -39,19 +121,16 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
         bitfinex_api_secret: apiSecret.trim(),
         bitfinex_funding_address: fundingAddr.trim(),
       });
-      setSuccess(
-        `連接成功!Bitfinex Funding wallet 餘額:${r.bitfinex_funding_balance} USDT`,
-      );
-      // Bounce to /earn after a short pause for the user to see success
+      setSuccess(`${s.successPrefix}${r.bitfinex_funding_balance} USDT`);
       setTimeout(() => router.push(`/${locale}/earn`), 1800);
     } catch (e) {
-      const code = (e as { code?: string }).code ?? "操作失敗";
+      const code = (e as { code?: string }).code ?? s.errGeneric;
       const params = (e as { params?: Record<string, unknown> }).params ?? {};
       setErr(
         code === "earn.bitfinexVerifyFailed"
-          ? `Bitfinex 驗證失敗:${(params as { error?: string }).error ?? "請檢查 key + secret 是否正確,以及 IP allowlist 是否設了 45.77.30.174"}`
+          ? `${s.errVerifyPrefix}${(params as { error?: string }).error ?? s.errVerifyDefault}`
           : code === "earn.kycRequired"
-          ? "請先完成 KYC 驗證"
+          ? s.errKycRequired
           : `${code}`,
       );
     } finally {
@@ -62,7 +141,7 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="api_key">Bitfinex API Key</Label>
+        <Label htmlFor="api_key">{s.apiKeyLabel}</Label>
         <Input
           id="api_key"
           type="text"
@@ -75,7 +154,7 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="api_secret">Bitfinex API Secret</Label>
+        <Label htmlFor="api_secret">{s.apiSecretLabel}</Label>
         <Input
           id="api_secret"
           type="password"
@@ -85,15 +164,11 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
           onChange={(e) => setApiSecret(e.target.value)}
           disabled={busy}
         />
-        <p className="text-xs text-slate-500">
-          Secret 只用 password input 顯示。送出後立刻 AES-GCM 加密儲存。
-        </p>
+        <p className="text-xs text-slate-500">{s.apiSecretHelp}</p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="funding_addr">
-          Bitfinex Funding wallet — TRC20 USDT 入金地址
-        </Label>
+        <Label htmlFor="funding_addr">{s.fundingAddrLabel}</Label>
         <Input
           id="funding_addr"
           type="text"
@@ -104,10 +179,11 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
           disabled={busy}
         />
         <p className="text-xs text-slate-500">
-          在 Bitfinex 點 Wallets → Deposit → Tether (USDt) → Network: Tron (TRX) → 複製{" "}
-          <strong>Funding wallet address</strong>(不是 Exchange / Margin)。
+          {s.fundingAddrHelpBefore}
+          <strong>{s.fundingAddrHelpStrong}</strong>
+          {s.fundingAddrHelpAfter}
           {fundingAddr && !fundingAddrValid && (
-            <span className="ml-1 text-red-500">⚠ 格式不對(34 字元 T 開頭)</span>
+            <span className="ml-1 text-red-500">{s.fundingAddrInvalid}</span>
           )}
         </p>
       </div>
@@ -128,10 +204,10 @@ export function ConnectBitfinexForm({ locale }: { locale: string }) {
         {busy ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            驗證 Bitfinex 中...
+            {s.busyLabel}
           </>
         ) : (
-          "連接 Bitfinex"
+          s.submitLabel
         )}
       </Button>
     </form>

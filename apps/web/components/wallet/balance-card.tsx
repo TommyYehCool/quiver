@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ArrowUpRight, Clock, Coins, TrendingUp } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,41 @@ import { fmtTwd, useUsdtTwdRate } from "@/lib/api/rates";
 import { fetchEarnMe, type EarnMeOut } from "@/lib/api/earn-user";
 
 const POLL_INTERVAL_MS = 5_000;
+
+type Locale = "zh-TW" | "en" | "ja";
+const EARN_STRINGS: Record<Locale, {
+  totalTitle: string;
+  totalDesc: string;
+  earnLabel: string;
+  earnLent: (n: string) => string;
+  earnIdle: (n: string) => string;
+}> = {
+  "zh-TW": {
+    totalTitle: "總資產",
+    totalDesc: "Quiver 託管 + Bitfinex Earn 持有的 USDT 總額",
+    earnLabel: "Bitfinex 賺息",
+    earnLent: (n) => `已借出 ${n}`,
+    earnIdle: (n) => `等掛單 ${n}`,
+  },
+  en: {
+    totalTitle: "Total Assets",
+    totalDesc: "USDT held in Quiver custody + Bitfinex Earn",
+    earnLabel: "Bitfinex Earn",
+    earnLent: (n) => `Lent ${n}`,
+    earnIdle: (n) => `Idle ${n}`,
+  },
+  ja: {
+    totalTitle: "総資産",
+    totalDesc: "Quiver と Bitfinex Earn に保有する USDT の合計",
+    earnLabel: "Bitfinex で運用中",
+    earnLent: (n) => `貸出中 ${n}`,
+    earnIdle: (n) => `待機 ${n}`,
+  },
+};
+function pickLocale(l: string): Locale {
+  if (l === "en" || l === "ja") return l;
+  return "zh-TW";
+}
 
 /**
  * 餘額卡 — Total-first design:
@@ -25,6 +60,7 @@ export function BalanceCard() {
   const t = useTranslations("balance");
   const params = useParams();
   const locale = (params?.locale as string) ?? "zh-TW";
+  const es = EARN_STRINGS[pickLocale(useLocale())];
   const [balance, setBalance] = React.useState<Balance | null>(null);
   const [earn, setEarn] = React.useState<EarnMeOut | null>(null);
   const { rate } = useUsdtTwdRate();
@@ -68,10 +104,8 @@ export function BalanceCard() {
   const hasAnyBreakdown = showEarn || showPending;
 
   // 動態決定 title:有 Earn 部位用「總資產」更精確,沒就維持原本「餘額」
-  const cardTitle = hasAnyBreakdown ? "總資產" : t("title");
-  const cardDesc = hasAnyBreakdown
-    ? "Quiver 託管 + Bitfinex Earn 持有的 USDT 總額"
-    : t("desc");
+  const cardTitle = hasAnyBreakdown ? es.totalTitle : t("title");
+  const cardDesc = hasAnyBreakdown ? es.totalDesc : t("desc");
 
   return (
     <Card className="bg-macaron-mint dark:bg-slate-900">
@@ -105,16 +139,16 @@ export function BalanceCard() {
             <BalanceChip label={t("available")} value={available} tone="neutral" />
             {showEarn ? (
               <BalanceChip
-                label="Bitfinex 賺息"
+                label={es.earnLabel}
                 value={earnTotal}
                 tone="success"
                 href={`/${locale}/earn`}
                 icon={<TrendingUp className="h-3 w-3" />}
                 subtitle={
                   earnLent > 0
-                    ? `已借出 ${fmt(earnLent)}`
+                    ? es.earnLent(fmt(earnLent))
                     : earnIdle > 0
-                      ? `等掛單 ${fmt(earnIdle)}`
+                      ? es.earnIdle(fmt(earnIdle))
                       : undefined
                 }
               />

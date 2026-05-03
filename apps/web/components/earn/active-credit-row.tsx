@@ -1,9 +1,56 @@
 "use client";
 
 import * as React from "react";
+import { useLocale } from "next-intl";
 import { TrendingUp, Hourglass } from "lucide-react";
 
 import type { ActiveCreditOut } from "@/lib/api/earn-user";
+
+type Locale = "zh-TW" | "en" | "ja";
+const STRINGS: Record<Locale, {
+  badge: string;
+  ratePerDay: string;
+  apr: string;
+  expectedInterest: string;
+  expires: string;
+  expired: string;
+  fmtRemaining: (days: number, hours: number, mins: number) => string;
+}> = {
+  "zh-TW": {
+    badge: "已借出",
+    ratePerDay: "利率 / 日",
+    apr: "年化 (APR)",
+    expectedInterest: "預期利息",
+    expires: "到期",
+    expired: "已到期",
+    fmtRemaining: (d, h, m) =>
+      d > 0 ? `${d} 天 ${h} 小時` : h > 0 ? `${h} 小時 ${m} 分` : `${m} 分鐘`,
+  },
+  en: {
+    badge: "Lent",
+    ratePerDay: "Rate / day",
+    apr: "Annualised (APR)",
+    expectedInterest: "Expected interest",
+    expires: "Expires",
+    expired: "Expired",
+    fmtRemaining: (d, h, m) =>
+      d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`,
+  },
+  ja: {
+    badge: "貸出中",
+    ratePerDay: "利率 / 日",
+    apr: "年率 (APR)",
+    expectedInterest: "予想利息",
+    expires: "満期",
+    expired: "満期済み",
+    fmtRemaining: (d, h, m) =>
+      d > 0 ? `${d} 日 ${h} 時間` : h > 0 ? `${h} 時間 ${m} 分` : `${m} 分`,
+  },
+};
+function pickLocale(l: string): Locale {
+  if (l === "en" || l === "ja") return l;
+  return "zh-TW";
+}
 
 /**
  * 顯示單筆 Bitfinex active funding credit:
@@ -12,6 +59,7 @@ import type { ActiveCreditOut } from "@/lib/api/earn-user";
  * - 到期倒數(每秒更新一次)
  */
 export function ActiveCreditRow({ credit }: { credit: ActiveCreditOut }) {
+  const s = STRINGS[pickLocale(useLocale())];
   const [now, setNow] = React.useState(() => Date.now());
 
   React.useEffect(() => {
@@ -47,26 +95,26 @@ export function ActiveCreditRow({ credit }: { credit: ActiveCreditOut }) {
           <p className="text-[10px] text-slate-500">offer #{credit.id}</p>
         </div>
         <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-          已借出
+          {s.badge}
         </span>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
         <Stat
-          label="利率 / 日"
+          label={s.ratePerDay}
           value={`${rateDailyPct.toFixed(4)}%`}
           icon={<TrendingUp className="h-3 w-3" />}
         />
-        <Stat label="年化 (APR)" value={`${apr.toFixed(2)}%`} />
+        <Stat label={s.apr} value={`${apr.toFixed(2)}%`} />
         <Stat
-          label="預期利息"
+          label={s.expectedInterest}
           value={`+${expectedInterest.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`}
           tone="success"
         />
         <Stat
-          label="到期"
-          value={expired ? "已到期" : formatRemaining(remainingMs)}
+          label={s.expires}
+          value={expired ? s.expired : formatRemaining(remainingMs, s.fmtRemaining)}
           subtitle={expiresAtStr}
           icon={<Hourglass className="h-3 w-3" />}
           tone={expired ? "warning" : "default"}
@@ -109,12 +157,13 @@ function Stat({
   );
 }
 
-function formatRemaining(ms: number): string {
+function formatRemaining(
+  ms: number,
+  fmt: (d: number, h: number, m: number) => string,
+): string {
   const totalMin = Math.floor(ms / 60_000);
   const days = Math.floor(totalMin / (60 * 24));
   const hours = Math.floor((totalMin % (60 * 24)) / 60);
   const mins = totalMin % 60;
-  if (days > 0) return `${days} 天 ${hours} 小時`;
-  if (hours > 0) return `${hours} 小時 ${mins} 分`;
-  return `${mins} 分鐘`;
+  return fmt(days, hours, mins);
 }
