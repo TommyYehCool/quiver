@@ -238,7 +238,7 @@ function StepBasicInfo({
             maxLength={64}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="birth_date">{t("fields.birthDate")}</Label>
             <Input
