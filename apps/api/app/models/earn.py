@@ -76,6 +76,27 @@ class FeePaidMethod(str, enum.Enum):
     MANUAL_OFFLINE = "manual_offline"          # 朋友直接給現金 / 請吃飯,Tommy 手動 mark
 
 
+class EarnPositionStatus(str, enum.Enum):
+    """earn_positions.status — Path A auto-lend pipeline state machine.
+
+    pending_outbound  → 已決定要 auto-lend,還沒 broadcast
+    onchain_in_flight → 已從 HOT broadcast 到 user.bitfinex_funding,等 Bitfinex credit
+    funding_idle      → Bitfinex 已 credit 到 funding wallet,還沒掛 offer
+    lent              → 已 submit funding offer,等借出/已借出
+    closing           → user / 系統觸發 cancel offer,等 funds idle
+    closed_external   → user 自己在 Bitfinex 提走 / cancel,Quiver sync 偵測為 closed
+    failed            → pipeline 中途錯誤,需 admin 排查(audit log + alert)
+    """
+
+    PENDING_OUTBOUND = "pending_outbound"
+    ONCHAIN_IN_FLIGHT = "onchain_in_flight"
+    FUNDING_IDLE = "funding_idle"
+    LENT = "lent"
+    CLOSING = "closing"
+    CLOSED_EXTERNAL = "closed_external"
+    FAILED = "failed"
+
+
 # ─────────────────────────────────────────────────────────
 # EarnAccount
 # ─────────────────────────────────────────────────────────
@@ -108,6 +129,17 @@ class EarnAccount(Base):
         Boolean, nullable=False, server_default="false"
     )
     # F-Phase 3 / V0.5 才 true(允許 Quiver 主動下 offer / cancel / rebalance)
+
+    # F-Phase 3 Path A — auto-lend pipeline
+    auto_lend_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
+    )
+    # toggle B(default on,user 可關)。Off 不阻止已 lent 部位自然到期,只阻
+    # 新 deposit 進 auto-lend pipeline。
+    bitfinex_funding_address: Mapped[str | None] = mapped_column(String(64))
+    # cache 從 Bitfinex API 撈出的 user TRC20 USDT funding wallet 入金地址。
+    # 第一次 connect 時 fetch + 存,之後 broadcast 前可 refresh 防止 user 在
+    # Bitfinex 端 rotate。
 
     # onboarding metadata
     onboarded_by: Mapped[int | None] = mapped_column(
@@ -313,3 +345,78 @@ class EarnFeeAccrual(Base):
     @property
     def is_paid(self) -> bool:
         return self.status == FeeAccrualStatus.PAID.value
+
+
+# ─────────────────────────────────────────────────────────
+# EarnPosition (F-Phase 3 / Path A)
+# ─────────────────────────────────────────────────────────
+
+
+class EarnPosition(Base):
+    """Path A auto-lend pipeline 每筆部位的 state machine row。
+
+    一筆 deposit 觸發 → 一筆 EarnPosition,跟著 status enum 走完整 pipeline。
+    Bitfinex 部位的「funding/lent/interest」細節由 EarnPositionSnapshot 表達,
+    這裡只記 lifecycle event 跟 onchain/exchange ID 對應。
+    """
+
+    __tablename__ = "earn_positions"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    earn_account_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("earn_accounts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, server_default="pending_outbound"
+    )
+    # EarnPositionStatus enum value
+
+    amount: Mapped[Decimal] = mapped_column(Numeric(38, 6), nullable=False)
+    # 原始 deposit 金額(USDT)— Bitfinex 之後實際借出可能不同(部分 fill)
+
+    currency: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="USDT-TRC20"
+    )
+
+    # onchain broadcast(HOT → user.bitfinex_funding_address)
+    onchain_tx_hash: Mapped[str | None] = mapped_column(String(128), index=True)
+    onchain_broadcast_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    bitfinex_credited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Bitfinex side
+    bitfinex_offer_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    bitfinex_offer_submitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+
+    # closing
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closed_reason: Mapped[str | None] = mapped_column(String(64))
+    # "user_external_withdraw" / "platform_redeem" / "failed:<reason>"
+
+    # diagnostics
+    last_error: Mapped[str | None] = mapped_column(Text)
+    retry_count: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, server_default="0"
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in (
+            EarnPositionStatus.CLOSED_EXTERNAL.value,
+            EarnPositionStatus.FAILED.value,
+        )

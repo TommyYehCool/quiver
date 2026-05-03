@@ -3,11 +3,14 @@
 支援:
 - self-custody mode:從 DB 讀加密 API key/secret(per-friend)
 - platform mode:用 settings.BITFINEX_API_KEY / SECRET(env)
-- 純讀:wallets / funding offers / funding credits / FRR
+- 讀路徑:wallets / funding offers / funding credits / FRR
+- 寫路徑(F-Phase 3 / Path A MVP):funding deposit address / submit offer /
+  cancel offer / list active offers
 - async httpx
 - HMAC-SHA384 簽章 + nonce monotonic
 
-Phase 1 只實作 read 路徑;write (submit / cancel offer)留給 F-Phase 3。
+Auto-renew 暫不用 Bitfinex 原生 `/v2/auth/w/funding/auto`;由我們的
+reconciliation worker 看到 funding wallet 又 idle ≥ min 後重新 submit。
 """
 
 from __future__ import annotations
@@ -47,6 +50,27 @@ class BitfinexPosition:
     funding_balance: Decimal  # idle in funding wallet
     lent_total: Decimal  # active credits (借出去)
     daily_earned_estimate: Decimal | None  # 估算當日結算(若可拿到)
+
+
+@dataclass(frozen=True)
+class FundingOffer:
+    """Active funding offer, parsed from `/v2/auth/r/funding/offers/<sym>` rows."""
+
+    id: int
+    symbol: str            # e.g. "fUSDT"
+    amount: Decimal        # remaining unmatched amount
+    rate: Decimal          # daily rate (0 if FRR market order)
+    period: int            # days
+    flags: int
+
+
+@dataclass(frozen=True)
+class FundingDepositAddress:
+    """Deposit address for funding wallet on a specific network method."""
+
+    address: str
+    method: str            # e.g. "tetherusx" (USDT-TRX)
+    pool_address: str | None = None  # for chains that need memo (TRC20 doesn't)
 
 
 @dataclass(frozen=True)
@@ -183,6 +207,128 @@ class BitfinexFundingAdapter:
             lent_total=lent_total,
             daily_earned_estimate=None,
         )
+
+    # ──── write methods (F-Phase 3 / Path A MVP) ────
+
+    async def get_funding_deposit_address(
+        self, method: str = "tetherusx", op_renew: int = 0
+    ) -> FundingDepositAddress:
+        """Auto-fetch user 的 funding wallet TRC20 USDT 入金地址。
+
+        `method='tetherusx'` = USDT on Tron。`op_renew=0` 拿現有地址,1 = 強制 generate
+        新地址(我們用 0;Bitfinex 入金地址預設永久,除非 user 自己 rotate)。
+
+        permission 需要 "Wallets → Get deposit addresses"。
+
+        Bitfinex response:
+            [MTS, TYPE, MSG_ID, null, [_, CURR, METHOD, REMARK, _, _, _, _, _, _, _, _,
+                                       AMOUNT, FEES, _, _, ADDRESS, POOL_ADDRESS, ...],
+             CODE, STATUS, TEXT]
+        """
+        body = {"wallet": "funding", "method": method, "op_renew": op_renew}
+        async with httpx.AsyncClient() as client:
+            resp = await self._auth_post(client, "v2/auth/w/deposit/address", body)
+        if not isinstance(resp, list) or len(resp) < 7:
+            raise ValueError(f"unexpected deposit_address response shape: {resp!r}")
+        if resp[6] != "SUCCESS":
+            raise ValueError(f"deposit_address failed: status={resp[6]} text={resp[5] if len(resp) > 5 else None}")
+        inner = resp[4]
+        if not isinstance(inner, list) or len(inner) < 17:
+            raise ValueError(f"unexpected deposit_address inner shape: {inner!r}")
+        address = inner[16]
+        if not isinstance(address, str) or not address:
+            raise ValueError(f"deposit_address missing address field: {inner!r}")
+        pool = inner[17] if len(inner) > 17 and isinstance(inner[17], str) else None
+        return FundingDepositAddress(address=address, method=method, pool_address=pool)
+
+    async def submit_funding_offer(
+        self,
+        amount: Decimal,
+        period_days: int,
+        rate: Decimal | None = None,
+        symbol: str = SYMBOL_AUTH,
+    ) -> int:
+        """Submit a funding offer。回傳 offer_id (int)。
+
+        rate=None → LIMIT 訂單 at rate=0,即「以當前 FRR 成交」(Bitfinex 文件稱
+        為 market funding offer)。rate=Decimal(...) → LIMIT at 指定 daily rate。
+
+        period_days: 2-30(Bitfinex 規則)。
+
+        permission 需要 "Margin Funding → Offer, cancel and close funding"。
+
+        Bitfinex response: [MTS, TYPE, MSG_ID, null, OFFER_DATA, CODE, STATUS, TEXT]
+        OFFER_DATA[0] = offer id
+        """
+        if period_days < 2 or period_days > 30:
+            raise ValueError(f"period_days must be 2-30, got {period_days}")
+        if amount <= 0:
+            raise ValueError(f"amount must be positive, got {amount}")
+        body = {
+            "type": "LIMIT",
+            "symbol": symbol,
+            "amount": str(amount),
+            "rate": str(rate) if rate is not None else "0",
+            "period": int(period_days),
+            "flags": 0,
+        }
+        async with httpx.AsyncClient() as client:
+            resp = await self._auth_post(client, "v2/auth/w/funding/offer/submit", body)
+        if not isinstance(resp, list) or len(resp) < 7:
+            raise ValueError(f"unexpected offer/submit response shape: {resp!r}")
+        if resp[6] != "SUCCESS":
+            raise ValueError(f"offer/submit failed: status={resp[6]} text={resp[7] if len(resp) > 7 else None}")
+        offer_data = resp[4]
+        if not isinstance(offer_data, list) or len(offer_data) < 1:
+            raise ValueError(f"offer/submit missing OFFER_DATA: {resp!r}")
+        offer_id = offer_data[0]
+        if not isinstance(offer_id, int):
+            raise ValueError(f"offer/submit returned non-int offer_id: {offer_id!r}")
+        return offer_id
+
+    async def cancel_funding_offer(self, offer_id: int) -> None:
+        """Cancel an active funding offer by id。Idempotent for already-cancelled."""
+        async with httpx.AsyncClient() as client:
+            resp = await self._auth_post(
+                client, "v2/auth/w/funding/offer/cancel", {"id": int(offer_id)}
+            )
+        if not isinstance(resp, list) or len(resp) < 7:
+            raise ValueError(f"unexpected offer/cancel response shape: {resp!r}")
+        if resp[6] != "SUCCESS":
+            # ERROR may mean already-cancelled / already-matched — surface but
+            # caller can decide how to react.
+            raise ValueError(f"offer/cancel failed: status={resp[6]} text={resp[7] if len(resp) > 7 else None}")
+
+    async def list_active_offers(self, symbol: str = SYMBOL_AUTH) -> list[FundingOffer]:
+        """List active(unmatched / partially-matched)funding offers for a symbol.
+
+        Endpoint回 array of arrays;each row:
+            [ID, SYMBOL, MTS_CREATE, MTS_UPDATE, AMOUNT, AMOUNT_ORIG, TYPE,
+             _, _, FLAGS, STATUS, _, _, _, RATE, PERIOD, NOTIFY, HIDDEN,
+             _, RENEW, RATE_REAL]
+        """
+        async with httpx.AsyncClient() as client:
+            resp = await self._auth_post(client, f"v2/auth/r/funding/offers/{symbol}")
+        if not isinstance(resp, list):
+            return []
+        out: list[FundingOffer] = []
+        for row in resp:
+            if not isinstance(row, list) or len(row) < 16:
+                continue
+            try:
+                out.append(
+                    FundingOffer(
+                        id=int(row[0]),
+                        symbol=str(row[1]),
+                        amount=Decimal(str(row[4] or 0)),
+                        rate=Decimal(str(row[14] or 0)),
+                        period=int(row[15] or 0),
+                        flags=int(row[9] or 0),
+                    )
+                )
+            except (ValueError, TypeError):
+                continue
+        return out
 
 
 # ─────────────────────────────────────────────────────────
