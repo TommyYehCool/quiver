@@ -468,7 +468,8 @@
   "locale": {
     "switch": "語言",
     "zh-TW": "繁體中文",
-    "en": "English"
+    "en": "English",
+    "ja": "日本語"
   },
   "theme": {
     "toggle": "切換主題",

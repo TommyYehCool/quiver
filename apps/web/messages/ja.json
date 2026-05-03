@@ -1,0 +1,490 @@
+{
+  "brand": {
+    "name": "Quiver",
+    "tagline": "誰もが使える暗号資産ウォレット"
+  },
+  "marketing": {
+    "hero": {
+      "badge": "台湾の初心者向けに設計",
+      "title": "暗号資産を、わかる数字で。",
+      "subtitle": "残高は常に法定通貨で表示。ブロックチェーンの知識は不要。3 分で開始できます。",
+      "cta": "無料で始める",
+      "secondary": "詳しく見る"
+    },
+    "features": {
+      "f1": {
+        "title": "常に法定通貨で表示",
+        "desc": "残高は TWD または USD で表示 — 暗算は不要。"
+      },
+      "f2": {
+        "title": "ユーザー間の送金は無料",
+        "desc": "メールアドレスだけで友達に送金 — 即時かつ無料。"
+      },
+      "f3": {
+        "title": "ガス代は当社が負担",
+        "desc": "どの外部ウォレットにも出金可能 — オンチェーン手数料は当社負担。"
+      }
+    },
+    "naming": {
+      "badge": "由来",
+      "title": "なぜ「Quiver」?",
+      "subtitle": "Quiver(箙)とは、弓の射手が矢を入れて持ち運ぶ容器のこと。",
+      "story": "ウォレットの中の USDT 一つひとつを、矢のようなものだと考えています。Quiver はあなた専用の容器 — 資産を整理し、いつでも使える状態で、安全に保管します。",
+      "tagline": "あなたのお金は取引所やプロトコルの奥深くではなく、自分の Quiver の中にあります。"
+    },
+    "painPoint": {
+      "title": "なぜ台湾の暗号資産はこんなに難しいのか?",
+      "subtitle": "面倒な技術詳細は当社が処理。Line Pay と同じくらい簡単に。",
+      "p1Problem": "USDT、TRC20、TRX、Wei、gwei — 何のことかわからない",
+      "p1Solution": "Quiver はすべてを TWD で表示し、ブロックチェーン用語を平易な言葉に翻訳します。",
+      "p2Problem": "取引のたびにガス代がかかる — 初心者は学習中にお金が消える",
+      "p2Solution": "内部送金は無料。出金時のガス代も当社負担。",
+      "p3Problem": "秘密鍵の自己管理 — 失くしたらお金は永久に消える",
+      "p3Solution": "Google ログインで簡単。鍵は銀行レベルの暗号化 + Shamir コールドバックアップで保護。",
+      "p4Problem": "利息収入が欲しいが、DeFi は怖いし、CEX は破綻する",
+      "p4Solution": "Quiver Earn (ベータ) は Bitfinex Funding と AAVE に接続 — 資金は自分のアカウントに残ります。"
+    },
+    "featuresMore": {
+      "f4Title": "多言語 + ダークモード",
+      "f4Desc": "繁体字中国語 / 英語 / 日本語に完全対応、ダークモードはシステム設定に追従。",
+      "f5Title": "2FA + 出金ホワイトリスト",
+      "f5Desc": "TOTP 二段階認証、24 時間クールダウン付きホワイトリスト、大口出金には速度制限。",
+      "f6Title": "プライバシーとデータ権利",
+      "f6Desc": "GDPR 準拠:データエクスポート、アカウント削除、ログインセッション管理。"
+    },
+    "earn": {
+      "badge": "ベータ・招待制",
+      "title": "余剰 USDT を不労所得に変える",
+      "subtitle": "Quiver Earn はあなたの USDT を Bitfinex Funding (CeFi) と AAVE V3 (DeFi) に接続し、APY の変動を毎日追跡します。現在は招待制の友人向け、手数料なし。",
+      "howTitle": "仕組み",
+      "step1Title": "1. ご自身の Bitfinex アカウントと USDT を保有",
+      "step1Desc": "当社はユーザー資金を一切預かりません。USDT はあなた自身の Bitfinex Funding ウォレットに残ります。",
+      "step2Title": "2. Quiver に読み取り専用 API キーを提供",
+      "step2Desc": "AES-GCM + KEK で暗号化保管。Quiver は読み取りのみ — 出金・取引は不可。Bitfinex 側でいつでも取り消せます。",
+      "step3Title": "3. Quiver が日々ポジションを追跡",
+      "step3Desc": "Bitfinex Funding ウォレット残高、貸出元本、収益を確認できます。AAVE 用に任意で Polygon アドレスも追加可能。",
+      "step4Title": "4. ダッシュボードを見て、次の行動を自分で決定",
+      "step4Desc": "Quiver は投資判断を代行しません。データを読み、市場を理解し、自分で動きを決めてください。",
+      "h1": {
+        "title": "本物の市場金利",
+        "desc": "Bitfinex Funding は USDT を margin トレーダーに貸し出し、APY は市場により変動。AAVE V3 Polygon は完全オンチェーン、TVL $1.2B。台湾定期預金より 3-10 倍高い純 APY。"
+      },
+      "h2": {
+        "title": "あなたの資金はあなたのアカウントに",
+        "desc": "資金は常にあなたの Bitfinex / EVM ウォレット内。Quiver は読み取り専用ダッシュボードで、預かることも引き出すこともできません。"
+      },
+      "h3": {
+        "title": "友人向けは無料",
+        "desc": "招待制の友人ティアは手数料無料。今後の商用版では成果報酬がかかりますが、友人ティアは永久無料。"
+      },
+      "h4": {
+        "title": "CeFi + DeFi の分散ヘッジ",
+        "desc": "Bitfinex (CEX リスク) に集中させない。AAVE (オンチェーン) も追跡。一方が破綻してももう一方は影響を受けません。"
+      },
+      "h5": {
+        "title": "履歴トレンド追跡",
+        "desc": "毎日自動スナップショット。30 日 APY トレンド、累積収益をダッシュボードに表示。確定申告データもすぐ用意できます。"
+      },
+      "h6": {
+        "title": "友人間 APY ランキング",
+        "desc": "他の友人と APY を比較 (オプトイン) — 一番良い戦略を持つ人から学べます。"
+      },
+      "compareTitle": "他の選択肢との比較",
+      "compare": {
+        "row1Name": "台湾の銀行 1 年定期預金",
+        "row1Rate": "1.6%",
+        "row1Note": "安定だがインフレに負ける",
+        "row2Name": "CEX Earn (Binance, OKX)",
+        "row2Rate": "5-12%",
+        "row2Note": "高 APY だが Celsius / FTX の前例あり",
+        "row3Name": "Quiver Earn (Bitfinex Funding)",
+        "row3Rate": "5-15%",
+        "row3Note": "資金は自分のアカウント内、ただし 2-30 日のロック",
+        "row4Name": "AAVE V3 (DeFi)",
+        "row4Rate": "~4%",
+        "row4Note": "完全オンチェーンで透明"
+      },
+      "disclaimer": "Earn は招待制ベータツールであり、規制下の金融商品ではありません。Bitfinex / DeFi プロトコルの事故について Quiver は責任を負いません。過去の実績は将来の結果を保証しません。暗号資産はハイリスク — 失っても問題のない金額のみ投資してください。",
+      "cta": "ベータ参加を問い合わせる"
+    },
+    "roadmap": {
+      "title": "プロダクトロードマップ",
+      "subtitle": "機能を盛り込まず、各フェーズを正しくやり切ってから次へ。",
+      "r1Status": "完了",
+      "r1Title": "Phase 1 — ウォレット MVP",
+      "r1Desc": "USDT-TRC20 カストディアル ウォレット、KYC、出金、ガス代スポンサー、ホット/コールドウォレット、多言語、ダークモード、2FA、監査ログ。",
+      "r2Status": "進行中",
+      "r2Title": "Phase 2 — Earn 友人ベータ",
+      "r2Desc": "Bitfinex Funding + AAVE V3 ポジション追跡ダッシュボード。招待制、最大 10 名の友人、手数料無料。",
+      "r3Status": "予定",
+      "r3Title": "Phase 3 — モバイルアプリ",
+      "r3Desc": "iOS + Android (Flutter)。完全なウォレット機能、Face ID、プッシュ通知。",
+      "r4Status": "法務確認待ち",
+      "r4Title": "Phase 4 — Earn 一般公開",
+      "r4Desc": "法務審査後、自動リバランスと成果報酬付きで一般登録を開放。"
+    },
+    "trust": {
+      "title": "信頼できる理由",
+      "subtitle": "「約束する」ではなく、「コードとスキーマで強制する」。",
+      "t1Title": "銀行レベルの鍵暗号化",
+      "t1Desc": "AES-256-GCM + 32 バイト Master KEK + Shamir 5/3 コールドバックアップ。鍵はホストから出ません。",
+      "t2Title": "出金ホワイトリスト + 24 時間クールダウン",
+      "t2Desc": "全出金は事前承認済みホワイトリスト + 24 時間待機が必要。セッション乗っ取りでも資金は奪えません。",
+      "t3Title": "完全な監査ログ",
+      "t3Desc": "すべての重要操作 (KYC、出金、設定) は append-only な audit_logs に記録。",
+      "t4Title": "Earn 読み取り専用の不変性",
+      "t4Desc": "Earn の Bitfinex API キーは出金・取引・移動が一切不可能。アーキテクチャ上、資金窃取は不可能。",
+      "t5Title": "毎日の対帳",
+      "t5Desc": "毎日 03:00 自動対帳:オンチェーン残高 vs 元帳。差異 > 0.01 USDT でアラート発動。"
+    },
+    "ctaFinal": {
+      "title": "無料アカウントで始めましょう",
+      "subtitle": "ウォレットは永久無料。Earn ベータは招待制 — お問い合わせください。",
+      "primaryCta": "無料で始める",
+      "secondaryCta": "Earn ベータに申し込む"
+    }
+  },
+  "login": {
+    "title": "Quiver にお帰りなさい",
+    "subtitle": "Google でログインしてデジタル資産を管理",
+    "googleButton": "Google で続行",
+    "termsNote": "ログインすると利用規約とプライバシーポリシーに同意したものとみなします",
+    "errors": {
+      "oauth_failed": "ログインに失敗しました。もう一度お試しください。",
+      "email_unverified": "Google メールが未確認です。"
+    }
+  },
+  "nav": {
+    "login": "ログイン",
+    "dashboard": "ダッシュボード",
+    "wallet": "ウォレット",
+    "earn": "Earn",
+    "kyc": "本人確認",
+    "switchToAdmin": "管理者に切り替え",
+    "backToUser": "ユーザーに戻る",
+    "adminModeBanner": "管理者モード — 操作はプラットフォーム / ユーザー資金に直接影響します",
+    "adminOverview": "概要",
+    "adminKyc": "KYC 審査",
+    "adminWithdrawals": "出金審査",
+    "adminEarn": "Earn 友人",
+    "adminPlatform": "プラットフォーム口座",
+    "adminAudit": "監査ログ",
+    "adminDeletions": "削除申請",
+    "adminSetup": "システム設定"
+  },
+  "dashboard": {
+    "greeting": "こんにちは、{name}さん",
+    "phaseNotice": "Phase 2 — 本人確認 (KYC) を完了してウォレット機能を解放してください。",
+    "logout": "ログアウト",
+    "kycCard": {
+      "title": "本人確認",
+      "descNew": "4 ステップ、約 3 分",
+      "descPending": "提出済み — 審査待ち",
+      "descApproved": "確認済み — 全機能解放",
+      "descRejected": "不承認 — 再提出してください",
+      "ctaNew": "確認を始める",
+      "ctaPending": "状況を見る",
+      "ctaApproved": "完了",
+      "ctaRejected": "再提出"
+    },
+    "adminCard": {
+      "title": "管理コンソール",
+      "desc": "ユーザーの KYC 提出を審査",
+      "cta": "管理者を開く"
+    },
+    "walletCard": {
+      "title": "ウォレット操作",
+      "desc": "受取、送金、出金 — いずれかを選択してウォレットページへ。",
+      "receive": "受取",
+      "send": "送金",
+      "withdraw": "出金"
+    }
+  },
+  "balance": {
+    "title": "残高",
+    "desc": "あなたの利用可能な USDT (TRC20) 残高。処理中の入金は約 1 分で確定します。",
+    "available": "利用可能",
+    "pending": "処理中",
+    "history": "最近の取引",
+    "historyDesc": "直近 5 件の入金 / 送金 / 出金",
+    "noActivity": "まだ取引がありません — 上のウォレット操作をお試しください。",
+    "loading": "読み込み中",
+    "viewAll": "すべて見る",
+    "statusPending": "処理中",
+    "statusPosted": "確定",
+    "typeDeposit": "入金",
+    "typeTransferIn": "受取",
+    "typeTransferOut": "送金"
+  },
+  "settings": {
+    "title": "設定",
+    "desc": "デバイス管理、データのエクスポート、アカウント削除リクエスト。",
+    "security": {
+      "sessionsTitle": "ログイン端末",
+      "sessionsDesc": "直近 50 件のログインを表示。心当たりのない端末があれば、すぐに他端末を全てログアウトしてください。",
+      "loading": "読み込み中",
+      "noSessions": "ログイン記録がまだありません。",
+      "current": "この端末",
+      "active": "アクティブ",
+      "revoked": "ログアウト済み",
+      "unknownDevice": "不明な端末",
+      "lastSeen": "最終アクセス",
+      "loginAt": "ログイン日時",
+      "revokeOthers": "他のすべての端末をログアウト",
+      "confirmRevokeOthers": "この端末以外をすべてログアウトしますか?\n\n他の端末は即座にログアウトされ、再ログインが必要になります。",
+      "revokedCount": "{count} 端末をログアウトしました"
+    },
+    "account": {
+      "title": "アカウント",
+      "desc": "データエクスポートとアカウント削除 (個人情報保護法 / GDPR)。",
+      "exportTitle": "データをエクスポート",
+      "exportDesc": "プロフィール + 取引履歴を JSON でダウンロード (KYC 写真は除外)。データ保護法で認められた権利です。",
+      "exportButton": "JSON をダウンロード",
+      "exportOk": "エクスポート開始 — まもなくダウンロードが始まります。",
+      "exportFailed": "エクスポートに失敗しました。後でもう一度お試しください。",
+      "deleteTitle": "アカウントを削除",
+      "deleteDesc": "削除をリクエストすると、管理者が残高 0 を確認後に処理します。コンプライアンスのため取引履歴は保持されますが、個人情報はマスクされます。",
+      "requestDelete": "アカウント削除をリクエスト",
+      "confirmDelete": "削除リクエストを送信しますか?\n\n管理者が確認します。確定前ならいつでも取り消せますが、確定後は取り消せません。",
+      "deleteRequested": "削除リクエストを送信しました。管理者の確認待ちです。",
+      "pendingNotice": "{date} に削除をリクエスト済み。管理者の処理待ちです。",
+      "cancelDelete": "リクエストを取り消す",
+      "deleteCancelled": "削除リクエストを取り消しました。"
+    }
+  },
+  "transfer": {
+    "title": "送金",
+    "desc": "メールアドレスで誰にでも USDT を送金。内部送金は無料。",
+    "recipientLabel": "受取人のメールアドレス",
+    "amountLabel": "金額",
+    "noteLabel": "メモ (任意)",
+    "notePlaceholder": "例:ランチの割り勘",
+    "review": "確認画面へ",
+    "confirm": {
+      "title": "送金を確認",
+      "subtitle": "取り消せません — 内容をしっかり確認してください。",
+      "to": "宛先",
+      "amount": "金額",
+      "note": "メモ",
+      "cancel": "キャンセル",
+      "send": "確認して送信"
+    },
+    "success": {
+      "title": "送信完了 ✓",
+      "message": "{to} に {amount} USDT を送りました",
+      "again": "もう一度送る"
+    },
+    "errors": {
+      "transfer": {
+        "recipientNotFound": "そのメールアドレスのユーザーは見つかりません",
+        "selfTransfer": "自分自身には送金できません",
+        "recipientKycRequired": "受取人が本人確認を完了していません",
+        "senderKycRequired": "先に本人確認を完了してください",
+        "recipientSuspended": "受取人のアカウントは停止されています",
+        "amountMustBePositive": "金額は 0 より大きくしてください",
+        "insufficientFunds": "残高不足",
+        "commitFailed": "送信失敗、もう一度お試しください",
+        "twofaRequired": "6 桁の 2FA コードまたは 8 桁のバックアップコードを入力"
+      },
+      "twofa": {
+        "invalidCode": "コードが無効です。もう一度お試しください"
+      }
+    }
+  },
+  "history": {
+    "title": "取引履歴",
+    "subtitle": "すべての入金 + 内部送金 + 出金。",
+    "backToDashboard": "ホームに戻る",
+    "filterAll": "すべて",
+    "filterDeposit": "入金",
+    "filterTransfer": "送金",
+    "filterWithdrawal": "出金",
+    "listTitle": "取引ログ",
+    "totalCount": "{n} 件",
+    "empty": "記録なし",
+    "statusPending": "処理中",
+    "statusPosted": "完了",
+    "typeDeposit": "入金",
+    "typeTransferIn": "受取",
+    "typeTransferOut": "送金",
+    "typeWithdrawal": "出金",
+    "typeRefund": "返金"
+  },
+  "withdraw": {
+    "title": "出金",
+    "desc": "USDT (TRC20) を外部の Tron アドレスに送金。手数料 1 USDT、オンチェーンガス代はプラットフォーム負担。",
+    "addressLabel": "受取アドレス (Tron Network)",
+    "amountLabel": "金額",
+    "feeNote": "最低 5 USDT;手数料 1 USDT",
+    "review": "確認画面へ",
+    "confirm": {
+      "title": "出金を確認",
+      "subtitle": "取り消せません。よく確認してください。",
+      "to": "受取人",
+      "amount": "出金額",
+      "fee": "手数料",
+      "total": "合計差引額",
+      "largeNotice": "1000 USDT 以上はブロードキャスト前に管理者審査が必要",
+      "cancel": "キャンセル",
+      "send": "確認して送信"
+    },
+    "success": {
+      "title": "出金リクエストを作成 ✓",
+      "needsReview": "ブロードキャスト前に管理者審査待ち",
+      "needsReviewLarge": "大口金額 — ブロードキャスト前に管理者審査待ち",
+      "needsReviewVelocityCount": "過去 24 時間に複数回出金を提出 — ブロードキャスト前に管理者審査が必要",
+      "needsReviewVelocityAmount": "24 時間累計出金額が大きいため — ブロードキャスト前に管理者審査が必要",
+      "approved": "自動承認 — まもなくブロードキャスト",
+      "again": "もう一件出金"
+    },
+    "errors": {
+      "withdrawal": {
+        "invalidAddress": "Tron アドレスの形式が無効",
+        "amountMustBePositive": "金額は 0 より大きくしてください",
+        "belowMinimum": "金額が最低額 (5 USDT) を下回っています",
+        "kycRequired": "先に本人確認を完了してください",
+        "insufficientFunds": "残高不足 (手数料含む)",
+        "commitFailed": "送信失敗、もう一度お試しください",
+        "notFound": "出金リクエストが見つかりません",
+        "custodyMissing": "システムエラー、管理者にお問い合わせください",
+        "feePayerLow": "プラットフォームの FEE_PAYER が一時的に不足しています。出金は一時停止中、後ほど再試行してください。",
+        "twofaRequired": "6 桁の 2FA コードまたは 8 桁のバックアップコードを入力",
+        "notInWhitelist": "ホワイトリスト専用モード有効。このアドレスはホワイトリストにありません。"
+      },
+      "twofa": {
+        "invalidCode": "コードが無効です。もう一度お試しください"
+      }
+    }
+  },
+  "wallet": {
+    "pageTitle": "ウォレット",
+    "pageDesc": "受取、送金、出金 — 上のタブで切り替え。",
+    "tabsLabel": "ウォレット タブ",
+    "tabReceive": "受取",
+    "tabSend": "送金",
+    "tabWithdraw": "出金",
+    "title": "受取アドレス",
+    "desc": "このアドレスまたは QR を共有してください。USDT は直接 Quiver アカウントに届きます。",
+    "addressLabel": "受取アドレス (TRON Network)",
+    "copy": "アドレスをコピー",
+    "copied": "コピーしました",
+    "hint": "TRON ネットワーク (TRC20) の USDT のみ受け付けます。取引所から出金するときは TRC20 を選択してください。",
+    "testnetBadge": "TESTNET",
+    "loading": "読み込み中…",
+    "loadFailed": "読み込み失敗、再読み込みしてください",
+    "notReady": {
+      "title": "ウォレット未準備",
+      "desc": "システムセットアップが未完了です。管理者にお問い合わせください。"
+    }
+  },
+  "kyc": {
+    "title": "本人確認",
+    "subtitle": "本人確認を完了して出金と送金を解放してください。すべてのデータは暗号化保管されます。",
+    "step1": {
+      "title": "基本情報",
+      "desc": "本名と身分証番号を入力。証明書と一致させてください。"
+    },
+    "step2": {
+      "title": "身分証写真",
+      "desc": "身分証の表裏をアップロード (jpg / png / webp、最大 5MB)。"
+    },
+    "step3": {
+      "title": "セルフィー",
+      "desc": "身分証を持って自撮り。顔と身分証の両方が鮮明に映ること。"
+    },
+    "step4": {
+      "title": "確認して提出",
+      "desc": "提出後、1 営業日以内に回答します。",
+      "notice": "提出後は、管理者に却下された場合のみ修正可能です。"
+    },
+    "fields": {
+      "legalName": "氏名",
+      "legalNamePlaceholder": "身分証と同じ",
+      "idNumber": "身分証 / パスポート番号",
+      "idNumberPlaceholder": "例:A123456789",
+      "birthDate": "生年月日",
+      "country": "国",
+      "idFront": "身分証(表)",
+      "idBack": "身分証(裏)",
+      "selfie": "身分証を持ったセルフィー"
+    },
+    "upload": {
+      "cta": "クリックしてアップロード",
+      "hint": "JPG / PNG / WebP、最大 5MB"
+    },
+    "nav": {
+      "prev": "戻る",
+      "next": "次へ",
+      "submit": "提出"
+    },
+    "approved": {
+      "title": "本人確認 完了",
+      "subtitle": "Quiver の全機能が利用可能になりました。",
+      "backHome": "ホームに戻る"
+    },
+    "pending": {
+      "title": "審査中",
+      "subtitle": "提出を受け付けました。審査完了次第メールでお知らせします。",
+      "backHome": "ホームに戻る"
+    },
+    "rejected": {
+      "title": "前回の提出は却下されました"
+    },
+    "errors": {
+      "kyc": {
+        "alreadySubmitted": "すでに有効な提出があります",
+        "fileEmpty": "ファイルが空です",
+        "fileTooLarge": "ファイルが大きすぎます (最大 5MB)",
+        "fileFormatUnsupported": "未対応の形式 — JPG / PNG / WebP を使用",
+        "invalidPath": "パスが無効",
+        "fileNotFound": "ファイルが見つかりません"
+      },
+      "server": {
+        "internalError": "問題が発生しました。もう一度お試しください"
+      }
+    }
+  },
+  "common": {
+    "loading": "読み込み中…",
+    "error": "問題が発生しました。もう一度お試しください。"
+  },
+  "notifications": {
+    "ariaLabel": "通知",
+    "title": "通知",
+    "markAllRead": "すべて既読に",
+    "empty": "通知はまだありません",
+    "messages": {
+      "DEPOSIT_POSTED": "入金を受け取りました:+{amount} {currency}",
+      "TRANSFER_RECEIVED": "{sender_display_name} さんから +{amount} {currency} を受信",
+      "KYC_APPROVED": "本人確認が承認されました ✓",
+      "KYC_REJECTED": "本人確認が却下されました:{reason}",
+      "WITHDRAWAL_COMPLETED": "{amount} {currency} の出金が完了しました",
+      "WITHDRAWAL_FAILED": "{amount} {currency} の出金が失敗、返金されました",
+      "WITHDRAWAL_REJECTED": "出金リクエストが却下されました:{reason}"
+    }
+  },
+  "locale": {
+    "switch": "言語",
+    "zh-TW": "繁體中文",
+    "en": "English",
+    "ja": "日本語"
+  },
+  "theme": {
+    "toggle": "テーマ切り替え",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "ログインしてください",
+      "invalidToken": "セッションが期限切れ、再度ログインしてください",
+      "userNotFound": "ユーザーが見つかりません",
+      "userSuspended": "アカウントが停止されています",
+      "adminRequired": "管理者権限が必要です"
+    },
+    "server": {
+      "internalError": "問題が発生しました。もう一度お試しください"
+    }
+  }
+}
