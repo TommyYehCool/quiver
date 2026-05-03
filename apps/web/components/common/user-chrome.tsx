@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
+  BookOpen,
   LayoutDashboard,
   Menu,
   Settings,
@@ -44,6 +45,7 @@ export function UserChrome({ children, locale, isAdmin, showKycEntry }: React.Pr
     { href: `/${locale}/dashboard`, i18nKey: "dashboard", Icon: LayoutDashboard },
     { href: `/${locale}/wallet`, i18nKey: "wallet", Icon: Wallet },
     { href: `/${locale}/earn`, i18nKey: "earn", Icon: TrendingUp },
+    { href: `/${locale}/earn/setup-guide`, i18nKey: "guide", Icon: BookOpen },
   ];
   if (showKycEntry) {
     items.push({ href: `/${locale}/kyc`, i18nKey: "kyc", Icon: ShieldCheck });
