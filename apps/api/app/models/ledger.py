@@ -32,6 +32,7 @@ class LedgerTxType(str, enum.Enum):
     TRANSFER = "TRANSFER"  # Phase 4+
     WITHDRAWAL = "WITHDRAWAL"  # Phase 5+
     REVERSE = "REVERSE"  # Phase 5+
+    EARN_OUTBOUND = "EARN_OUTBOUND"  # F-Phase 3 / Path A:USDT 從 HOT 送到 user 的 Bitfinex
 
 
 class LedgerTxStatus(str, enum.Enum):

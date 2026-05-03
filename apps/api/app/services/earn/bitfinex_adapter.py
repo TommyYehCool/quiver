@@ -36,8 +36,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = get_logger(__name__)
 
 API_BASE = "https://api.bitfinex.com"
-SYMBOL_AUTH = "fUSDT"  # auth endpoints
-SYMBOL_PUBLIC = "fUST"  # public ticker (UST=USDT)
+# Bitfinex uses `UST` as the wallet/asset code for Tether on most modern endpoints.
+# Funding-pair symbol = `fUST`. Credit-list endpoint *also* accepts `fUSDT` as a
+# legacy alias, but `funding/offer/submit` only accepts `fUST` (returns 500
+# "symbol: invalid" otherwise — verified 2026-05-03 in F-3b e2e test).
+# Standardize on `fUST` for all auth endpoints to avoid the trap.
+SYMBOL_AUTH = "fUST"
+SYMBOL_PUBLIC = "fUST"  # public ticker
 
 
 # ─────────────────────────────────────────────────────────

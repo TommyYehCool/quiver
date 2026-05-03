@@ -407,10 +407,18 @@ async def confirm_withdrawal(ctx: dict[str, Any], *, withdrawal_id: int) -> str:
 
 
 async def sweep_user(ctx: dict[str, Any], *, user_id: int) -> str:
-    """掃一個 user 鏈上 USDT 到 HOT。"""
+    """掃一個 user 鏈上 USDT 到 HOT。
+
+    F-Phase 3 Path A:sweep 成功後 enqueue auto_lend_dispatcher。dispatcher 自己
+    會檢查 user 是否有 active earn_account / auto_lend_enabled / ledger 是否 ≥
+    min,沒符合條件會 skip(無副作用),所以這裡可以無條件 enqueue。
+    """
     async with db_session() as session:
         result = await sweep_user_to_hot(session, user_id)
     if result.tx_hash:
+        await ctx["redis"].enqueue_job(
+            "auto_lend_dispatcher", user_id=user_id, _defer_by=10
+        )
         return f"swept:{result.swept_amount}:{result.tx_hash}"
     return f"skipped:{result.skipped_reason}"
 
@@ -546,6 +554,12 @@ def _redis_settings() -> RedisSettings:
 
 
 class WorkerSettings:
+    # Late import to avoid pulling earn deps when worker.py is imported elsewhere.
+    from app.services.earn.auto_lend import (
+        auto_lend_dispatcher,
+        auto_lend_finalizer,
+    )
+
     functions = [
         noop,
         kyc_send_approved_email,
@@ -558,6 +572,8 @@ class WorkerSettings:
         sweep_user,
         cron_sweep_all,
         cron_heartbeat_watchdog,
+        auto_lend_dispatcher,
+        auto_lend_finalizer,
     ]
     # 每日 03:00 (Asia/Taipei) = 19:00 UTC 跑對帳
     # 每 5 分鐘掃一次 user 地址(phase 6D)

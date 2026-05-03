@@ -134,17 +134,17 @@ async def test_list_active_offers_parses_rows(adapter: BitfinexFundingAdapter) -
     # Each row: [ID, SYMBOL, MTS_CREATE, MTS_UPDATE, AMOUNT, AMOUNT_ORIG, TYPE,
     #            _, _, FLAGS, STATUS, _, _, _, RATE, PERIOD, ...]
     rows = [
-        [111, "fUSDT", 1700000000000, 1700000000000, 150.0, 150.0, "LIMIT",
+        [111, "fUST", 1700000000000, 1700000000000, 150.0, 150.0, "LIMIT",
          None, None, 0, "ACTIVE", None, None, None, 0.0001, 2],
-        [222, "fUSDT", 1700000001000, 1700000001000, 50.5,  100.0, "LIMIT",
+        [222, "fUST", 1700000001000, 1700000001000, 50.5,  100.0, "LIMIT",
          None, None, 16, "PARTIALLY FILLED", None, None, None, 0.0002, 7],
     ]
-    respx.post(f"{API_BASE}/v2/auth/r/funding/offers/fUSDT").mock(
+    respx.post(f"{API_BASE}/v2/auth/r/funding/offers/fUST").mock(
         return_value=httpx.Response(200, json=rows)
     )
     offers = await adapter.list_active_offers()
     assert len(offers) == 2
-    assert offers[0] == FundingOffer(id=111, symbol="fUSDT", amount=Decimal("150.0"),
+    assert offers[0] == FundingOffer(id=111, symbol="fUST", amount=Decimal("150.0"),
                                      rate=Decimal("0.0001"), period=2, flags=0)
     assert offers[1].id == 222
     assert offers[1].period == 7
@@ -155,12 +155,12 @@ async def test_list_active_offers_parses_rows(adapter: BitfinexFundingAdapter) -
 @respx.mock
 async def test_list_active_offers_skips_malformed_rows(adapter: BitfinexFundingAdapter) -> None:
     rows = [
-        [111, "fUSDT", 1700000000000, 1700000000000, 150.0, 150.0, "LIMIT",
+        [111, "fUST", 1700000000000, 1700000000000, 150.0, 150.0, "LIMIT",
          None, None, 0, "ACTIVE", None, None, None, 0.0001, 2],
         ["short", "row"],  # malformed, should be skipped
         None,              # not a list, should be skipped
     ]
-    respx.post(f"{API_BASE}/v2/auth/r/funding/offers/fUSDT").mock(
+    respx.post(f"{API_BASE}/v2/auth/r/funding/offers/fUST").mock(
         return_value=httpx.Response(200, json=rows)
     )
     offers = await adapter.list_active_offers()
@@ -171,7 +171,7 @@ async def test_list_active_offers_skips_malformed_rows(adapter: BitfinexFundingA
 @pytest.mark.asyncio
 @respx.mock
 async def test_list_active_offers_empty(adapter: BitfinexFundingAdapter) -> None:
-    respx.post(f"{API_BASE}/v2/auth/r/funding/offers/fUSDT").mock(
+    respx.post(f"{API_BASE}/v2/auth/r/funding/offers/fUST").mock(
         return_value=httpx.Response(200, json=[])
     )
     offers = await adapter.list_active_offers()

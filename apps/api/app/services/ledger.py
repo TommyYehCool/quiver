@@ -153,6 +153,67 @@ async def post_deposit(db: AsyncSession, onchain_tx: OnchainTx) -> LedgerTransac
     return ledger_tx
 
 
+async def post_earn_outbound(
+    db: AsyncSession,
+    *,
+    user_id: int,
+    amount: Decimal,
+    currency: str = CURRENCY,
+) -> LedgerTransaction:
+    """記錄「USDT 從 Quiver HOT 送到 user 的外部 Bitfinex」事件。
+
+    DR  USER              +amount    ← 用戶對 Quiver 的請求權減少(錢已送出去到他自己 Bitfinex)
+    CR  PLATFORM_CUSTODY  +amount    ← Quiver 在鏈上的保管池減少
+
+    這個 entry 跟 DEPOSIT 方向相反 — DEPOSIT 是錢進來增加雙邊,EARN_OUTBOUND
+    是錢出去減少雙邊。caller 須在 broadcast 成功後 atomically 跟 earn_position
+    狀態更新一起 commit。
+
+    冪等性由 caller 控制(透過 earn_positions 唯一性);此 fn 自己不檢查重複。
+    """
+    if amount <= 0:
+        raise LedgerError(f"earn_outbound amount must be positive, got {amount}")
+
+    user_acct = await get_or_create_user_account(db, user_id, currency)
+    custody_acct = await _platform_custody_account(db, currency)
+
+    ledger_tx = LedgerTransaction(
+        type=LedgerTxType.EARN_OUTBOUND.value,
+        status=LedgerTxStatus.POSTED.value,
+        amount=amount,
+        currency=currency,
+    )
+    db.add(ledger_tx)
+    await db.flush()
+
+    db.add_all(
+        [
+            LedgerEntry(
+                ledger_tx_id=ledger_tx.id,
+                account_id=user_acct.id,
+                direction=EntryDirection.DEBIT.value,
+                amount=amount,
+                currency=currency,
+            ),
+            LedgerEntry(
+                ledger_tx_id=ledger_tx.id,
+                account_id=custody_acct.id,
+                direction=EntryDirection.CREDIT.value,
+                amount=amount,
+                currency=currency,
+            ),
+        ]
+    )
+
+    logger.info(
+        "earn_outbound_posted",
+        ledger_tx_id=ledger_tx.id,
+        user_id=user_id,
+        amount=str(amount),
+    )
+    return ledger_tx
+
+
 async def balance_for_account(db: AsyncSession, account_id: int) -> Decimal:
     """sum(credit) - sum(debit) for one account。供 transfer / withdrawal 鎖定後計算用。"""
     credits_q = await db.execute(
