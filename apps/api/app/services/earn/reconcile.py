@@ -158,9 +158,11 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     if in_flight_q.scalar_one_or_none() is not None:
         return summary
 
-    # Submit fresh offer for the idle funds (use available, not balance)
-    rate = await _compute_competitive_rate()
+    # Submit fresh offer for the idle funds (use available, not balance).
+    # F-5a-3.2: pass amount so _compute_competitive_rate can do depth-aware
+    # book walk (replaces ticker-only ask_daily logic).
     amount = bf_position.funding_available
+    rate = await _compute_competitive_rate(amount)
     try:
         offer_id = await adapter.submit_funding_offer(
             amount=amount,

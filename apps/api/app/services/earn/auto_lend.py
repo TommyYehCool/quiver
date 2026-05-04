@@ -39,6 +39,7 @@ from app.services.earn import repo as earn_repo
 from app.services.earn.bitfinex_adapter import (
     BitfinexFundingAdapter,
     FundingDepositAddress,
+    fetch_funding_book,
     fetch_market_frr,
 )
 from app.services.ledger import get_user_balance, post_earn_outbound
@@ -69,6 +70,12 @@ BITFINEX_USDT_TRX_METHOD = "tetherusx"
 # 0 = 直接照 last;正值 = 比 last 再低一點(更積極搶 match)。
 # 5 bps daily = 1.8% APR — 對 FRR 9% APR 環境差別微小,但能保證 fill 速度。
 COMPETITIVE_RATE_MARKDOWN_BPS = Decimal("0")
+
+# F-5a-3.2: order-book depth multiplier. We walk the live offer book and
+# anchor our rate at the level where cumulative-cheaper-supply equals
+# (BOOK_DEPTH_FACTOR × our_amount). At factor 2, we land roughly behind
+# 2× our size in the queue — well-positioned for the next borrower wave.
+BOOK_DEPTH_FACTOR = Decimal("2")
 
 
 # ─────────────────────────────────────────────────────────
@@ -294,10 +301,11 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         pos.bitfinex_credited_at = datetime.now(timezone.utc)
         await db.commit()
 
-    competitive_rate = await _compute_competitive_rate()
+    competitive_rate = await _compute_competitive_rate(position_amount)
     logger.info(
         "auto_lend_competitive_rate",
         position_id=position_id,
+        amount=str(position_amount),
         rate_daily=str(competitive_rate) if competitive_rate is not None else "FRR",
     )
     try:
@@ -328,29 +336,68 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
     return f"lent:{offer_id}"
 
 
-async def _compute_competitive_rate() -> Decimal | None:
-    """Pull Bitfinex's public fUST ticker and return a rate likely to clear
-    quickly while still keeping yield healthy.
+async def _compute_competitive_rate(
+    amount: Decimal | None = None,
+) -> Decimal | None:
+    """Compute a funding rate likely to clear quickly while keeping yield healthy.
 
-    Strategy: match `ask_daily` — Bitfinex 語義上 ask = 「最便宜的 lender
-    現在在掛的價」。我們也掛在這價 = 跟最便宜的 lender 並列,下一個 borrower
-    來就會輪到我們(或同價分配)。**通常幾分鐘到 30 分鐘成交**,且拿到的是
-    market clearing rate(實測 ~5-6% APR),不會被 outlier 拖低。
+    F-5a-3.2: order-book-aware. Walks the live `/v2/book/fUST/P0` and finds
+    the rate at the depth where cumulative-cheaper-offer-supply ≥
+    (BOOK_DEPTH_FACTOR × our amount). Anchoring to that depth means our offer
+    sits ~2× our size deep in the queue — close enough to the front to fill
+    on the next reasonable borrower wave, but not undercutting all the
+    cheaper lenders unnecessarily.
 
-    Why not `bid_daily`?
-      bid_daily = 借方願付的最高 rate(~8% APR)。看似 yield 高,但只有少數
-      借方真的願付這麼高,我們會卡在 lender book 中段等 hours。
-      **Effective yield = 8% × 50% utilization = 4%**,比 ask_daily 的
-      5% × 100% utilization 還差。
+    Why depth-aware vs. plain `ask_daily`:
+      ask_daily is the top-of-book rate, but the top offer might be tiny
+      (e.g. $50 at 4.5%). If we post $5000 at 4.5%, our offer would push to
+      a deeper price level the moment a borrower hits the small offer first.
+      Walking the book lets us anchor to where we'd actually land.
 
-    Why not `last_daily`?
-      可能是 outlier(實測踩過 0.000076 = 2.92% APR 爛價)。
+    Fallback chain (if Bitfinex API hiccups):
+      book → ticker ask_daily → ticker last_daily → None
+    None signals "use FRR"; the caller can pass rate=None to submit_offer.
 
-    Why not FRR?
-      FRR 是平滑均價,quiet 期會 lag,offer 容易卡 idle。
-
-    Fallback chain:ask_daily > last_daily > None(讓 caller 用 FRR 兜底)
+    `amount` arg is optional for backward compat; if omitted we walk to a
+    fixed depth slot (= a small reference amount).
     """
+    # ── try order book first (F-5a-3.2 path) ──
+    if amount is not None and amount > 0:
+        try:
+            book = await fetch_funding_book()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("auto_lend_book_fetch_failed", error=str(e))
+            book = []
+        if book:
+            target_depth = amount * BOOK_DEPTH_FACTOR
+            cumulative = Decimal(0)
+            for offer in book:  # ascending by rate (cheapest first)
+                cumulative += offer.amount
+                if cumulative >= target_depth:
+                    rate = offer.rate_daily - (
+                        COMPETITIVE_RATE_MARKDOWN_BPS / Decimal(10000)
+                    )
+                    final = rate if rate > 0 else offer.rate_daily
+                    logger.info(
+                        "auto_lend_book_anchor",
+                        amount=str(amount),
+                        target_depth=str(target_depth),
+                        landing_rate_daily=str(final),
+                        landing_apr=str(final * Decimal(365) * Decimal(100)),
+                        depth_offers_walked=book.index(offer) + 1,
+                    )
+                    return final
+            # Book is thin — couldn't accumulate target depth. Use the
+            # deepest (most aggressive) offer as our anchor.
+            logger.info(
+                "auto_lend_book_thin_using_deepest",
+                amount=str(amount),
+                book_total=str(cumulative),
+                deepest_rate_daily=str(book[-1].rate_daily),
+            )
+            return book[-1].rate_daily
+
+    # ── fallback to ticker (legacy path / book unavailable) ──
     market = await fetch_market_frr()
     if market is None:
         logger.warning("auto_lend_market_fetch_failed_falling_back_to_frr")
