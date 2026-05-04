@@ -64,7 +64,7 @@
       "step2Title": "2. 給 Quiver Bitfinex API key（只開 Funding 權限）",
       "step2Desc": "用 AES-GCM + KEK 加密儲存，跟錢包私鑰同等級保護。Quiver 只能在 Bitfinex 的 Funding 區做事 — 掛 funding offer、取消 offer。永遠不能 withdraw、不能 trade、不能把錢轉去其他錢包。隨時可在 Bitfinex 撤銷 key。",
       "step3Title": "3. Quiver 自動幫你掛 funding offer",
-      "step3Desc": "依照你選的策略（保守 / 平衡 / 進取），把資金切成多階 ladder 同時掛。每筆借期到期後自動續借。Spike 抓到、利息結算、出狀況都會推 Telegram 通知。",
+      "step3Desc": "依照你選的策略（保守 / 平衡 / 進取），把資金切成多階階梯掛單同時上架。每筆借期到期後自動續借。捕捉到利率飆漲、利息結算、出狀況都會推 Telegram 通知。",
       "step4Title": "4. 你選策略偏好，Quiver 執行",
       "step4Desc": "你決定 risk 等級 + 隨時可開關 auto-lend。Quiver 不替你判斷時機，不主動買幣，不轉去其他平台。要停就一鍵 disconnect。",
       "h1": {

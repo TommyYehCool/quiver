@@ -42,7 +42,7 @@ const STRINGS: Record<Locale, Strings> = {
     title: "Earn 教學",
     subtitle: "從不會 Bitfinex 到自動賺利息,3 個步驟看完不到 15 分鐘。",
     flowHint: "完全沒接觸過的話,建議照 ① → ② → ③ 順序看。",
-    advancedHint: "進階:想理解 Quiver 的策略 + ladder 內部運作怎麼決定你的利率,看 ④。",
+    advancedHint: "進階:想理解 Quiver 的策略 + 階梯掛單內部運作怎麼決定你的利率,看 ④。",
     cards: {
       lending: {
         step: "①",
@@ -67,8 +67,8 @@ const STRINGS: Record<Locale, Strings> = {
       },
       strategy: {
         step: "④",
-        title: "策略偏好 + Ladder 完整說明",
-        desc: "保守/平衡/進取 真正的差別、ladder 怎麼把資金切成 5 階等 spike、為什麼小額看不到策略效果。實際數字 + FAQ。",
+        title: "策略類型 + 階梯掛單完整說明",
+        desc: "保守 / 平衡 / 進取 真正的差別、階梯掛單怎麼把資金切成 5 階等待利率飆漲、為什麼小額看不到策略效果。實際數字 + 常見問答。",
         cta: "看策略拆解",
         duration: "約 7 分鐘",
       },
@@ -114,7 +114,7 @@ const STRINGS: Record<Locale, Strings> = {
     title: "Earn ガイド",
     subtitle: "Bitfinex の経験ゼロから自動で利息を得るまで、3 ステップで合計 15 分以内。",
     flowHint: "初めての方は ① → ② → ③ の順で読むのがおすすめ。",
-    advancedHint: "上級:Quiver の戦略 + ladder ロジックがあなたの利率をどう決めるか理解するには ④ を参照。",
+    advancedHint: "上級:Quiver の戦略 + ラダー(階段オファー)ロジックがどのようにあなたの金利を決めるか理解するには ④ を参照。",
     cards: {
       lending: {
         step: "①",
@@ -139,8 +139,8 @@ const STRINGS: Record<Locale, Strings> = {
       },
       strategy: {
         step: "④",
-        title: "戦略プリセット + Ladder 完全解説",
-        desc: "保守 / 平衡 / 進取 の本当の違い、ladder が資金を 5 階に切って spike を捕捉する仕組み、小額では戦略効果が見えない理由。実数字 + FAQ。",
+        title: "戦略プリセット + ラダー(階段オファー)完全解説",
+        desc: "保守 / バランス / アグレッシブの本当の違い、ラダーが資金を 5 段階に切って金利急騰を捕捉する仕組み、小額では戦略効果が見えない理由。実数字 + よくある質問。",
         cta: "戦略の内訳を見る",
         duration: "約 7 分",
       },
