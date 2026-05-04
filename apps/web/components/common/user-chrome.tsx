@@ -146,38 +146,22 @@ export function UserChrome({
         ))}
       </nav>
 
-      {/* Bottom: KYC entry (workflow item) + admin shortcut for mobile.
-           Settings / locale / logout are in the top-right header. */}
-      {accountItems.length > 0 || isAdmin ? (
+      {/* Bottom: KYC entry (workflow item) only.
+           Admin / Settings / locale / logout all live in top-right header. */}
+      {accountItems.length > 0 ? (
         <div className="border-t border-cream-edge px-3 py-3 dark:border-slate-800">
-          {accountItems.length > 0 ? (
-            <ul className="space-y-0.5">
-              {accountItems.map((item) => (
-                <li key={item.href}>
-                  <NavLink
-                    item={item}
-                    active={isActive(item.href)}
-                    t={t}
-                    onNavigate={() => setMobileOpen(false)}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {isAdmin ? (
-            <Link
-              href={`/${locale}/admin`}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-100 px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-200 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60",
-                accountItems.length > 0 ? "mt-2" : "",
-              )}
-              title={t("switchToAdmin")}
-            >
-              <UserCog className="h-4 w-4" />
-              {t("switchToAdmin")}
-            </Link>
-          ) : null}
+          <ul className="space-y-0.5">
+            {accountItems.map((item) => (
+              <li key={item.href}>
+                <NavLink
+                  item={item}
+                  active={isActive(item.href)}
+                  t={t}
+                  onNavigate={() => setMobileOpen(false)}
+                />
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </>
@@ -255,8 +239,9 @@ export function UserChrome({
               {isAdmin ? (
                 <Link
                   href={`/${locale}/admin`}
-                  className="hidden items-center gap-1.5 rounded-full border border-violet-300 bg-violet-100 px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-200 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60 sm:inline-flex"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-100 px-2.5 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-200 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60 sm:px-3"
                   title={t("switchToAdmin")}
+                  aria-label={t("switchToAdmin")}
                 >
                   <UserCog className="h-3.5 w-3.5" />
                   <span className="hidden lg:inline">{t("switchToAdmin")}</span>
