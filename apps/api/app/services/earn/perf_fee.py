@@ -21,6 +21,7 @@ Settlement runs in the same cron right after accrual. If user wallet balance
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
@@ -318,8 +319,12 @@ async def evaluate_dunning(db: AsyncSession) -> list[DunningTransition]:
 
     Designed to be idempotent — running twice in a row is a no-op for
     accounts already in their target state.
+
+    F-5a-4.2: also fires Telegram notifications on state transitions —
+    fire-and-forget so a TG outage never blocks the dunning state machine.
     """
     from app.models.earn import EarnAccount, EarnFeeAccrual, FeeAccrualStatus
+    from app.services.earn import notifications as earn_notifications
 
     # Pull all (account, pending_count) pairs in one query.
     q = await db.execute(
@@ -373,6 +378,14 @@ async def evaluate_dunning(db: AsyncSession) -> list[DunningTransition]:
                 pending_amount=str(pending_amount),
                 threshold_weeks=DUNNING_PAUSE_THRESHOLD_WEEKS,
             )
+            # F-5a-4.2 telegram notification (fire-and-forget)
+            asyncio.create_task(
+                earn_notifications.notify_dunning_paused(
+                    user_id=account.user_id,
+                    pending_amount=pending_amount,
+                    pending_count=pending_count,
+                )
+            )
         elif should_resume:
             account.auto_lend_enabled = True
             account.dunning_pause_active = False
@@ -390,6 +403,10 @@ async def evaluate_dunning(db: AsyncSession) -> list[DunningTransition]:
                 "perf_fee_dunning_resumed",
                 earn_account_id=account.id,
                 user_id=account.user_id,
+            )
+            # F-5a-4.2 telegram notification (fire-and-forget)
+            asyncio.create_task(
+                earn_notifications.notify_dunning_resumed(user_id=account.user_id)
             )
 
     if transitions:

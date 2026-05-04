@@ -172,6 +172,14 @@ class EarnAccount(Base):
     # cron flips this back to false and re-enables auto_lend_enabled. This
     # flag distinguishes "Quiver paused" from "user toggled off" so we know
     # whether to auto-resume.
+    last_credits_check_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # F-5a-4.2: spike-capture watermark. Each reconcile run, we look for
+    # active credits with opened_at_ms > last_credits_check_at AND apr_pct
+    # >= SPIKE_APR_THRESHOLD; those are the new captures we notify on.
+    # Then we update this to now(). server_default ensures existing accounts
+    # don't fire spam notifications on backlog credits at deploy time.
     bitfinex_funding_address: Mapped[str | None] = mapped_column(String(64))
     # cache 從 Bitfinex API 撈出的 user TRC20 USDT funding wallet 入金地址。
     # 第一次 connect 時 fetch + 存,之後 broadcast 前可 refresh 防止 user 在
