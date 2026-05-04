@@ -37,7 +37,7 @@ const STRINGS = {
       bullet4: "✓ 取消後仍可享受到當期結束",
     },
     notSubscribed: {
-      ctaTemplate: "訂閱 — ${price} USDT / 月",
+      ctaTemplate: "訂閱：${price} USDT / 月",
       ctaNote: "立即從你 Quiver 主錢包扣款,確認後即享 0% 績效費。",
     },
     activeSection: {
@@ -49,7 +49,7 @@ const STRINGS = {
       pastDueDesc: (graceEnd: string) =>
         `上次自動續訂扣款失敗,主錢包餘額不足。請於 ${graceEnd} 前儲值,否則訂閱會自動到期。`,
       scheduledDesc: (endDate: string) =>
-        `已排程取消 — ${endDate} 後失效,績效費將恢復為一般級距。要繼續訂閱?點下面復原。`,
+        `已排程取消,${endDate} 後失效,績效費將恢復為一般級距。要繼續訂閱?點下面復原。`,
       cancelCta: "取消訂閱(保留到期)",
       uncancelCta: "復原(繼續續訂)",
       premiumBadgePeriod: (start: string, end: string) =>
@@ -90,7 +90,7 @@ const STRINGS = {
       bullet4: "✓ Cancel keeps benefits until period end",
     },
     notSubscribed: {
-      ctaTemplate: "Subscribe — ${price} USDT / month",
+      ctaTemplate: "Subscribe: ${price} USDT / month",
       ctaNote: "Charged immediately from your Quiver main wallet. 0% performance fee starts on confirmation.",
     },
     activeSection: {
@@ -98,11 +98,11 @@ const STRINGS = {
       titlePastDue: "Premium (renewal failing)",
       titleScheduled: "Premium active (cancellation scheduled)",
       activeDesc: (renewDate: string) =>
-        `Next auto-renewal: ${renewDate}. You can cancel anytime — benefits stay until period end (no refund).`,
+        `Next auto-renewal: ${renewDate}. You can cancel anytime; benefits stay until period end (no refund).`,
       pastDueDesc: (graceEnd: string) =>
         `Last renewal attempt failed (insufficient main-wallet balance). Top up before ${graceEnd} or the subscription expires.`,
       scheduledDesc: (endDate: string) =>
-        `Cancellation scheduled — expires ${endDate}, performance fee returns to your tier rate. Want to keep going? Click resume below.`,
+        `Cancellation scheduled. Expires ${endDate}; performance fee returns to your tier rate. Want to keep going? Click resume below.`,
       cancelCta: "Cancel (keep until period end)",
       uncancelCta: "Resume (continue renewing)",
       premiumBadgePeriod: (start: string, end: string) =>
@@ -123,7 +123,7 @@ const STRINGS = {
     actionErrors: {
       "subscription.alreadyActive": "You already have an active subscription",
       "subscription.insufficientBalance":
-        "Your Quiver main-wallet balance is below $9.99 USDT — please top up first",
+        "Your Quiver main-wallet balance is below $9.99 USDT. Please top up first.",
       "subscription.notActive": "No active subscription to act on",
       "subscription.notCancelled":
         "Your subscription is not scheduled for cancellation",
@@ -144,7 +144,7 @@ const STRINGS = {
       bullet4: "✓ キャンセル後も当期終了まで利用可能",
     },
     notSubscribed: {
-      ctaTemplate: "サブスク登録 — ${price} USDT / 月",
+      ctaTemplate: "サブスク登録：${price} USDT / 月",
       ctaNote: "即時に Quiver メインウォレットから引落。確認後 0%パフォーマンスフィー開始。",
     },
     activeSection: {
@@ -156,7 +156,7 @@ const STRINGS = {
       pastDueDesc: (graceEnd: string) =>
         `前回の自動更新が失敗しました(残高不足)。${graceEnd} までに入金してください、それ以外はサブスクが期限切れになります。`,
       scheduledDesc: (endDate: string) =>
-        `キャンセル予約済み — ${endDate} に失効、パフォーマンスフィー はティアレートに戻ります。続行する場合は下の復元をクリック。`,
+        `キャンセル予約済み。${endDate} に失効、パフォーマンスフィー はティアレートに戻ります。続行する場合は下の復元をクリック。`,
       cancelCta: "キャンセル(当期まで継続)",
       uncancelCta: "復元(自動更新継続)",
       premiumBadgePeriod: (start: string, end: string) =>
@@ -177,7 +177,7 @@ const STRINGS = {
     actionErrors: {
       "subscription.alreadyActive": "既にアクティブなサブスクリプションがあります",
       "subscription.insufficientBalance":
-        "Quiver メインウォレットの残高が $9.99 USDT 未満です — 先に入金してください",
+        "Quiver メインウォレットの残高が $9.99 USDT 未満です。先に入金してください。",
       "subscription.notActive": "アクティブなサブスクリプションがありません",
       "subscription.notCancelled": "サブスクリプションはキャンセル予定ではありません",
       "subscription.unknown": "操作失敗、後ほど再試行してください",
