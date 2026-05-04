@@ -20,6 +20,7 @@ Plus helpers:
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
@@ -76,6 +77,28 @@ COMPETITIVE_RATE_MARKDOWN_BPS = Decimal("0")
 # (BOOK_DEPTH_FACTOR × our_amount). At factor 2, we land roughly behind
 # 2× our size in the queue — well-positioned for the next borrower wave.
 BOOK_DEPTH_FACTOR = Decimal("2")
+
+# F-5a-3.3: ladder mode. Splits a single deposit into K tranches with
+# increasing rates. Most of the supply (60%) sits at the depth-aware base
+# rate for fast fill; smaller tranches sit at premiums waiting for spike
+# events. If market hits a spike, the high-premium tranches fill at
+# elevated rates without sacrificing fill speed of the bulk.
+#
+# Ladder is opt-in by amount: only deposits ≥ MIN_AUTO_LEND_USDT × LADDER_MIN_TRANCHES
+# (currently 150 × 5 = 750 USDT) qualify. Below that, single-offer mode
+# (legacy) — Bitfinex's per-offer minimum is 150 USDT, so ladder of $200
+# would fail with $40 tranches.
+#
+# Format: list of (fraction_of_amount, rate_multiplier_above_base).
+# Fractions must sum to 1.0. Multiplier 1.0 = base rate, 1.5 = 50% above.
+LADDER_TRANCHES: list[tuple[Decimal, Decimal]] = [
+    (Decimal("0.60"), Decimal("1.00")),  # baseline (fast fill)
+    (Decimal("0.20"), Decimal("1.20")),  # mild spike capture
+    (Decimal("0.10"), Decimal("1.50")),  # moderate spike
+    (Decimal("0.07"), Decimal("2.00")),  # major spike
+    (Decimal("0.03"), Decimal("4.00")),  # extreme liquidation event
+]
+LADDER_MIN_TRANCHES = len(LADDER_TRANCHES)  # 5
 
 
 # ─────────────────────────────────────────────────────────
@@ -308,14 +331,21 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         amount=str(position_amount),
         rate_daily=str(competitive_rate) if competitive_rate is not None else "FRR",
     )
+
+    # F-5a-3.3: build ladder if amount qualifies, else single-offer fallback
+    ladder = _build_ladder(position_amount, competitive_rate)
     try:
-        offer_id = await adapter.submit_funding_offer(
-            amount=position_amount,
+        offer_ids = await _submit_ladder(
+            adapter=adapter,
+            ladder=ladder,
             period_days=DEFAULT_OFFER_PERIOD_DAYS,
-            rate=competitive_rate,
         )
     except Exception as e:
-        logger.exception("auto_lend_submit_offer_failed", position_id=position_id, error=str(e))
+        logger.exception(
+            "auto_lend_submit_offer_failed",
+            position_id=position_id,
+            error=str(e),
+        )
         # 常見原因:Bitfinex 對剛 cancel 的 offer 有 1-2 min settling 延遲,
         # 期間 wallet.available=0 但 wallet.balance=200。re-enqueue 重試。
         return await _maybe_retry(ctx, position_id, retry_count, f"submit_offer:{e}"[:200])
@@ -323,9 +353,13 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
     async with AsyncSessionLocal() as db:
         pos = (await db.execute(select(EarnPosition).where(EarnPosition.id == position_id))).scalar_one()
         pos.status = EarnPositionStatus.LENT.value
-        pos.bitfinex_offer_id = offer_id
+        # Primary tranche (largest, lowest rate) for backward compat
+        pos.bitfinex_offer_id = offer_ids[0]
+        # Full ladder list as JSON for reconcile to track all tranches
+        pos.bitfinex_offer_ids = json.dumps(offer_ids)
         pos.bitfinex_offer_submitted_at = datetime.now(timezone.utc)
         await db.commit()
+    offer_id = offer_ids[0]  # alias used in log line below
 
     logger.info(
         "auto_lend_offer_submitted",
@@ -334,6 +368,89 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         amount=str(position_amount),
     )
     return f"lent:{offer_id}"
+
+
+def _build_ladder(
+    amount: Decimal,
+    base_rate: Decimal | None,
+) -> list[tuple[Decimal, Decimal | None]]:
+    """Slice `amount` into K tranches at increasing rates per LADDER_TRANCHES.
+
+    Returns list of (chunk_amount, chunk_rate). The first tranche is the
+    largest at base rate; subsequent tranches are smaller with progressively
+    higher rates designed to capture spike events.
+
+    Eligibility:
+      - amount >= MIN_AUTO_LEND_USDT × LADDER_MIN_TRANCHES → laddered (K rows)
+      - else → single-row [(amount, base_rate)] (legacy single offer)
+      - base_rate is None → single-row at FRR (no rate computation possible)
+
+    Per-tranche minimum: MIN_AUTO_LEND_USDT (Bitfinex platform rule).
+    Smallest tranche fraction × amount must be >= MIN_AUTO_LEND_USDT or
+    the whole ladder is rejected (caller falls back to single-row).
+    """
+    # Single-offer fallbacks
+    if base_rate is None:
+        return [(amount, None)]
+    smallest_fraction = min(frac for frac, _ in LADDER_TRANCHES)
+    smallest_chunk = amount * smallest_fraction
+    if smallest_chunk < MIN_AUTO_LEND_USDT:
+        return [(amount, base_rate)]
+
+    # Build laddered tranches
+    tranches: list[tuple[Decimal, Decimal | None]] = []
+    cumulative = Decimal(0)
+    for i, (frac, mult) in enumerate(LADDER_TRANCHES):
+        # Last tranche absorbs rounding to ensure exact total
+        if i == len(LADDER_TRANCHES) - 1:
+            chunk = amount - cumulative
+        else:
+            chunk = (amount * frac).quantize(Decimal("0.01"))
+            cumulative += chunk
+        rate = base_rate * mult
+        tranches.append((chunk, rate))
+    return tranches
+
+
+async def _submit_ladder(
+    *,
+    adapter: BitfinexFundingAdapter,
+    ladder: list[tuple[Decimal, Decimal | None]],
+    period_days: int,
+) -> list[int]:
+    """Submit each tranche as a separate Bitfinex offer. Returns list of
+    offer IDs in submission order (first = primary tranche).
+
+    Sequential, not concurrent — Bitfinex rejects API calls that arrive
+    too close together with the same nonce; sequential is safer.
+
+    If ANY tranche fails, raises and caller retries the whole pipeline
+    (the failed tranches won't have offer IDs and the prior successful
+    ones become orphans we'd need to manually clean up — for MVP we accept
+    this risk; F-5a-3.4 will harden with rollback).
+    """
+    offer_ids: list[int] = []
+    for i, (chunk_amount, chunk_rate) in enumerate(ladder):
+        offer_id = await adapter.submit_funding_offer(
+            amount=chunk_amount,
+            period_days=period_days,
+            rate=chunk_rate,
+        )
+        offer_ids.append(offer_id)
+        logger.info(
+            "auto_lend_ladder_tranche_submitted",
+            tranche_idx=i,
+            tranche_count=len(ladder),
+            amount=str(chunk_amount),
+            rate_daily=str(chunk_rate) if chunk_rate is not None else "FRR",
+            apr_pct=(
+                str(chunk_rate * Decimal(365) * Decimal(100))
+                if chunk_rate is not None
+                else "FRR"
+            ),
+            offer_id=offer_id,
+        )
+    return offer_ids
 
 
 async def _compute_competitive_rate(

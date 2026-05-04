@@ -1,6 +1,6 @@
 """Earn reconciliation + auto-renew (F-Phase 3 / Path A F-3e).
 
-Two responsibilities, both run by `cron_earn_reconcile` every 30 min:
+Two responsibilities, both run by `cron_earn_reconcile` every 5 min (F-5a-3.1):
 
 1. **Reconciliation**: detect DB ↔ Bitfinex drift.
    - For each EarnPosition in `lent` status: if its Bitfinex offer_id is no
@@ -25,6 +25,7 @@ pending_outbound) emits warnings for admin to investigate.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
@@ -38,7 +39,9 @@ from app.services.earn import repo as earn_repo
 from app.services.earn.auto_lend import (
     DEFAULT_OFFER_PERIOD_DAYS,
     MIN_AUTO_LEND_USDT,
+    _build_ladder,
     _compute_competitive_rate,
+    _submit_ladder,
 )
 from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
 
@@ -87,23 +90,42 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         )
     )
     for pos in lent_positions_q.scalars().all():
-        if pos.bitfinex_offer_id is None:
+        # F-5a-3.3: positions may have multiple tranches (ladder mode).
+        # Use bitfinex_offer_ids JSON if present, else fall back to single
+        # bitfinex_offer_id for legacy / single-offer positions.
+        if pos.bitfinex_offer_ids:
+            try:
+                tranche_ids: list[int] = json.loads(pos.bitfinex_offer_ids)
+            except (json.JSONDecodeError, TypeError):
+                tranche_ids = (
+                    [pos.bitfinex_offer_id] if pos.bitfinex_offer_id else []
+                )
+        elif pos.bitfinex_offer_id is not None:
+            tranche_ids = [pos.bitfinex_offer_id]
+        else:
             continue
-        if pos.bitfinex_offer_id not in active_offer_ids:
-            # Offer no longer in active list — either matured, cancelled, or
-            # currently lent out (active credits, not in offer book). For MVP
-            # just mark closed_external; F-3 future could distinguish via
-            # /v2/auth/r/funding/credits.
-            pos.status = EarnPositionStatus.CLOSED_EXTERNAL.value
-            pos.closed_at = datetime.now(timezone.utc)
-            pos.closed_reason = "offer_no_longer_active"
-            summary["lent_closed"] += 1
-            logger.info(
-                "earn_reconcile_position_closed",
-                earn_account_id=account.id,
-                position_id=pos.id,
-                offer_id=pos.bitfinex_offer_id,
-            )
+
+        still_active = [oid for oid in tranche_ids if oid in active_offer_ids]
+        if still_active:
+            # At least one tranche is still in the offer book — position
+            # remains LENT (the closed tranches matured into credits, but
+            # the active ones haven't filled yet).
+            continue
+
+        # All tranches have left the offer book — either matured, cancelled,
+        # or currently lent out (in credits not offers). For MVP just mark
+        # closed_external; F-3 future could distinguish via /funding/credits.
+        pos.status = EarnPositionStatus.CLOSED_EXTERNAL.value
+        pos.closed_at = datetime.now(timezone.utc)
+        pos.closed_reason = "offer_no_longer_active"
+        summary["lent_closed"] += 1
+        logger.info(
+            "earn_reconcile_position_closed",
+            earn_account_id=account.id,
+            position_id=pos.id,
+            tranche_count=len(tranche_ids),
+            primary_offer_id=pos.bitfinex_offer_id,
+        )
 
     await db.commit()
 
@@ -158,16 +180,17 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     if in_flight_q.scalar_one_or_none() is not None:
         return summary
 
-    # Submit fresh offer for the idle funds (use available, not balance).
-    # F-5a-3.2: pass amount so _compute_competitive_rate can do depth-aware
-    # book walk (replaces ticker-only ask_daily logic).
+    # Submit fresh offer(s) for the idle funds (use available, not balance).
+    # F-5a-3.2: depth-aware base rate. F-5a-3.3: laddered tranches if amount
+    # qualifies (≥ 750 USDT).
     amount = bf_position.funding_available
-    rate = await _compute_competitive_rate(amount)
+    base_rate = await _compute_competitive_rate(amount)
+    ladder = _build_ladder(amount, base_rate)
     try:
-        offer_id = await adapter.submit_funding_offer(
-            amount=amount,
+        offer_ids = await _submit_ladder(
+            adapter=adapter,
+            ladder=ladder,
             period_days=DEFAULT_OFFER_PERIOD_DAYS,
-            rate=rate,
         )
     except Exception as e:
         # Most common: Bitfinex's "available=0" right after our previous cancel
@@ -190,7 +213,8 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         status=EarnPositionStatus.LENT.value,
         amount=amount,
         currency="USDT-TRC20",
-        bitfinex_offer_id=offer_id,
+        bitfinex_offer_id=offer_ids[0],
+        bitfinex_offer_ids=json.dumps(offer_ids),
         bitfinex_offer_submitted_at=datetime.now(timezone.utc),
         bitfinex_credited_at=datetime.now(timezone.utc),  # already at Bitfinex
     )
@@ -202,9 +226,10 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         "earn_reconcile_renewed",
         earn_account_id=account.id,
         amount=str(amount),
-        rate_daily=str(rate) if rate else "FRR",
+        rate_daily=str(base_rate) if base_rate else "FRR",
+        tranche_count=len(offer_ids),
         new_position_id=new_pos.id,
-        offer_id=offer_id,
+        primary_offer_id=offer_ids[0],
     )
     return summary
 

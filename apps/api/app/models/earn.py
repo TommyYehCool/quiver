@@ -390,6 +390,12 @@ class EarnPosition(Base):
 
     # Bitfinex side
     bitfinex_offer_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    # F-5a-3.3: ladder mode submits K offers per position (different rates).
+    # Stored as JSON array of int. When laddered, bitfinex_offer_id holds the
+    # primary tranche (largest amount, lowest rate — for backward-compat with
+    # UI / reconcile code that reads a single ID). Reconcile parses this list
+    # to determine if ALL tranches have closed before marking position closed.
+    bitfinex_offer_ids: Mapped[str | None] = mapped_column(Text)
     bitfinex_offer_submitted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True)
     )
