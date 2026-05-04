@@ -132,13 +132,60 @@ async def telegram_webhook(
         return {"ok": False}
 
     payload = await request.json()
-    parsed = telegram_service.parse_start_command(payload)
+    parsed = telegram_service.parse_message_text(payload)
     if parsed is None:
-        # Not a /start <code> message — could be plain /start, group invite,
-        # whatever. Acknowledge silently.
+        # Not a parseable text message (sticker, group invite, callback, etc.)
+        # — acknowledge silently so Telegram doesn't retry.
         return {"ok": True}
 
-    chat_id, username, code = parsed
+    chat_id, username, text = parsed
+
+    # F-5a-4.1.1 UX fix: bare "/start" (user opened the bot directly via
+    # the in-app sidebar instead of the deep link) → reply with help instead
+    # of silently doing nothing. Same for any non-code text.
+    bind_code = telegram_service.extract_bind_code(text)
+    if bind_code is None:
+        if telegram_service.is_bare_start_command(text):
+            # Check if user is already bound — if so, friendly reminder.
+            already_q = await db.execute(
+                select(User.id, User.email).where(User.telegram_chat_id == chat_id)
+            )
+            already_row = already_q.first()
+            if already_row is not None:
+                try:
+                    await telegram_service.send_message(
+                        chat_id,
+                        (
+                            "✅ <b>你已經綁定 Quiver 帳號了</b>\n\n"
+                            "事件通知會自動推到這個 chat。\n"
+                            "想取消綁定 → Quiver /earn/bot-settings → Disconnect。"
+                        ),
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                return {"ok": True}
+            # Not bound + bare /start → instruct to use deep link
+            try:
+                await telegram_service.send_message(
+                    chat_id,
+                    (
+                        "👋 <b>歡迎使用 Quiver Telegram bot</b>\n\n"
+                        "要綁定你的 Quiver 帳號,請:\n"
+                        "1. 登入 quiverdefi.com\n"
+                        "2. 去 /earn/bot-settings\n"
+                        "3. 點「<b>連接 Telegram</b>」按鈕\n"
+                        "4. 點開新分頁的連結回到這裡\n\n"
+                        "或者直接把綁定碼貼進這個 chat(8 字元,例如 ABCD1234)。"
+                    ),
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            return {"ok": True}
+        # Random text that's neither /start nor a code-shaped string —
+        # silent ignore (avoid being chatty for accidental DMs).
+        return {"ok": True}
+
+    code = bind_code
 
     # Look up user by bind code; check expiry.
     q = await db.execute(
@@ -146,12 +193,27 @@ async def telegram_webhook(
     )
     user = q.scalar_one_or_none()
     if user is None:
-        # Unknown code — could be stale, brute-force, or someone shared a
-        # link to the wrong person. Reply with a soft error to the sender.
+        # Code not found — but maybe this chat is ALREADY bound to another
+        # user? If so, give a more accurate message.
+        already_q = await db.execute(
+            select(User.id).where(User.telegram_chat_id == chat_id)
+        )
+        if already_q.scalar_one_or_none() is not None:
+            try:
+                await telegram_service.send_message(
+                    chat_id,
+                    (
+                        "✅ <b>你已經綁定了</b>\n\n"
+                        "綁定碼只能用一次。要解除綁定請去 Quiver bot-settings 點 Disconnect。"
+                    ),
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            return {"ok": True}
         try:
             await telegram_service.send_message(
                 chat_id,
-                "⚠️ 這個連結已失效或從未產生過。請回到 Quiver /earn/bot-settings 重新點 Connect Telegram。",
+                "⚠️ 這個綁定碼已失效或不存在。請回到 Quiver /earn/bot-settings 重新產生。",
             )
         except Exception:  # noqa: BLE001
             pass

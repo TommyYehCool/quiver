@@ -199,34 +199,24 @@ def verify_webhook_secret(header_value: str | None) -> bool:
     return secrets.compare_digest(header_value, expected)
 
 
-def parse_start_command(payload: dict[str, Any]) -> tuple[int, str | None, str] | None:
-    """Extract (chat_id, username, bind_code) from a Telegram webhook update.
+def parse_message_text(
+    payload: dict[str, Any],
+) -> tuple[int, str | None, str] | None:
+    """Extract (chat_id, username, raw_text) from a Telegram webhook update.
 
-    Returns None if this update isn't a /start <code> message (could be any
-    other message type — group chat add, button callback, etc — we ignore).
+    Returns None if this update isn't a private message we can handle
+    (group invite, button callback, sticker, etc.) — for those we ignore
+    silently.
 
-    Telegram update shape (the bits we care about):
-      {
-        "update_id": 123,
-        "message": {
-          "from": {"id": 456, "username": "alice"},
-          "chat": {"id": 456, "type": "private"},
-          "text": "/start ABCD1234"
-        }
-      }
+    The webhook handler decides what to DO with the text (parse as bind
+    code, treat as bare /start, etc.) — this function just normalizes
+    the envelope.
     """
     message = payload.get("message")
     if not isinstance(message, dict):
         return None
     text = message.get("text")
-    if not isinstance(text, str) or not text.startswith("/start"):
-        return None
-    # "/start ABCD1234" → ["/start", "ABCD1234"]; "/start" alone has no code
-    parts = text.split(maxsplit=1)
-    if len(parts) != 2:
-        return None
-    code = parts[1].strip().upper()
-    if not code or not all(c in BIND_CODE_ALPHABET for c in code):
+    if not isinstance(text, str):
         return None
     chat = message.get("chat")
     if not isinstance(chat, dict):
@@ -239,6 +229,53 @@ def parse_start_command(payload: dict[str, Any]) -> tuple[int, str | None, str] 
     username = sender.get("username") if isinstance(sender, dict) else None
     if username is not None and not isinstance(username, str):
         username = None
+    return chat_id, username, text.strip()
+
+
+def extract_bind_code(text: str) -> str | None:
+    """Pull a candidate bind code out of user-typed text.
+
+    Accepts both:
+      - "/start ABCD1234"  → standard deep-link form
+      - "ABCD1234"         → user pasted just the code as a plain message
+
+    Returns the uppercased code if it matches BIND_CODE_LENGTH +
+    BIND_CODE_ALPHABET; None otherwise.
+    """
+    text = text.strip()
+    if text.lower().startswith("/start"):
+        parts = text.split(maxsplit=1)
+        if len(parts) != 2:
+            return None  # bare "/start", no code
+        candidate = parts[1].strip()
+    else:
+        # Bare code paste — user didn't use the /start prefix.
+        candidate = text
+    candidate = candidate.upper()
+    if len(candidate) != BIND_CODE_LENGTH:
+        return None
+    if not all(c in BIND_CODE_ALPHABET for c in candidate):
+        return None
+    return candidate
+
+
+def is_bare_start_command(text: str) -> bool:
+    """True for "/start" with no argument — we reply with help text."""
+    return text.strip().lower() == "/start"
+
+
+# Legacy alias — the API endpoint imports parse_start_command historically.
+# Keep it working by routing to the new extract_bind_code path.
+def parse_start_command(
+    payload: dict[str, Any],
+) -> tuple[int, str | None, str] | None:
+    parsed = parse_message_text(payload)
+    if parsed is None:
+        return None
+    chat_id, username, text = parsed
+    code = extract_bind_code(text)
+    if code is None:
+        return None
     return chat_id, username, code
 
 
