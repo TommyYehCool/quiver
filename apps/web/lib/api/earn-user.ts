@@ -144,6 +144,45 @@ export async function fetchEarnPublicStats(): Promise<EarnPublicStatsOut> {
   return apiFetch<EarnPublicStatsOut>("/api/earn/public-stats");
 }
 
+// ──── F-5b-2 fees ────
+
+export type FeeAccrualStatus = "ACCRUED" | "PAID" | "WAIVED";
+
+export type FeePaidMethod =
+  | "platform_deduction"
+  | "tron_usdt"
+  | "manual_offline";
+
+export interface FeeAccrualRow {
+  id: number;
+  period_start: string;
+  period_end: string;
+  earnings_amount: string;
+  fee_bps_applied: number;
+  fee_amount: string;
+  status: FeeAccrualStatus;
+  paid_at: string | null;
+  paid_method: FeePaidMethod | null;
+}
+
+export interface EarnFeeSummaryOut {
+  perf_fee_bps: number;
+  is_premium: boolean;
+  pending_accrued_usdt: string;
+  pending_count: number;
+  quiver_wallet_balance_usdt: string;
+  has_buffer_warning: boolean;
+  paid_30d_usdt: string;
+  paid_lifetime_usdt: string;
+  last_paid_at: string | null;
+  next_settle_at: string;
+  recent_accruals: FeeAccrualRow[];
+}
+
+export async function fetchEarnFees(): Promise<EarnFeeSummaryOut> {
+  return apiFetch<EarnFeeSummaryOut>("/api/earn/fees");
+}
+
 export async function updateEarnSettings(
   payload: {
     auto_lend_enabled?: boolean;

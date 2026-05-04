@@ -5,6 +5,7 @@
 - POST  /api/earn/connect      — submit Bitfinex API key + funding address (gated by KYC)
 - GET   /api/earn/performance  — F-5b-1: per-user strategy performance metrics
 - GET   /api/earn/public-stats — F-5b-1: aggregate platform stats (no auth)
+- GET   /api/earn/fees         — F-5b-2: perf fee accrual + payment status
 
 Admin-only earn management lives in apps/api/app/api/admin/earn.py.
 """
@@ -25,10 +26,12 @@ from app.models.earn import (
     CustodyMode,
     EarnAccount,
     EarnBitfinexConnection,
+    EarnFeeAccrual,
     EarnPosition,
     EarnPositionSnapshot,
     EarnPositionStatus,
     EarnTier,
+    FeeAccrualStatus,
 )
 from app.models.kyc import KycStatus, KycSubmission
 from app.schemas.api import ApiResponse
@@ -38,6 +41,7 @@ from app.schemas.earn_user import (
     EarnConnectIn,
     EarnConnectOut,
     EarnConnectPreviewOut,
+    EarnFeeSummaryOut,
     EarnMeOut,
     EarnPerformanceOut,
     EarnPositionUserOut,
@@ -45,7 +49,9 @@ from app.schemas.earn_user import (
     EarnSettingsOut,
     EarnSettingsUpdateIn,
     EarnSnapshotUserOut,
+    FeeAccrualRow,
 )
+from app.services import ledger as ledger_service
 from app.models.referral import ReferralBindingSource
 from app.services.earn import encryption as earn_crypto
 from app.services.earn import fee_policy
@@ -641,3 +647,156 @@ async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
     )
     _public_stats_cache = (now, result)
     return ApiResponse[EarnPublicStatsOut].ok(result)
+
+
+def _next_monday_utc(now: datetime) -> datetime:
+    """Next Monday 02:00 UTC — matches services/earn/perf_fee.py cron schedule.
+
+    If today is Monday and current time < 02:00 UTC, returns today 02:00.
+    Otherwise the upcoming Monday.
+    """
+    target_hour = 2
+    # weekday(): Mon=0, Sun=6
+    days_ahead = (0 - now.weekday()) % 7
+    candidate = (now + timedelta(days=days_ahead)).replace(
+        hour=target_hour, minute=0, second=0, microsecond=0
+    )
+    if candidate <= now:
+        candidate += timedelta(days=7)
+    return candidate
+
+
+@router.get("/fees", response_model=ApiResponse[EarnFeeSummaryOut])
+async def get_earn_fees(
+    user: CurrentUserDep, db: DbDep
+) -> ApiResponse[EarnFeeSummaryOut]:
+    """Per-user perf fee status — what's accrued, what's been paid, buffer warning.
+
+    Honest about the structural Path A constraint: fees are deducted from the
+    user's Quiver wallet (not from Bitfinex), so users with $0 Quiver balance
+    accumulate ACCRUED rows that never settle. The `has_buffer_warning` flag
+    is the trigger for the UI to nudge users to top up.
+
+    Returns even for fee-exempt users (perf_fee_bps=0 / Premium): they get
+    zeros across the board and the client can render an "exempt" badge.
+    """
+    is_premium = await sub_repo.is_user_premium(db, user.id)
+
+    account = await earn_repo.get_account_by_user_id(db, user.id)
+    now = datetime.now(timezone.utc)
+    next_settle = _next_monday_utc(now)
+
+    if account is None:
+        # No earn account yet → nothing to bill.
+        return ApiResponse[EarnFeeSummaryOut].ok(
+            EarnFeeSummaryOut(
+                perf_fee_bps=0,
+                is_premium=is_premium,
+                pending_accrued_usdt=Decimal("0"),
+                pending_count=0,
+                quiver_wallet_balance_usdt=Decimal("0"),
+                has_buffer_warning=False,
+                paid_30d_usdt=Decimal("0"),
+                paid_lifetime_usdt=Decimal("0"),
+                last_paid_at=None,
+                next_settle_at=next_settle,
+                recent_accruals=[],
+            )
+        )
+
+    # Pending = sum + count of ACCRUED rows
+    pending_q = await db.execute(
+        select(
+            func.coalesce(func.sum(EarnFeeAccrual.fee_amount), 0),
+            func.count(EarnFeeAccrual.id),
+        ).where(
+            EarnFeeAccrual.earn_account_id == account.id,
+            EarnFeeAccrual.status == FeeAccrualStatus.ACCRUED.value,
+        )
+    )
+    pending_sum_raw, pending_count = pending_q.one()
+    pending_sum = Decimal(str(pending_sum_raw or 0))
+
+    # Paid in last 30d (by paid_at, not period_end)
+    cutoff_30d = now - timedelta(days=30)
+    paid_30d_q = await db.execute(
+        select(func.coalesce(func.sum(EarnFeeAccrual.fee_amount), 0)).where(
+            EarnFeeAccrual.earn_account_id == account.id,
+            EarnFeeAccrual.status == FeeAccrualStatus.PAID.value,
+            EarnFeeAccrual.paid_at >= cutoff_30d,
+        )
+    )
+    paid_30d = Decimal(str(paid_30d_q.scalar_one() or 0))
+
+    # Paid lifetime
+    paid_total_q = await db.execute(
+        select(func.coalesce(func.sum(EarnFeeAccrual.fee_amount), 0)).where(
+            EarnFeeAccrual.earn_account_id == account.id,
+            EarnFeeAccrual.status == FeeAccrualStatus.PAID.value,
+        )
+    )
+    paid_lifetime = Decimal(str(paid_total_q.scalar_one() or 0))
+
+    # Last paid_at
+    last_paid_q = await db.execute(
+        select(EarnFeeAccrual.paid_at)
+        .where(
+            EarnFeeAccrual.earn_account_id == account.id,
+            EarnFeeAccrual.status == FeeAccrualStatus.PAID.value,
+            EarnFeeAccrual.paid_at.isnot(None),
+        )
+        .order_by(EarnFeeAccrual.paid_at.desc())
+        .limit(1)
+    )
+    last_paid_at = last_paid_q.scalar_one_or_none()
+
+    # User's spendable Quiver wallet (= ledger balance, since perf_fee.settle
+    # checks the same thing). Premium users still get the number for transparency
+    # but it doesn't trigger the buffer warning.
+    wallet_balance = await ledger_service.get_user_balance(db, user.id)
+
+    # Buffer warning: pending exceeds wallet (and user isn't premium-exempt)
+    has_warning = (
+        not is_premium
+        and account.perf_fee_bps > 0
+        and pending_sum > wallet_balance
+        and pending_count > 0
+    )
+
+    # Recent accruals (last 12 — covers ~3 months of weekly accruals)
+    recent_q = await db.execute(
+        select(EarnFeeAccrual)
+        .where(EarnFeeAccrual.earn_account_id == account.id)
+        .order_by(EarnFeeAccrual.id.desc())
+        .limit(12)
+    )
+    recent = [
+        FeeAccrualRow(
+            id=row.id,
+            period_start=row.period_start,
+            period_end=row.period_end,
+            earnings_amount=row.earnings_amount,
+            fee_bps_applied=row.fee_bps_applied,
+            fee_amount=row.fee_amount,
+            status=row.status,
+            paid_at=row.paid_at,
+            paid_method=row.paid_method,
+        )
+        for row in recent_q.scalars().all()
+    ]
+
+    return ApiResponse[EarnFeeSummaryOut].ok(
+        EarnFeeSummaryOut(
+            perf_fee_bps=account.perf_fee_bps,
+            is_premium=is_premium,
+            pending_accrued_usdt=pending_sum,
+            pending_count=int(pending_count or 0),
+            quiver_wallet_balance_usdt=wallet_balance,
+            has_buffer_warning=has_warning,
+            paid_30d_usdt=paid_30d,
+            paid_lifetime_usdt=paid_lifetime,
+            last_paid_at=last_paid_at,
+            next_settle_at=next_settle,
+            recent_accruals=recent,
+        )
+    )

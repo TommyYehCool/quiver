@@ -4,6 +4,7 @@
 
 import type {
   EarnConnectPreviewOut,
+  EarnFeeSummaryOut,
   EarnMeOut,
   EarnPerformanceOut,
   EarnPublicStatsOut,
@@ -46,6 +47,12 @@ export async function fetchEarnPerformanceServer(
   cookieHeader: string,
 ): Promise<EarnPerformanceOut | null> {
   return get<EarnPerformanceOut>("/api/earn/performance", cookieHeader);
+}
+
+export async function fetchEarnFeesServer(
+  cookieHeader: string,
+): Promise<EarnFeeSummaryOut | null> {
+  return get<EarnFeeSummaryOut>("/api/earn/fees", cookieHeader);
 }
 
 /**

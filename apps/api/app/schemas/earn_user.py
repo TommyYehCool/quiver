@@ -242,3 +242,58 @@ class EarnPublicStatsOut(BaseModel):
     active_bots_count: int  # distinct earn_accounts with at least one lent position
     total_lent_usdt: Decimal  # sum of latest-snapshot lent across all accounts
     avg_apr_30d_pct: Decimal | None  # platform-weighted avg APR over last 30d snapshots
+
+
+# ─────────────────────────────────────────────────────────
+# GET /api/earn/fees (F-5b-2) — perf fee accrual + payment status
+# ─────────────────────────────────────────────────────────
+
+
+class FeeAccrualRow(BaseModel):
+    """One historical accrual row for the user-facing fee history table."""
+    id: int
+    period_start: date
+    period_end: date
+    earnings_amount: Decimal
+    fee_bps_applied: int
+    fee_amount: Decimal
+    status: str  # ACCRUED | PAID | WAIVED
+    paid_at: datetime | None
+    paid_method: str | None  # platform_deduction | tron_usdt | manual_offline
+
+
+class EarnFeeSummaryOut(BaseModel):
+    """User-facing perf fee dashboard.
+
+    Solves the structural visibility gap of self-custody Path A: the user's
+    USDT lives on Bitfinex (out of Quiver's reach), so we settle perf fees
+    by deducting from the user's Quiver wallet balance every Monday. If the
+    wallet is empty (typical right after auto-lend), accruals pile up
+    silently — this card surfaces "you owe X, your buffer is Y, top up to
+    avoid arrears" before users get confused.
+
+    Returned even for fee-exempt users (Friend tier, Premium subscribers)
+    so the client can render an "exempt" pill rather than 404; client
+    decides whether to show the full table.
+    """
+    # ── policy ──
+    perf_fee_bps: int  # 0 = exempt (Friend / Premium overrides)
+    is_premium: bool   # if true, perf fee is waived this period regardless of bps
+
+    # ── what user owes right now ──
+    pending_accrued_usdt: Decimal  # sum of ACCRUED rows
+    pending_count: int             # how many ACCRUED rows
+    quiver_wallet_balance_usdt: Decimal  # user's spendable Quiver wallet
+    has_buffer_warning: bool       # pending > balance (will be in arrears next settle)
+
+    # ── what user has paid historically ──
+    paid_30d_usdt: Decimal
+    paid_lifetime_usdt: Decimal
+    last_paid_at: datetime | None
+
+    # ── next settlement attempt ──
+    # cron runs Monday 02:00 UTC per services/earn/perf_fee.py
+    next_settle_at: datetime
+
+    # ── recent rows for transparency table ──
+    recent_accruals: list[FeeAccrualRow]

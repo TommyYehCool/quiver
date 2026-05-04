@@ -11,6 +11,7 @@ import {
 
 import { fetchMeServer } from "@/lib/auth";
 import {
+  fetchEarnFeesServer,
   fetchEarnMeServer,
   fetchEarnPerformanceServer,
   fetchEarnPublicStatsServer,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ActiveCreditRow } from "@/components/earn/active-credit-row";
+import { FeeStatusCard } from "@/components/earn/fee-status-card";
 import { PerformanceCard } from "@/components/earn/performance-card";
 import { PublicStatsStrip } from "@/components/earn/public-stats-strip";
 import type { EarnPositionStatus } from "@/lib/api/earn-user";
@@ -257,12 +259,13 @@ export default async function EarnPage({
   if (!user) redirect(`/${locale}/login`);
 
   const s = PAGE_STRINGS[pickLocale(locale)];
-  // Parallel-fetch all data (earn-me, performance, public-stats) — no
-  // dependency between them, so awaiting in series wastes ~600ms.
-  const [earn, perf, publicStats] = await Promise.all([
+  // Parallel-fetch all data (earn-me, performance, public-stats, fees) — no
+  // dependency between them, so awaiting in series wastes ~800ms.
+  const [earn, perf, publicStats, fees] = await Promise.all([
     fetchEarnMeServer(cookieHeader),
     fetchEarnPerformanceServer(cookieHeader),
     fetchEarnPublicStatsServer(),
+    fetchEarnFeesServer(cookieHeader),
   ]);
   if (!earn) {
     return (
@@ -381,6 +384,11 @@ export default async function EarnPage({
           {/* F-5b-1 strategy performance card — placed right after big numbers
                so it's the first thing the user reads on a real dashboard. */}
           {perf ? <PerformanceCard locale={locale} perf={perf} /> : null}
+
+          {/* F-5b-2 perf fee status card — visibility into accruals + buffer
+               warnings. Card itself decides whether to show full table (Public
+               tier) or compact exempt pill (Friend / Premium). */}
+          {fees ? <FeeStatusCard locale={locale} fees={fees} /> : null}
 
           {/* Active loans */}
           {earn.active_credits.length > 0 && (
