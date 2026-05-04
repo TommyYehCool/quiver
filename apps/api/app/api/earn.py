@@ -678,10 +678,13 @@ async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
     """Aggregate platform stats — no auth required, cached server-side ~60s.
 
     Three numbers for marketing / social proof:
-      - active_bots_count: distinct earn_accounts with at least one LENT
-        position. Counts active users without exposing identities.
+      - active_bots_count: distinct earn_accounts whose most-recent snapshot
+        within the last 7d still shows lent_usdt > 0. Uses snapshot data (not
+        earn_positions.status) because the position state machine can lag
+        reality — e.g. a row marked closed_external when Bitfinex still has
+        funds lent. Snapshots reflect what Bitfinex actually reports.
       - total_lent_usdt:   sum of bitfinex_lent_usdt from each account's
-        most recent snapshot (within last 24h to exclude stale rows).
+        most recent snapshot (within last 7d to exclude stale rows).
       - avg_apr_30d_pct:   weighted across all snapshots in last 30d using
         daily_earned ÷ lent_usdt → daily rate → annualised. Captures real
         platform-wide performance, not just current top tranche.
@@ -696,19 +699,11 @@ async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
     ):
         return ApiResponse[EarnPublicStatsOut].ok(_public_stats_cache[1])
 
-    # Active bots: distinct accounts with currently lent positions
-    bots_q = await db.execute(
-        select(func.count(distinct(EarnPosition.earn_account_id))).where(
-            EarnPosition.status == EarnPositionStatus.LENT.value
-        )
-    )
-    active_bots_count = int(bots_q.scalar_one() or 0)
-
-    # Total lent: sum of LATEST snapshot's bitfinex_lent_usdt per account.
-    # Naive sum across all rows in last 24h double-counts when an account has
-    # snapshots from both today and yesterday (very common — daily cron + 24h
-    # cutoff window). We use a correlated subquery to pull just each account's
-    # most recent row within the 7-day staleness budget.
+    # Active bots + total lent: both derived from each account's LATEST
+    # snapshot within the 7-day staleness budget. Naive aggregation across
+    # all rows in the window double-counts when an account has snapshots
+    # from multiple days. We use a correlated subquery to pull just each
+    # account's most recent row.
     cutoff_recent = date.today() - timedelta(days=7)
     latest_per_account = (
         select(
@@ -719,6 +714,24 @@ async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
         .group_by(EarnPositionSnapshot.earn_account_id)
         .subquery()
     )
+
+    # Active bots: count accounts whose latest snapshot still has funds lent.
+    # We do NOT join to earn_positions.status — that table's state machine
+    # can lag reality (e.g. a position marked closed_external while Bitfinex
+    # still actively lends the funds). Snapshot is the source of truth.
+    bots_q = await db.execute(
+        select(
+            func.count(distinct(EarnPositionSnapshot.earn_account_id))
+        )
+        .join(
+            latest_per_account,
+            (EarnPositionSnapshot.earn_account_id == latest_per_account.c.earn_account_id)
+            & (EarnPositionSnapshot.snapshot_date == latest_per_account.c.max_date),
+        )
+        .where(EarnPositionSnapshot.bitfinex_lent_usdt > 0)
+    )
+    active_bots_count = int(bots_q.scalar_one() or 0)
+
     lent_q = await db.execute(
         select(func.coalesce(func.sum(EarnPositionSnapshot.bitfinex_lent_usdt), 0))
         .join(
