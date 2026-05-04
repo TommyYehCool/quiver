@@ -99,7 +99,7 @@ function Row({ it, t }: { it: HistoryItem; t: Labels }) {
       <td className="py-3 pr-4">
         <span
           className={cn(
-            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
             isPending
               ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
               : isOut

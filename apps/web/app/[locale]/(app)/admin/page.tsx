@@ -191,7 +191,7 @@ function KpiCard({
       </p>
       <p className={cn("mt-2 text-2xl font-semibold tabular-nums", valueClass)}>{value}</p>
       {sub ? (
-        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{sub}</p>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{sub}</p>
       ) : null}
       {href ? (
         <p className="mt-2 flex items-center gap-1 text-xs text-violet-700 dark:text-violet-400">

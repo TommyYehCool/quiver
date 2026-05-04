@@ -452,7 +452,7 @@ export default async function EarnPage({
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 <span>{s.footer.connected}</span>
-                <code className="font-mono text-[10px]">
+                <code className="font-mono text-xs">
                   {earn.bitfinex_funding_address?.slice(0, 8)}...{earn.bitfinex_funding_address?.slice(-6)}
                 </code>
               </div>
@@ -484,9 +484,9 @@ function TierBadge({
   // Premium overrides the tier badge — user pays 0% regardless of underlying tier
   if (isPremium) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
         ✦ {strings.premium}
-        <span className="text-[10px] opacity-70">{strings.premiumSuffix}</span>
+        <span className="text-xs opacity-70">{strings.premiumSuffix}</span>
       </span>
     );
   }
@@ -508,9 +508,9 @@ function TierBadge({
     maximumFractionDigits: 2,
   });
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>
       {label}
-      <span className="text-[10px] opacity-70">{strings.feeSuffix(pct)}</span>
+      <span className="text-xs opacity-70">{strings.feeSuffix(pct)}</span>
     </span>
   );
 }

@@ -120,7 +120,7 @@ export function NotificationBell() {
       >
         <Bell className="h-5 w-5" />
         {unread > 0 ? (
-          <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+          <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
             {unread > 9 ? "9+" : unread}
           </span>
         ) : null}
@@ -217,7 +217,7 @@ function NotificationRow({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm leading-snug">{message}</p>
-          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             {new Date(it.created_at).toLocaleString("zh-TW")}
           </p>
         </div>

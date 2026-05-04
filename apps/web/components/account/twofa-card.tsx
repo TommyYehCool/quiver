@@ -264,7 +264,7 @@ export function TwoFACard() {
               </div>
               <div className="flex-1 space-y-2 text-xs">
                 <p className="text-slate-500">{s.manualSecretLabel}</p>
-                <code className="block break-all rounded bg-slate-100 px-2 py-1 font-mono text-[11px] dark:bg-slate-900">
+                <code className="block break-all rounded bg-slate-100 px-2 py-1 font-mono text-xs dark:bg-slate-900">
                   {setup.secret}
                 </code>
                 <p className="text-slate-400">{s.codeRefreshNote}</p>

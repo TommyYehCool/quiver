@@ -121,24 +121,24 @@ function SessionRow({ s }: { s: LoginSessionItem }) {
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-xs">
             {s.is_current ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                 <BadgeCheck className="h-3 w-3" /> {t("current")}
               </span>
             ) : isActive ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
                 {t("active")}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                 {t("revoked")}
               </span>
             )}
-            <span className="font-mono text-[11px] text-slate-500">{s.ip ?? "—"}</span>
+            <span className="font-mono text-xs text-slate-500">{s.ip ?? "—"}</span>
           </p>
-          <p className="mt-1 truncate text-[11px] text-slate-500" title={s.user_agent ?? ""}>
+          <p className="mt-1 truncate text-xs text-slate-500" title={s.user_agent ?? ""}>
             {s.user_agent ?? t("unknownDevice")}
           </p>
-          <p className="mt-1 text-[10px] text-slate-400">
+          <p className="mt-1 text-xs text-slate-400">
             {t("lastSeen")}: {new Date(s.last_seen_at).toLocaleString("zh-TW")} · {t("loginAt")}:{" "}
             {new Date(s.created_at).toLocaleString("zh-TW")}
           </p>

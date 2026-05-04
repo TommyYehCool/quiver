@@ -226,7 +226,7 @@ function ConfirmModalWithRate({
                 {quote.amount} <span className="text-xs font-normal text-slate-500">USDT</span>
               </p>
               {rate ? (
-                <p className="text-[10px] text-slate-500">≈ {fmtTwd(quote.amount, rate)}</p>
+                <p className="text-xs text-slate-500">≈ {fmtTwd(quote.amount, rate)}</p>
               ) : null}
             </div>
           </Row>
@@ -242,7 +242,7 @@ function ConfirmModalWithRate({
                   {quote.total} <span className="text-xs font-normal text-slate-500">USDT</span>
                 </p>
                 {rate ? (
-                  <p className="text-[10px] text-slate-500">≈ {fmtTwd(quote.total, rate)}</p>
+                  <p className="text-xs text-slate-500">≈ {fmtTwd(quote.total, rate)}</p>
                 ) : null}
               </div>
             </Row>
@@ -269,7 +269,7 @@ function ConfirmModalWithRate({
               className="font-mono tracking-widest"
               autoFocus
             />
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               {t("confirm.twofaHint")}
             </p>
           </div>

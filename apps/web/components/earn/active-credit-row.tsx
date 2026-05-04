@@ -92,7 +92,7 @@ export function ActiveCreditRow({ credit }: { credit: ActiveCreditOut }) {
             {amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
             <span className="text-sm font-normal text-slate-500">USDT</span>
           </p>
-          <p className="text-[10px] text-slate-500">offer #{credit.id}</p>
+          <p className="text-xs text-slate-500">offer #{credit.id}</p>
         </div>
         <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
           {s.badge}
@@ -145,13 +145,13 @@ function Stat({
         : "text-slate-800 dark:text-slate-200";
   return (
     <div>
-      <p className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <p className="flex items-center gap-1 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
         {icon}
         {label}
       </p>
       <p className={`mt-0.5 font-mono text-sm font-semibold tabular-nums ${valueClass}`}>{value}</p>
       {subtitle ? (
-        <p className="text-[10px] text-slate-400">{subtitle}</p>
+        <p className="text-xs text-slate-400">{subtitle}</p>
       ) : null}
     </div>
   );

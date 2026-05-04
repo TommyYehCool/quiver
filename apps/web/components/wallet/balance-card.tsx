@@ -128,7 +128,7 @@ export function BalanceCard() {
           {rate !== null ? (
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               ≈ {fmtTwd(String(total), rate)}{" "}
-              <span className="text-[10px]">@ {rate.toFixed(2)}</span>
+              <span className="text-xs">@ {rate.toFixed(2)}</span>
             </p>
           ) : null}
         </div>
@@ -192,14 +192,14 @@ function BalanceChip({ label, value, tone, href, icon, subtitle }: BalanceChipPr
       className={`rounded-xl border px-3 py-2.5 transition-colors ${toneClasses[tone]} ${href ? "cursor-pointer" : ""}`}
     >
       <div className="flex items-center justify-between gap-1">
-        <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider opacity-80">
+        <div className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider opacity-80">
           {icon}
           {label}
         </div>
         {href ? <ArrowUpRight className="h-3 w-3 opacity-60" /> : null}
       </div>
       <p className="mt-1 text-xl font-semibold tabular-nums">{fmt(value)}</p>
-      {subtitle ? <p className="mt-0.5 text-[10px] opacity-70">{subtitle}</p> : null}
+      {subtitle ? <p className="mt-0.5 text-xs opacity-70">{subtitle}</p> : null}
     </div>
   );
 

@@ -19,6 +19,15 @@ const config: Config = {
         // Sora — 給品牌 wordmark / 重要 display heading 用
         display: ["var(--font-sora)", "var(--font-inter)", "system-ui", "sans-serif"],
       },
+      // Bump base text sizes — Tailwind defaults (12/14/16) felt small vs
+      // competitor sites (FULY.AI etc.). +1px on xs/sm; base/lg unchanged.
+      // Also bumps `text-[10px]` / `text-[11px]` migrated to `text-xs` to 13px.
+      // Side benefit: 1px is small enough not to disrupt tight chip layouts.
+      fontSize: {
+        xs: ["0.8125rem", { lineHeight: "1.125rem" }],   // 13px / 18px (was 12/16)
+        sm: ["0.9375rem", { lineHeight: "1.375rem" }],   // 15px / 22px (was 14/20)
+        // base+ unchanged: 16/24, 18/28, 20/28, 24/32, 30/36
+      },
       colors: {
         brand: {
           DEFAULT: "#4F46E5",

@@ -259,17 +259,17 @@ export default async function AdminEarnPage({
                         </Link>
                         {tierBadge ? (
                           <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${tierBadge.color}`}
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tierBadge.color}`}
                           >
                             {tierBadge.icon}
                             {tierBadge.label}
                           </span>
                         ) : null}
-                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                           {a.custody_mode}
                         </span>
                         {a.perf_fee_bps > 0 ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                             fee {(a.perf_fee_bps / 100).toFixed(1)}%
                           </span>
                         ) : null}
@@ -277,7 +277,7 @@ export default async function AdminEarnPage({
                       <p className="mt-1 text-xs text-slate-500">
                         {a.user_email}
                       </p>
-                      <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-400">
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-400">
                         <span>
                           Bitfinex:{" "}
                           {a.has_active_bitfinex ? (

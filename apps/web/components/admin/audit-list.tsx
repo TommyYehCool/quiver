@@ -160,10 +160,10 @@ function AuditRow({ it }: { it: AuditLogItem }) {
             <span
               className={
                 it.actor_kind === "ADMIN"
-                  ? "inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
+                  ? "inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950/40 dark:text-violet-300"
                   : it.actor_kind === "USER"
-                    ? "inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
-                    : "inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                    ? "inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950/40 dark:text-sky-300"
+                    : "inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300"
               }
             >
               {it.actor_kind}
@@ -176,7 +176,7 @@ function AuditRow({ it }: { it: AuditLogItem }) {
               </span>
             ) : null}
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <p className="mt-1 text-xs text-slate-500">
             {it.actor_email ?? (it.actor_id ? `#${it.actor_id}` : "system")}
             {it.ip ? ` · ${it.ip}` : ""}
             {" · "}
@@ -193,7 +193,7 @@ function AuditRow({ it }: { it: AuditLogItem }) {
         ) : null}
       </div>
       {open && hasPayload ? (
-        <pre className="mt-2 overflow-x-auto rounded bg-slate-100 p-2 text-[11px] dark:bg-slate-900">
+        <pre className="mt-2 overflow-x-auto rounded bg-slate-100 p-2 text-xs dark:bg-slate-900">
           {JSON.stringify(it.payload, null, 2)}
         </pre>
       ) : null}

@@ -73,7 +73,7 @@ export function AdminChrome({
         </span>
         <Link
           href={`/${locale}/dashboard`}
-          className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] hover:bg-white/25"
+          className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs hover:bg-white/25"
         >
           <ArrowLeft className="h-3 w-3" />
           {t("backToUser")}

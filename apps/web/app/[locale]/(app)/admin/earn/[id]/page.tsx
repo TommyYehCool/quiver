@@ -117,7 +117,7 @@ export default async function AdminEarnAccountDetailPage({
                 <p className="mt-1 font-mono text-sm">
                   {fmtUsd(latestSnap.aave_polygon_usdt)}
                 </p>
-                <p className="mt-0.5 text-[10px] text-slate-400">
+                <p className="mt-0.5 text-xs text-slate-400">
                   APR: {fmtPct(latestSnap.aave_daily_apr)}
                 </p>
               </div>
@@ -218,7 +218,7 @@ export default async function AdminEarnAccountDetailPage({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium dark:bg-slate-700">
+                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium dark:bg-slate-700">
                         {a.chain}
                       </span>
                       {a.label ? (
@@ -300,7 +300,7 @@ export default async function AdminEarnAccountDetailPage({
           <CardDescription className="text-xs">
             auto_lend_enabled: <code>{String(detail.auto_lend_enabled)}</code>
             {" · "}funding_address:{" "}
-            <code className="font-mono text-[10px]">
+            <code className="font-mono text-xs">
               {detail.bitfinex_funding_address ?? "(not set)"}
             </code>
           </CardDescription>
@@ -329,7 +329,7 @@ export default async function AdminEarnAccountDetailPage({
                   >
                     <td className="py-2 font-mono">{p.id}</td>
                     <td className="py-2">
-                      <code className="rounded bg-slate-100 px-1 text-[10px] dark:bg-slate-800">
+                      <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">
                         {p.status}
                       </code>
                       {p.retry_count > 0 && (
@@ -337,18 +337,18 @@ export default async function AdminEarnAccountDetailPage({
                       )}
                     </td>
                     <td className="py-2 text-right font-mono">{fmtUsd(p.amount)}</td>
-                    <td className="py-2 font-mono text-[10px]">
+                    <td className="py-2 font-mono text-xs">
                       {p.bitfinex_offer_id ?? "—"}
                     </td>
-                    <td className="py-2 font-mono text-[10px]">
+                    <td className="py-2 font-mono text-xs">
                       {p.onchain_tx_hash
                         ? `${p.onchain_tx_hash.slice(0, 8)}…${p.onchain_tx_hash.slice(-6)}`
                         : "—"}
                     </td>
-                    <td className="py-2 text-[10px] text-slate-500">
+                    <td className="py-2 text-xs text-slate-500">
                       {new Date(p.created_at).toLocaleString()}
                     </td>
-                    <td className="py-2 text-[10px] text-red-500">
+                    <td className="py-2 text-xs text-red-500">
                       {p.last_error?.slice(0, 60) ?? ""}
                     </td>
                   </tr>

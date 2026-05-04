@@ -451,7 +451,7 @@ function FilePicker({
           <div className="flex flex-col items-center gap-2 p-4 text-center text-slate-500">
             <Upload className="h-6 w-6" />
             <span className="text-xs">{t("upload.cta")}</span>
-            <span className="text-[10px]">{t("upload.hint")}</span>
+            <span className="text-xs">{t("upload.hint")}</span>
           </div>
         )}
       </button>

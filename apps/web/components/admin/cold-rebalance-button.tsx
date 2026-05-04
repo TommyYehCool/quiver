@@ -193,7 +193,7 @@ export function ColdRebalanceButton() {
                     {info.cold_rebalance_max}{" "}
                     <span className="text-slate-500">USDT</span>
                   </p>
-                  <p className="mt-1 text-[10px] text-slate-400">
+                  <p className="mt-1 text-xs text-slate-400">
                     HOT 上限 {info.hot_max_usdt} / 目標水位 {info.hot_target_usdt}
                   </p>
                 </div>

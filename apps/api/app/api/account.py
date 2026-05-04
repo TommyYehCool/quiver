@@ -56,7 +56,12 @@ class DeletionRequestOut(BaseModel):
 
 
 # 當前的 TOS / Privacy 版本字串。改版時 bump 一次,所有人重新同意。
-TOS_CURRENT_VERSION = "2026-04-30-v1"
+TOS_CURRENT_VERSION = "2026-05-04-v2"
+# 2026-05-04-v2 (F-4d): added clauses 8-11 covering Quiver Earn (Bitfinex
+# integration), performance fees (5% Friend / 15% Public, 0% Premium),
+# referral revshare (10% L1 / 5% L2 over 6 months), and Premium subscription
+# ($9.99/mo, 7-day grace period). Existing users will see TosGate modal on
+# next page load and must re-accept.
 
 
 class TosStatusOut(BaseModel):

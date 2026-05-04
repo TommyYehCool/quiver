@@ -124,7 +124,7 @@ function HistoryRow({
         <p className="flex items-center gap-2 text-xs">
           <span
             className={cn(
-              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
               isPending
                 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                 : isOut
@@ -137,7 +137,7 @@ function HistoryRow({
           </span>
           <span className="text-slate-500">{new Date(it.created_at).toLocaleString("zh-TW")}</span>
         </p>
-        <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+        <p className="truncate text-xs text-slate-500 dark:text-slate-400">
           {counterparty ? counterparty : it.tx_hash ? <span className="font-mono">{it.tx_hash}</span> : null}
           {it.note ? <span className="ml-2 italic">「{it.note}」</span> : null}
         </p>

@@ -332,11 +332,11 @@ function WhitelistRow({
           <p className="flex items-center gap-2 text-sm">
             <strong className="truncate">{it.label}</strong>
             {it.is_active ? (
-              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                 {activeLabel}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                 <Clock className="h-3 w-3" />
                 {cooldownLabel(hoursLeft)}
               </span>

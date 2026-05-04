@@ -108,7 +108,7 @@ export default async function AdminPlatformPage({
                     <div className="flex items-baseline justify-between rounded-md bg-paper px-3 py-2 dark:bg-slate-900">
                       <span className="text-slate-500 dark:text-slate-400">用戶餘額</span>
                       <span className="font-mono tabular-nums text-slate-700 dark:text-slate-200">
-                        {hot.user_balances_total} <span className="text-[10px] text-slate-400">USDT</span>
+                        {hot.user_balances_total} <span className="text-xs text-slate-400">USDT</span>
                       </span>
                     </div>
                     <div
@@ -126,11 +126,11 @@ export default async function AdminPlatformPage({
                             : "font-mono tabular-nums text-emerald-700 dark:text-emerald-300"
                         }
                       >
-                        {hot.platform_profit ?? "0"} <span className="text-[10px] text-slate-400">USDT</span>
+                        {hot.platform_profit ?? "0"} <span className="text-xs text-slate-400">USDT</span>
                       </span>
                     </div>
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400">
+                  <p className="mt-2 text-xs text-slate-400">
                     HOT USDT = 所有用戶 ledger 餘額總和 + 平台累計手續費。獲利為負代表平台對用戶有負債(insolvency),需立即排查。
                   </p>
                 </div>
@@ -227,7 +227,7 @@ export default async function AdminPlatformPage({
                 </div>
               )}
 
-              <p className="text-[10px] text-slate-400">
+              <p className="text-xs text-slate-400">
                 ⓘ 顯示的 COLD 餘額是該地址鏈上**全部** USDT(含你個人原有的)。production 建議用一個只給平台用的全新地址。
               </p>
             </>
