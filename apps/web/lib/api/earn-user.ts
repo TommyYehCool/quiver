@@ -109,6 +109,41 @@ export async function fetchEarnConnectPreview(): Promise<EarnConnectPreviewOut> 
   return apiFetch<EarnConnectPreviewOut>("/api/earn/connect-preview");
 }
 
+// ──── F-5b-1 performance / public-stats ────
+
+export interface DailyEarning {
+  date: string;
+  usdt: string;
+}
+
+export interface EarnPerformanceOut {
+  current_frr_apr_pct: string | null;
+  weighted_avg_apr_pct: string | null;
+  apr_vs_frr_delta_pct: string | null;
+  total_interest_30d_usdt: string | null;
+  days_with_data: number;
+  daily_earnings: DailyEarning[];
+  spike_credits_count: number;
+  spike_credits_total_usdt: string;
+  best_active_apr_pct: string | null;
+  active_credits_count: number;
+  ladder_total_usdt: string | null;
+}
+
+export interface EarnPublicStatsOut {
+  active_bots_count: number;
+  total_lent_usdt: string;
+  avg_apr_30d_pct: string | null;
+}
+
+export async function fetchEarnPerformance(): Promise<EarnPerformanceOut> {
+  return apiFetch<EarnPerformanceOut>("/api/earn/performance");
+}
+
+export async function fetchEarnPublicStats(): Promise<EarnPublicStatsOut> {
+  return apiFetch<EarnPublicStatsOut>("/api/earn/public-stats");
+}
+
 export async function updateEarnSettings(
   payload: {
     auto_lend_enabled?: boolean;

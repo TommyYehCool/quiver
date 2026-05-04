@@ -187,3 +187,58 @@ class EarnConnectPreviewOut(BaseModel):
     perf_fee_pct: Decimal  # e.g. Decimal("5.00") for 5%
     friend_slots_total: int
     friend_slots_remaining: int
+
+
+# ─────────────────────────────────────────────────────────
+# GET /api/earn/performance (F-5b-1)
+# ─────────────────────────────────────────────────────────
+
+
+class DailyEarning(BaseModel):
+    """One row of the 30-day daily earnings sparkline."""
+    date: date
+    usdt: Decimal
+
+
+class EarnPerformanceOut(BaseModel):
+    """Per-user strategy performance metrics — the 'is the bot working?' card.
+
+    All fields are optional/nullable to handle the no-data states cleanly:
+      - User just connected, no snapshots yet → totals null
+      - Bitfinex API hiccup → live fields null, snapshot-derived fields still useful
+    """
+
+    # ── live: weighted APR comparison vs market ──
+    current_frr_apr_pct: Decimal | None  # baseline (Bitfinex Flash Return Rate)
+    weighted_avg_apr_pct: Decimal | None  # user's avg across active credits, weighted by amount
+    apr_vs_frr_delta_pct: Decimal | None  # weighted_avg - current_frr (positive = beating market)
+
+    # ── 30-day cumulative from snapshots ──
+    total_interest_30d_usdt: Decimal | None  # sum of bitfinex_daily_earned over last 30d
+    days_with_data: int  # count of snapshot days where daily_earned was non-null
+    daily_earnings: list[DailyEarning]  # for sparkline; ordered by date asc
+
+    # ── spike capture (live from active credits) ──
+    spike_credits_count: int  # active credits with APR >= SPIKE_THRESHOLD_APY (12%)
+    spike_credits_total_usdt: Decimal  # sum amount of those credits
+    best_active_apr_pct: Decimal | None  # max APR among active credits
+
+    # ── ladder visibility ──
+    active_credits_count: int  # # active credits = # tranches currently lent out
+    ladder_total_usdt: Decimal | None  # sum amount across all active credits
+
+
+# ─────────────────────────────────────────────────────────
+# GET /api/earn/public-stats (F-5b-1) — no auth required
+# ─────────────────────────────────────────────────────────
+
+
+class EarnPublicStatsOut(BaseModel):
+    """Aggregate platform-wide stats for marketing / social proof.
+
+    Safe to expose unauthenticated — only counts and totals, no PII.
+    Cached server-side ~60s to absorb scraper traffic.
+    """
+    active_bots_count: int  # distinct earn_accounts with at least one lent position
+    total_lent_usdt: Decimal  # sum of latest-snapshot lent across all accounts
+    avg_apr_30d_pct: Decimal | None  # platform-weighted avg APR over last 30d snapshots

@@ -1,19 +1,22 @@
 """User-facing Earn endpoints (F-Phase 3 / Path A self-service).
 
-- GET   /api/earn/me        — user's own earn state (account, positions, snapshot)
-- PATCH /api/earn/settings  — toggle auto_lend_enabled
-- POST  /api/earn/connect   — submit Bitfinex API key + funding address (gated by KYC)
+- GET   /api/earn/me           — user's own earn state (account, positions, snapshot)
+- PATCH /api/earn/settings     — toggle auto_lend_enabled
+- POST  /api/earn/connect      — submit Bitfinex API key + funding address (gated by KYC)
+- GET   /api/earn/performance  — F-5b-1: per-user strategy performance metrics
+- GET   /api/earn/public-stats — F-5b-1: aggregate platform stats (no auth)
 
 Admin-only earn management lives in apps/api/app/api/admin/earn.py.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import time
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import distinct, func, select
 
 from app.api.deps import CurrentUserDep, DbDep
 from app.core.logging import get_logger
@@ -23,6 +26,7 @@ from app.models.earn import (
     EarnAccount,
     EarnBitfinexConnection,
     EarnPosition,
+    EarnPositionSnapshot,
     EarnPositionStatus,
     EarnTier,
 )
@@ -30,11 +34,14 @@ from app.models.kyc import KycStatus, KycSubmission
 from app.schemas.api import ApiResponse
 from app.schemas.earn_user import (
     ActiveCreditOut,
+    DailyEarning,
     EarnConnectIn,
     EarnConnectOut,
     EarnConnectPreviewOut,
     EarnMeOut,
+    EarnPerformanceOut,
     EarnPositionUserOut,
+    EarnPublicStatsOut,
     EarnSettingsOut,
     EarnSettingsUpdateIn,
     EarnSnapshotUserOut,
@@ -43,9 +50,18 @@ from app.models.referral import ReferralBindingSource
 from app.services.earn import encryption as earn_crypto
 from app.services.earn import fee_policy
 from app.services.earn import repo as earn_repo
-from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
+from app.services.earn.bitfinex_adapter import (
+    BitfinexFundingAdapter,
+    fetch_market_frr,
+)
 from app.services.referral import binding as referral_binding
 from app.services.premium import repo as sub_repo
+
+# F-5b-1: spike threshold mirrors spike_detector.SPIKE_THRESHOLD_APY (12% APY).
+# Active credits at or above this rate count as "spike capture" in the
+# performance dashboard — the headline number that proves the laddered offers
+# (F-5a-3.3) actually catch market spikes.
+SPIKE_APR_THRESHOLD = Decimal("12")
 
 router = APIRouter(prefix="/api/earn", tags=["earn-user"])
 logger = get_logger(__name__)
@@ -433,3 +449,195 @@ async def connect_preview(
             friend_slots_remaining=slots_remaining,
         )
     )
+
+
+# ─────────────────────────────────────────────────────────
+# F-5b-1 — Performance dashboard (per user) + public stats
+# ─────────────────────────────────────────────────────────
+
+
+def _empty_performance() -> EarnPerformanceOut:
+    return EarnPerformanceOut(
+        current_frr_apr_pct=None,
+        weighted_avg_apr_pct=None,
+        apr_vs_frr_delta_pct=None,
+        total_interest_30d_usdt=None,
+        days_with_data=0,
+        daily_earnings=[],
+        spike_credits_count=0,
+        spike_credits_total_usdt=Decimal("0"),
+        best_active_apr_pct=None,
+        active_credits_count=0,
+        ladder_total_usdt=None,
+    )
+
+
+@router.get("/performance", response_model=ApiResponse[EarnPerformanceOut])
+async def get_earn_performance(
+    user: CurrentUserDep, db: DbDep
+) -> ApiResponse[EarnPerformanceOut]:
+    """Per-user strategy performance metrics.
+
+    Three data sources:
+      - Bitfinex live `active_credits` → weighted APR, spike capture, best APR
+      - Bitfinex live ticker FRR       → market baseline for comparison
+      - DB snapshots (last 30d)        → daily earnings sparkline + total interest
+
+    Failures degrade gracefully — Bitfinex hiccup → live fields null but
+    snapshot-derived stats still render. New user with no snapshot yet →
+    everything zero/null but the page still works.
+    """
+    account = await earn_repo.get_account_by_user_id(db, user.id)
+    if account is None or account.archived_at is not None:
+        return ApiResponse[EarnPerformanceOut].ok(_empty_performance())
+
+    # ── live: market FRR ──
+    market = None
+    try:
+        market = await fetch_market_frr()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("earn_performance_frr_fetch_failed", error=str(e))
+    current_frr_apr = market.frr_apy_pct if market is not None else None
+
+    # ── live: user's active credits ──
+    active_credits: list = []
+    conn = await earn_repo.get_active_bitfinex_connection(db, account.id)
+    if conn is not None:
+        try:
+            adapter = await BitfinexFundingAdapter.from_connection(db, conn)
+            position = await adapter.get_funding_position()
+            active_credits = list(position.active_credits)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "earn_performance_bf_query_failed",
+                user_id=user.id,
+                error=str(e),
+            )
+
+    # weighted avg APR across active credits (weight = principal amount)
+    weighted_avg = None
+    best_apr = None
+    if active_credits:
+        total_amount = sum((c.amount for c in active_credits), Decimal(0))
+        if total_amount > 0:
+            weighted_avg = sum(
+                (c.apr_pct * c.amount for c in active_credits), Decimal(0)
+            ) / total_amount
+        best_apr = max((c.apr_pct for c in active_credits), default=None)
+
+    apr_delta = (
+        weighted_avg - current_frr_apr
+        if weighted_avg is not None and current_frr_apr is not None
+        else None
+    )
+
+    spike_credits = [c for c in active_credits if c.apr_pct >= SPIKE_APR_THRESHOLD]
+    spike_total = sum((c.amount for c in spike_credits), Decimal(0))
+    ladder_total = sum((c.amount for c in active_credits), Decimal(0)) if active_credits else None
+
+    # ── snapshots: daily earnings sparkline + total interest ──
+    snapshots = await earn_repo.list_recent_snapshots(db, account.id, days=30)
+    daily_rows = [
+        DailyEarning(date=s.snapshot_date, usdt=s.bitfinex_daily_earned)
+        for s in snapshots
+        if s.bitfinex_daily_earned is not None
+    ]
+    total_30d = sum((d.usdt for d in daily_rows), Decimal(0)) if daily_rows else None
+
+    return ApiResponse[EarnPerformanceOut].ok(
+        EarnPerformanceOut(
+            current_frr_apr_pct=current_frr_apr,
+            weighted_avg_apr_pct=weighted_avg,
+            apr_vs_frr_delta_pct=apr_delta,
+            total_interest_30d_usdt=total_30d,
+            days_with_data=len(daily_rows),
+            daily_earnings=daily_rows,
+            spike_credits_count=len(spike_credits),
+            spike_credits_total_usdt=spike_total,
+            best_active_apr_pct=best_apr,
+            active_credits_count=len(active_credits),
+            ladder_total_usdt=ladder_total,
+        )
+    )
+
+
+# Process-local cache for /api/earn/public-stats. Reset when api restarts.
+# Don't use Redis — this is hot-path no-auth, the in-memory cache is enough
+# to absorb scraper traffic without crossing the network for every request.
+_PUBLIC_STATS_CACHE_TTL_SEC = 60.0
+_public_stats_cache: tuple[float, EarnPublicStatsOut] | None = None
+
+
+@router.get("/public-stats", response_model=ApiResponse[EarnPublicStatsOut])
+async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
+    """Aggregate platform stats — no auth required, cached server-side ~60s.
+
+    Three numbers for marketing / social proof:
+      - active_bots_count: distinct earn_accounts with at least one LENT
+        position. Counts active users without exposing identities.
+      - total_lent_usdt:   sum of bitfinex_lent_usdt from each account's
+        most recent snapshot (within last 24h to exclude stale rows).
+      - avg_apr_30d_pct:   weighted across all snapshots in last 30d using
+        daily_earned ÷ lent_usdt → daily rate → annualised. Captures real
+        platform-wide performance, not just current top tranche.
+
+    Safe to expose unauthenticated — only counts and totals, no per-user data.
+    """
+    global _public_stats_cache
+    now = time.time()
+    if (
+        _public_stats_cache is not None
+        and now - _public_stats_cache[0] < _PUBLIC_STATS_CACHE_TTL_SEC
+    ):
+        return ApiResponse[EarnPublicStatsOut].ok(_public_stats_cache[1])
+
+    # Active bots: distinct accounts with currently lent positions
+    bots_q = await db.execute(
+        select(func.count(distinct(EarnPosition.earn_account_id))).where(
+            EarnPosition.status == EarnPositionStatus.LENT.value
+        )
+    )
+    active_bots_count = int(bots_q.scalar_one() or 0)
+
+    # Total lent: sum of bitfinex_lent_usdt from snapshots in last 24h.
+    # Each user has one snapshot per day, so sum across them gives platform total.
+    yesterday = date.today() - timedelta(days=1)
+    lent_q = await db.execute(
+        select(func.coalesce(func.sum(EarnPositionSnapshot.bitfinex_lent_usdt), 0)).where(
+            EarnPositionSnapshot.snapshot_date >= yesterday
+        )
+    )
+    total_lent = Decimal(str(lent_q.scalar_one() or 0))
+
+    # Platform-weighted 30-day APR:
+    #   sum(daily_earned) / sum(lent_usdt over the same days) × 365 × 100
+    # Uses snapshot rows where both are non-null and lent > 0.
+    cutoff = date.today() - timedelta(days=30)
+    apr_q = await db.execute(
+        select(
+            func.coalesce(func.sum(EarnPositionSnapshot.bitfinex_daily_earned), 0),
+            func.coalesce(func.sum(EarnPositionSnapshot.bitfinex_lent_usdt), 0),
+        ).where(
+            EarnPositionSnapshot.snapshot_date >= cutoff,
+            EarnPositionSnapshot.bitfinex_daily_earned.isnot(None),
+            EarnPositionSnapshot.bitfinex_lent_usdt.isnot(None),
+            EarnPositionSnapshot.bitfinex_lent_usdt > 0,
+        )
+    )
+    earned_sum, lent_sum = apr_q.one()
+    earned_sum = Decimal(str(earned_sum or 0))
+    lent_sum = Decimal(str(lent_sum or 0))
+    avg_apr = None
+    if lent_sum > 0:
+        # Each row = one day, so sum_lent represents lent-days. The ratio
+        # gives the weighted-by-(amount × days) daily rate.
+        daily_rate = earned_sum / lent_sum
+        avg_apr = (daily_rate * Decimal(365) * Decimal(100)).quantize(Decimal("0.01"))
+
+    result = EarnPublicStatsOut(
+        active_bots_count=active_bots_count,
+        total_lent_usdt=total_lent.quantize(Decimal("0.01")),
+        avg_apr_30d_pct=avg_apr,
+    )
+    _public_stats_cache = (now, result)
+    return ApiResponse[EarnPublicStatsOut].ok(result)
