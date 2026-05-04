@@ -163,6 +163,15 @@ class EarnAccount(Base):
     )
     # F-5a-3.5: risk dial. EarnStrategyPreset.CONSERVATIVE / BALANCED / AGGRESSIVE.
     # Drives ladder slicing + period selection in services/earn/auto_lend.py.
+    dunning_pause_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+    # F-5b-2: true iff perf_fee.settle_outstanding paused this account's
+    # auto-lend after >=4 consecutive unpaid weekly accruals. When the user
+    # tops up their Quiver wallet enough to settle all ACCRUED rows, the same
+    # cron flips this back to false and re-enables auto_lend_enabled. This
+    # flag distinguishes "Quiver paused" from "user toggled off" so we know
+    # whether to auto-resume.
     bitfinex_funding_address: Mapped[str | None] = mapped_column(String(64))
     # cache 從 Bitfinex API 撈出的 user TRC20 USDT funding wallet 入金地址。
     # 第一次 connect 時 fetch + 存,之後 broadcast 前可 refresh 防止 user 在

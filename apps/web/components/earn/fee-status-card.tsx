@@ -16,7 +16,7 @@
  */
 
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Crown, Receipt, Sparkles } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Crown, PauseCircle, Receipt, Sparkles } from "lucide-react";
 
 import {
   Card,
@@ -46,6 +46,11 @@ interface FeeStrings {
   bufferWarningTitle: string;
   bufferWarningBody: (shortfall: string) => string;
   bufferTopupCta: string;
+  /** F-5b-2: rendered when dunning_level === "paused" */
+  pausedTitle: string;
+  pausedBody: (pendingAmount: string, pendingCount: number) => string;
+  pausedTopupCta: string;
+  pausedPremiumCta: string;
   paid30dLabel: string;
   paidLifetimeLabel: string;
   nextSettleLabel: string;
@@ -84,6 +89,11 @@ const STRINGS: Record<Locale, FeeStrings> = {
     bufferWarningBody: (shortfall) =>
       `下個週一 02:00 UTC 結算時你的 Quiver wallet 餘額不足以扣完 (差 $${shortfall})。差額會留在 ACCRUED 等下次,但建議現在就補 — 連續積欠多週可能觸發暫停 auto-lend。`,
     bufferTopupCta: "去儲值 Quiver wallet",
+    pausedTitle: "Auto-lend 已被 Quiver 暫停",
+    pausedBody: (amt, n) =>
+      `已積欠 ${n} 週共 $${amt} 未付,Quiver 已自動暫停你的 auto-lend(已 lent 部位不受影響、自然到期回 funding wallet)。儲值 Quiver wallet 至 $${amt} 以上,下個週一 cron 會自動 resume;或升級 Premium 直接 0% 績效費。`,
+    pausedTopupCta: "去儲值 Quiver wallet",
+    pausedPremiumCta: "升級 Premium",
     paid30dLabel: "30 天已付",
     paidLifetimeLabel: "歷史總付",
     nextSettleLabel: "下次結算",
@@ -125,6 +135,11 @@ const STRINGS: Record<Locale, FeeStrings> = {
     bufferWarningBody: (shortfall) =>
       `At next Monday 02:00 UTC settlement your Quiver wallet won't cover the pending fees (short $${shortfall}). The shortfall stays ACCRUED for next attempt — top up to avoid auto-lend being paused after multiple unpaid weeks.`,
     bufferTopupCta: "Top up Quiver wallet",
+    pausedTitle: "Auto-lend paused by Quiver",
+    pausedBody: (amt, n) =>
+      `${n} unpaid weeks ($${amt} total). Quiver has paused your auto-lend (existing lent positions are unaffected and will return to your Bitfinex funding wallet on natural maturity). Top up your Quiver wallet to $${amt}+ and the next Monday cron will auto-resume; or upgrade to Premium for flat 0% perf fee.`,
+    pausedTopupCta: "Top up Quiver wallet",
+    pausedPremiumCta: "Upgrade to Premium",
     paid30dLabel: "Paid (30d)",
     paidLifetimeLabel: "Lifetime paid",
     nextSettleLabel: "Next settlement",
@@ -166,6 +181,11 @@ const STRINGS: Record<Locale, FeeStrings> = {
     bufferWarningBody: (shortfall) =>
       `次回月曜 02:00 UTC の結算で Quiver wallet 残高が不足します($${shortfall} 不足)。差額は ACCRUED として次回再試行されますが、複数週連続未払いで auto-lend が一時停止される可能性があります。今すぐチャージを推奨。`,
     bufferTopupCta: "Quiver wallet にチャージ",
+    pausedTitle: "Auto-lend は Quiver により一時停止されました",
+    pausedBody: (amt, n) =>
+      `${n} 週分 合計 $${amt} の未払いがあります。Quiver は auto-lend を自動的に一時停止しました(既存の貸出ポジションは影響なし、満期で funding wallet に自然に戻ります)。Quiver wallet を $${amt}+ にチャージすると次回月曜 cron で自動再開します;または Premium にアップグレードして 0% パフォーマンスフィーへ。`,
+    pausedTopupCta: "Quiver wallet にチャージ",
+    pausedPremiumCta: "Premium にアップグレード",
     paid30dLabel: "30 日間支払済",
     paidLifetimeLabel: "累計支払済",
     nextSettleLabel: "次回結算",
@@ -307,8 +327,40 @@ export function FeeStatusCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Buffer warning — most prominent thing if triggered */}
-        {fees.has_buffer_warning ? (
+        {/* F-5b-2 paused banner — strongest signal, shown when Quiver has
+            already taken action (auto-lend off). Includes both top-up and
+            Premium escape hatches. */}
+        {fees.dunning_level === "paused" ? (
+          <div className="rounded-lg border border-red-300 bg-red-50/70 p-3 dark:border-red-800 dark:bg-red-950/40">
+            <div className="flex items-start gap-2">
+              <PauseCircle className="h-4 w-4 flex-none text-red-600 dark:text-red-400" />
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-red-800 dark:text-red-200">
+                  {s.pausedTitle}
+                </div>
+                <p className="mt-0.5 text-xs text-red-700 dark:text-red-300">
+                  {s.pausedBody(fmtUsd(fees.pending_accrued_usdt), fees.pending_count)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                  <Link
+                    href={`/${locale}/wallet`}
+                    className="font-medium text-red-700 hover:underline dark:text-red-300"
+                  >
+                    {s.pausedTopupCta} →
+                  </Link>
+                  <Link
+                    href={`/${locale}/subscription`}
+                    className="font-medium text-amber-700 hover:underline dark:text-amber-300"
+                  >
+                    {s.pausedPremiumCta} →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : fees.has_buffer_warning ? (
+          /* Buffer warning (level=warning, 2-3 unpaid weeks) — softer
+             amber, no Quiver action taken yet. */
           <div className="rounded-lg border border-amber-300 bg-amber-50/70 p-3 dark:border-amber-800 dark:bg-amber-950/40">
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 flex-none text-amber-600 dark:text-amber-400" />

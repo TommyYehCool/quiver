@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
@@ -281,8 +281,130 @@ def previous_iso_week_range(today: date | None = None) -> tuple[date, date]:
     return prev_monday, prev_sunday
 
 
+# ─────────────────────────────────────────────────────────
+# F-5b-2 — Dunning state machine
+# ─────────────────────────────────────────────────────────
+
+# Threshold at which Quiver auto-pauses an account's auto-lend due to
+# unpaid weekly accruals. Each accrual = 1 week, so 4 = ~1 month of arrears.
+DUNNING_PAUSE_THRESHOLD_WEEKS = 4
+
+
+@dataclass
+class DunningTransition:
+    """Audit record of a dunning state change for a single account."""
+    earn_account_id: int
+    user_id: int
+    pending_count: int
+    pending_amount: Decimal
+    action: str  # "paused" | "resumed"
+
+
+async def evaluate_dunning(db: AsyncSession) -> list[DunningTransition]:
+    """For each earn_account, decide whether to pause or auto-resume auto-lend
+    based on remaining unpaid (ACCRUED) accruals.
+
+    Rules:
+      - pending_count >= DUNNING_PAUSE_THRESHOLD_WEEKS (4)
+        AND auto_lend_enabled is true
+        AND not currently dunning_pause_active
+        → pause: set both auto_lend_enabled=false + dunning_pause_active=true
+      - pending_count == 0 AND dunning_pause_active is true
+        → resume: set both auto_lend_enabled=true + dunning_pause_active=false
+
+    User-initiated toggle off (auto_lend_enabled=false WITHOUT pause_active)
+    is respected — we don't touch it. Same for accounts with 1-3 pending
+    rows (just a warning state, no action yet).
+
+    Designed to be idempotent — running twice in a row is a no-op for
+    accounts already in their target state.
+    """
+    from app.models.earn import EarnAccount, EarnFeeAccrual, FeeAccrualStatus
+
+    # Pull all (account, pending_count) pairs in one query.
+    q = await db.execute(
+        select(
+            EarnAccount,
+            func.count(EarnFeeAccrual.id).filter(
+                EarnFeeAccrual.status == FeeAccrualStatus.ACCRUED.value
+            ).label("pending_count"),
+            func.coalesce(
+                func.sum(EarnFeeAccrual.fee_amount).filter(
+                    EarnFeeAccrual.status == FeeAccrualStatus.ACCRUED.value
+                ),
+                0,
+            ).label("pending_amount"),
+        )
+        .outerjoin(EarnFeeAccrual, EarnFeeAccrual.earn_account_id == EarnAccount.id)
+        .where(EarnAccount.archived_at.is_(None))
+        .group_by(EarnAccount.id)
+    )
+
+    transitions: list[DunningTransition] = []
+    for account, pending_count, pending_amount in q.all():
+        pending_count = int(pending_count or 0)
+        pending_amount = Decimal(str(pending_amount or 0))
+
+        should_pause = (
+            pending_count >= DUNNING_PAUSE_THRESHOLD_WEEKS
+            and account.auto_lend_enabled
+            and not account.dunning_pause_active
+        )
+        should_resume = pending_count == 0 and account.dunning_pause_active
+
+        if should_pause:
+            account.auto_lend_enabled = False
+            account.dunning_pause_active = True
+            await db.flush()
+            transitions.append(
+                DunningTransition(
+                    earn_account_id=account.id,
+                    user_id=account.user_id,
+                    pending_count=pending_count,
+                    pending_amount=pending_amount,
+                    action="paused",
+                )
+            )
+            logger.warning(
+                "perf_fee_dunning_paused",
+                earn_account_id=account.id,
+                user_id=account.user_id,
+                pending_count=pending_count,
+                pending_amount=str(pending_amount),
+                threshold_weeks=DUNNING_PAUSE_THRESHOLD_WEEKS,
+            )
+        elif should_resume:
+            account.auto_lend_enabled = True
+            account.dunning_pause_active = False
+            await db.flush()
+            transitions.append(
+                DunningTransition(
+                    earn_account_id=account.id,
+                    user_id=account.user_id,
+                    pending_count=0,
+                    pending_amount=Decimal("0"),
+                    action="resumed",
+                )
+            )
+            logger.info(
+                "perf_fee_dunning_resumed",
+                earn_account_id=account.id,
+                user_id=account.user_id,
+            )
+
+    if transitions:
+        await db.commit()
+    return transitions
+
+
+# ─────────────────────────────────────────────────────────
+# Cron entry point
+# ─────────────────────────────────────────────────────────
+
+
 async def run_weekly_perf_fee_cycle(db: AsyncSession) -> dict[str, int]:
-    """One full weekly cycle: accrue previous week + settle all outstanding.
+    """One full weekly cycle: accrue previous week + settle all outstanding +
+    evaluate dunning state.
 
     Returns counts for telemetry.
     """
@@ -299,9 +421,16 @@ async def run_weekly_perf_fee_cycle(db: AsyncSession) -> dict[str, int]:
 
     settled = await settle_outstanding(db)
 
+    # F-5b-2: after settlement, evaluate dunning state. Has to happen AFTER
+    # settle (so resumed-on-payment is visible immediately, not stuck for
+    # another week).
+    transitions = await evaluate_dunning(db)
+
     settled_ok = sum(1 for r in settled if r.settled)
     settled_skip = sum(1 for r in settled if not r.settled)
     payouts_total = sum(r.referral_payouts_count for r in settled)
+    paused_n = sum(1 for t in transitions if t.action == "paused")
+    resumed_n = sum(1 for t in transitions if t.action == "resumed")
 
     logger.info(
         "perf_fee_cycle_done",
@@ -309,10 +438,14 @@ async def run_weekly_perf_fee_cycle(db: AsyncSession) -> dict[str, int]:
         settled_ok=settled_ok,
         settled_skip_insufficient=settled_skip,
         referral_payouts_total=payouts_total,
+        dunning_paused=paused_n,
+        dunning_resumed=resumed_n,
     )
     return {
         "accrued": len(accrued),
         "settled_ok": settled_ok,
         "settled_skip": settled_skip,
         "payouts": payouts_total,
+        "dunning_paused": paused_n,
+        "dunning_resumed": resumed_n,
     }

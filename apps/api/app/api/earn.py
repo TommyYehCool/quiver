@@ -121,6 +121,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 has_earn_account=False,
                 auto_lend_enabled=False,
                 strategy_preset=None,
+                dunning_pause_active=False,
                 bitfinex_connected=False,
                 bitfinex_funding_address=None,
                 earn_tier=None,
@@ -187,6 +188,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             has_earn_account=True,
             auto_lend_enabled=account.auto_lend_enabled,
             strategy_preset=account.strategy_preset,
+            dunning_pause_active=account.dunning_pause_active,
             bitfinex_connected=conn is not None,
             bitfinex_funding_address=account.bitfinex_funding_address,
             earn_tier=user.earn_tier,
@@ -696,6 +698,8 @@ async def get_earn_fees(
                 pending_count=0,
                 quiver_wallet_balance_usdt=Decimal("0"),
                 has_buffer_warning=False,
+                dunning_level="ok",
+                dunning_pause_active=False,
                 paid_30d_usdt=Decimal("0"),
                 paid_lifetime_usdt=Decimal("0"),
                 last_paid_at=None,
@@ -785,14 +789,25 @@ async def get_earn_fees(
         for row in recent_q.scalars().all()
     ]
 
+    # F-5b-2 dunning level (mirror of perf_fee.evaluate_dunning thresholds)
+    pending_n = int(pending_count or 0)
+    if account.dunning_pause_active:
+        dunning_level = "paused"
+    elif pending_n >= 2:
+        dunning_level = "warning"
+    else:
+        dunning_level = "ok"
+
     return ApiResponse[EarnFeeSummaryOut].ok(
         EarnFeeSummaryOut(
             perf_fee_bps=account.perf_fee_bps,
             is_premium=is_premium,
             pending_accrued_usdt=pending_sum,
-            pending_count=int(pending_count or 0),
+            pending_count=pending_n,
             quiver_wallet_balance_usdt=wallet_balance,
             has_buffer_warning=has_warning,
+            dunning_level=dunning_level,
+            dunning_pause_active=account.dunning_pause_active,
             paid_30d_usdt=paid_30d,
             paid_lifetime_usdt=paid_lifetime,
             last_paid_at=last_paid_at,

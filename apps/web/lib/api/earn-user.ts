@@ -61,6 +61,8 @@ export interface EarnMeOut {
   auto_lend_enabled: boolean;
   /** F-5a-3.5: risk dial. null only when has_earn_account is false. */
   strategy_preset: EarnStrategyPreset | null;
+  /** F-5b-2: true iff Quiver auto-paused auto-lend due to ≥4 unpaid weeks. */
+  dunning_pause_active: boolean;
   bitfinex_connected: boolean;
   bitfinex_funding_address: string | null;
   earn_tier: EarnTier | null;
@@ -165,6 +167,8 @@ export interface FeeAccrualRow {
   paid_method: FeePaidMethod | null;
 }
 
+export type DunningLevel = "ok" | "warning" | "paused";
+
 export interface EarnFeeSummaryOut {
   perf_fee_bps: number;
   is_premium: boolean;
@@ -172,6 +176,9 @@ export interface EarnFeeSummaryOut {
   pending_count: number;
   quiver_wallet_balance_usdt: string;
   has_buffer_warning: boolean;
+  /** F-5b-2: derived dunning level for UI. */
+  dunning_level: DunningLevel;
+  dunning_pause_active: boolean;
   paid_30d_usdt: string;
   paid_lifetime_usdt: string;
   last_paid_at: string | null;

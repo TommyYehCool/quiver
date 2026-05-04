@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, PauseCircle, Sparkles } from "lucide-react";
 
 import { fetchMeServer } from "@/lib/auth";
 import {
@@ -47,6 +47,10 @@ const STRINGS: Record<Locale, {
     feeLabel: string;
     feeNote: string;
   };
+  /** F-5b-2: buffer hint for public-tier users (skipped for Friend/Premium). */
+  bufferTip: string;
+  /** F-5b-2: shown when earn.dunning_pause_active is true. */
+  dunningPaused: { title: string; body: string; topupCta: string; premiumCta: string };
   guideCard: { title: string; desc: string; cta: string };
   formCard: { title: string; desc: string };
 }> = {
@@ -73,6 +77,13 @@ const STRINGS: Record<Locale, {
       descPublic: "Friend 名額已滿,你會以標準公開費率連接。Quiver 從你利息收入抽取績效費,本金永遠不抽。",
       feeLabel: "績效費(只從你的利息收入扣,本金不動)",
       feeNote: "本金永遠不會被扣手續費。Fee 只在你的部位獲得利息且贖回時計算,從利息總額中抽取上述比例。",
+    },
+    bufferTip: "💡 建議 Quiver wallet 留 $50+ 作為 fee 預留 — 因為 Quiver 沒有 Bitfinex 提現權限,fee 從你的 Quiver wallet 扣;留 buffer 可避免 4 週連續積欠後 auto-lend 被自動暫停。Premium 訂閱可完全跳過。",
+    dunningPaused: {
+      title: "Auto-lend 已被 Quiver 暫停(連續 4 週未付 fee)",
+      body: "你的 auto-lend 目前被 Quiver 自動暫停 — 即使你下面把 toggle 打開,下個週一 cron 跑完還是會再被暫停。要恢復:儲值 Quiver wallet 補足欠款,或升級 Premium。",
+      topupCta: "去儲值 Quiver wallet",
+      premiumCta: "升級 Premium →",
     },
     guideCard: {
       title: "第一次設定?先看完整教學",
@@ -108,6 +119,13 @@ const STRINGS: Record<Locale, {
       feeLabel: "Performance fee (charged from interest only — never principal)",
       feeNote: "Your principal is never charged. The fee is calculated only when your position earns interest and you redeem, taking the above percentage from gross interest.",
     },
+    bufferTip: "💡 Keep $50+ in your Quiver wallet as a fee buffer — since Quiver has no Bitfinex withdrawal permission, fees deduct from your Quiver wallet balance. Without a buffer, after 4 consecutive unpaid weeks Quiver will auto-pause your auto-lend until you top up. Premium subscription bypasses this entirely.",
+    dunningPaused: {
+      title: "Auto-lend paused by Quiver (4 weeks of unpaid fees)",
+      body: "Your auto-lend has been auto-paused by Quiver. Toggling it on below won't help — the next Monday cron will pause it again. To resume: top up your Quiver wallet to cover the arrears, or upgrade to Premium.",
+      topupCta: "Top up Quiver wallet",
+      premiumCta: "Upgrade to Premium →",
+    },
     guideCard: {
       title: "First time? Read the full guide",
       desc: "The guide covers: how to create the API key, which permissions to enable / never enable (especially Withdrawal — never), IP allowlist setup, and where to find the deposit address.",
@@ -141,6 +159,13 @@ const STRINGS: Record<Locale, {
       descPublic: "Friend 枠は埋まっており、標準の public レートで接続されます。Quiver は元本ではなく利息収入からのみパフォーマンス手数料を取ります。",
       feeLabel: "パフォーマンス手数料(償還時、利息のみから差引)",
       feeNote: "元本に手数料がかかることはありません。手数料はポジションが利息を得て償還するときのみ計算され、利息総額から上記のパーセンテージが差し引かれます。",
+    },
+    bufferTip: "💡 Quiver wallet に $50+ をフィーバッファとして保持することを推奨 — Quiver は Bitfinex の出金権限を持たないため、フィーは Quiver wallet 残高から差し引かれます。バッファなしで 4 週連続未払いになると、Quiver は auto-lend を自動的に一時停止します。Premium 購読でこれを回避できます。",
+    dunningPaused: {
+      title: "Auto-lend は Quiver により一時停止されました(4 週連続未払い)",
+      body: "Auto-lend は Quiver により自動的に一時停止されています — 下のトグルをオンにしても、次回月曜の cron で再び停止されます。再開するには、Quiver wallet をチャージして滞納を解消するか、Premium にアップグレードしてください。",
+      topupCta: "Quiver wallet にチャージ",
+      premiumCta: "Premium にアップグレード →",
     },
     guideCard: {
       title: "初めての設定?先にガイドを読む",
@@ -223,6 +248,39 @@ export default async function EarnConnectPage({
                 ) : null}
               </Card>
 
+              {/* F-5b-2: paused-by-Quiver banner — shown above the auto-lend
+                  toggle so users immediately understand WHY the toggle won't
+                  stick. Has both top-up and Premium escape hatches. */}
+              {earn.dunning_pause_active ? (
+                <Card className="border-red-300/60 bg-red-50/60 dark:border-red-900 dark:bg-red-950/30">
+                  <CardHeader className="flex-row items-start gap-3">
+                    <PauseCircle className="h-5 w-5 flex-none text-red-600 dark:text-red-400" />
+                    <div className="flex-1">
+                      <CardTitle className="text-base text-red-800 dark:text-red-200">
+                        {s.dunningPaused.title}
+                      </CardTitle>
+                      <CardDescription className="text-red-700/90 dark:text-red-300/90">
+                        {s.dunningPaused.body}
+                      </CardDescription>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                        <Link
+                          href={`/${locale}/wallet`}
+                          className="font-medium text-red-700 hover:underline dark:text-red-300"
+                        >
+                          {s.dunningPaused.topupCta} →
+                        </Link>
+                        <Link
+                          href={`/${locale}/subscription`}
+                          className="font-medium text-amber-700 hover:underline dark:text-amber-300"
+                        >
+                          {s.dunningPaused.premiumCta}
+                        </Link>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ) : null}
+
               {/* Auto-lend toggle */}
               <Card>
                 <CardHeader className="flex-row items-start justify-between gap-4">
@@ -232,6 +290,14 @@ export default async function EarnConnectPage({
                   </div>
                   <AutoLendToggle initial={earn.auto_lend_enabled} />
                 </CardHeader>
+                {/* F-5b-2: buffer hint for paying users (skip Friend & Premium). */}
+                {(earn.perf_fee_bps ?? 0) > 0 && !earn.is_premium ? (
+                  <CardContent className="pt-0">
+                    <p className="rounded-md border border-sky-200/60 bg-sky-50/40 px-3 py-2 text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300">
+                      {s.bufferTip}
+                    </p>
+                  </CardContent>
+                ) : null}
               </Card>
 
               {/* F-5a-3.5 strategy preset selector */}
@@ -296,6 +362,14 @@ export default async function EarnConnectPage({
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {s.feeCard.feeNote}
                     </p>
+                    {/* F-5b-2: warn public-tier connectors about Quiver wallet
+                        buffer requirement before they connect (Friend tier
+                        skips this — they pay no fee). */}
+                    {preview.tier !== "friend" ? (
+                      <p className="rounded-md border border-sky-200/60 bg-sky-50/40 px-3 py-2 text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300">
+                        {s.bufferTip}
+                      </p>
+                    ) : null}
                   </CardContent>
                 </Card>
               ) : null}

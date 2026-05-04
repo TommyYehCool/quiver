@@ -65,6 +65,11 @@ class EarnMeOut(BaseModel):
     # F-5a-3.5: risk dial. "conservative" | "balanced" | "aggressive".
     # null when has_earn_account=false (no row yet); defaults "balanced" otherwise.
     strategy_preset: str | None
+    # F-5b-2: true iff Quiver auto-paused this account due to ≥4 weeks of
+    # unpaid perf fee accruals. Distinguishes "Quiver paused" from "user
+    # toggled off". When true, the bot-settings page shows a paused banner
+    # explaining how to resume (top up wallet OR upgrade to Premium).
+    dunning_pause_active: bool
     bitfinex_connected: bool
     bitfinex_funding_address: str | None  # cached deposit address
 
@@ -285,6 +290,13 @@ class EarnFeeSummaryOut(BaseModel):
     pending_count: int             # how many ACCRUED rows
     quiver_wallet_balance_usdt: Decimal  # user's spendable Quiver wallet
     has_buffer_warning: bool       # pending > balance (will be in arrears next settle)
+
+    # ── F-5b-2 dunning state ──
+    # "ok"      → 0-1 unpaid weeks
+    # "warning" → 2-3 unpaid weeks (visible nudge but no action)
+    # "paused"  → >=4 unpaid weeks; Quiver auto-paused auto_lend
+    dunning_level: str
+    dunning_pause_active: bool  # mirror of EarnAccount.dunning_pause_active
 
     # ── what user has paid historically ──
     paid_30d_usdt: Decimal
