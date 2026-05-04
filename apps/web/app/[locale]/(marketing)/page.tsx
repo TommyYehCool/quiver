@@ -441,7 +441,7 @@ function Earn({ locale: _locale }: { locale: string }) {
 
         <div className="mt-8 flex justify-center">
           <Button asChild size="lg" variant="outline">
-            <a href="mailto:tommy.yeh1112@gmail.com?subject=Quiver%20Earn%20Beta%20申請">
+            <a href="mailto:exfantasy7wolves@gmail.com?subject=Quiver%20Earn%20Beta%20申請">
               <Mail className="h-4 w-4" />
               {t("cta")}
             </a>
@@ -552,7 +552,7 @@ function CtaFinal({ locale }: { locale: string }) {
             </Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <a href="mailto:tommy.yeh1112@gmail.com?subject=Quiver%20Earn%20Beta%20申請">
+            <a href="mailto:exfantasy7wolves@gmail.com?subject=Quiver%20Earn%20Beta%20申請">
               <Mail className="h-4 w-4" />
               {t("secondaryCta")}
             </a>

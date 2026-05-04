@@ -227,19 +227,28 @@ export default async function RankPage({
                     {emoji ?? `#${entry.rank}`}
                   </div>
 
-                  {/* Display name + premium badge + days active */}
+                  {/* Display name + premium badge + days active.
+                      F-5a-4.3.1: opted-in @username becomes a t.me deep link
+                      so visitors can DM directly — this is the acquisition
+                      flywheel ("how'd you get 12% APR? where do I sign up?").
+                      Anonymous handles stay plain text (no contact info). */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span
-                        className={cn(
-                          "truncate font-mono text-sm",
-                          entry.is_anonymous
-                            ? "text-slate-500 dark:text-slate-400"
-                            : "font-medium text-slate-800 dark:text-slate-100",
-                        )}
-                      >
-                        {entry.display_name}
-                      </span>
+                      {entry.is_anonymous ? (
+                        <span className="truncate font-mono text-sm text-slate-500 dark:text-slate-400">
+                          {entry.display_name}
+                        </span>
+                      ) : (
+                        <a
+                          href={`https://t.me/${entry.display_name.replace(/^@/, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate font-mono text-sm font-medium text-slate-800 hover:text-emerald-600 hover:underline dark:text-slate-100 dark:hover:text-emerald-400"
+                          title={`Open ${entry.display_name} on Telegram`}
+                        >
+                          {entry.display_name}
+                        </a>
+                      )}
                       {entry.is_premium ? (
                         <span
                           className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0 text-[10px] font-medium text-amber-700 dark:text-amber-300"
