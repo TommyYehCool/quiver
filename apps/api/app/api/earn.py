@@ -34,6 +34,7 @@ from app.models.earn import (
     FeeAccrualStatus,
 )
 from app.models.kyc import KycStatus, KycSubmission
+from app.models.user import User
 from app.schemas.api import ApiResponse
 from app.schemas.earn_user import (
     ActiveCreditOut,
@@ -46,10 +47,12 @@ from app.schemas.earn_user import (
     EarnPerformanceOut,
     EarnPositionUserOut,
     EarnPublicStatsOut,
+    EarnRankOut,
     EarnSettingsOut,
     EarnSettingsUpdateIn,
     EarnSnapshotUserOut,
     FeeAccrualRow,
+    RankEntryOut,
 )
 from app.services import ledger as ledger_service
 from app.models.referral import ReferralBindingSource
@@ -125,6 +128,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 dunning_pause_active=False,
                 telegram_bound=user.telegram_chat_id is not None,
                 telegram_bot_username=telegram_service.get_bot_username(),
+                show_on_leaderboard=user.show_on_leaderboard,
                 bitfinex_connected=False,
                 bitfinex_funding_address=None,
                 earn_tier=None,
@@ -194,6 +198,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             dunning_pause_active=account.dunning_pause_active,
             telegram_bound=user.telegram_chat_id is not None,
             telegram_bot_username=telegram_service.get_bot_username(),
+            show_on_leaderboard=user.show_on_leaderboard,
             bitfinex_connected=conn is not None,
             bitfinex_funding_address=account.bitfinex_funding_address,
             earn_tier=user.earn_tier,
@@ -269,12 +274,39 @@ async def update_earn_settings(
             old=prev,
             new=payload.strategy_preset,
         )
+    # F-5a-4.3 leaderboard opt-in lives on User, not EarnAccount, but it's
+    # exposed via this endpoint because the UI toggle is co-located on
+    # /earn/bot-settings. Re-fetch the user row attached to this session
+    # since `user` from the dep may be from a different session scope.
+    if payload.show_on_leaderboard is not None:
+        u_row = (
+            await db.execute(select(User).where(User.id == user.id))
+        ).scalar_one()
+        prev = u_row.show_on_leaderboard
+        u_row.show_on_leaderboard = payload.show_on_leaderboard
+        changed = True
+        logger.info(
+            "earn_leaderboard_optin_changed",
+            user_id=user.id,
+            old=prev,
+            new=payload.show_on_leaderboard,
+        )
     if changed:
         await db.commit()
+        # Re-resolve user.show_on_leaderboard for the response (we may have
+        # changed it; user object from dep is still the cached one)
+        leaderboard_state = (
+            await db.execute(
+                select(User.show_on_leaderboard).where(User.id == user.id)
+            )
+        ).scalar_one()
+    else:
+        leaderboard_state = user.show_on_leaderboard
     return ApiResponse[EarnSettingsOut].ok(
         EarnSettingsOut(
             auto_lend_enabled=account.auto_lend_enabled,
             strategy_preset=account.strategy_preset,
+            show_on_leaderboard=leaderboard_state,
         )
     )
 
@@ -835,3 +867,157 @@ async def get_earn_fees(
             recent_accruals=recent,
         )
     )
+
+
+# ─────────────────────────────────────────────────────────
+# F-5a-4.3 — Public leaderboard (/api/earn/rank, no auth)
+# ─────────────────────────────────────────────────────────
+
+
+# Minimum days of snapshot data a user must have to qualify for the
+# leaderboard. Lower threshold = more populated leaderboard sooner; higher
+# threshold = harder to game with one-day flukes. During dogfooding (few
+# users) keep low; bump as platform scales.
+RANK_MIN_DAYS = 1
+RANK_LIMIT = 20
+
+# Process-local cache (mirrors public-stats pattern). Reset on api restart.
+_RANK_CACHE_TTL_SEC = 60.0
+_rank_cache: tuple[float, EarnRankOut] | None = None
+
+
+def _anonymous_handle(user_id: int) -> str:
+    """Stable 4-hex-char hash for anonymous leaderboard display.
+
+    Same user_id always produces the same handle so the user can recognize
+    themselves across visits. Not cryptographically secret (4 hex = 65k
+    space, trivially brute-forceable from user_id), but the leaderboard
+    doesn't need that — anonymity here is about not LEAKING the username,
+    not preventing reverse-mapping.
+    """
+    import hashlib
+    digest = hashlib.sha256(f"quiver-rank-{user_id}".encode()).hexdigest()
+    return f"Anonymous #{digest[:4].upper()}"
+
+
+@router.get("/rank", response_model=ApiResponse[EarnRankOut])
+async def get_earn_rank(db: DbDep) -> ApiResponse[EarnRankOut]:
+    """Public leaderboard of Quiver users by 30-day weighted APR.
+
+    Computation:
+      - For each user (account), aggregate over snapshots in last 30 days:
+        * total_earned = sum(daily_earned)
+        * total_lent_days = sum(lent_usdt)  ← weight by amount × days
+        * days_active = COUNT(*)
+      - weighted_apr = (total_earned / total_lent_days) × 365 × 100
+      - Filter: days_active >= RANK_MIN_DAYS, total_lent_days > 0
+      - Sort desc, top RANK_LIMIT
+
+    Display name resolution:
+      - User opted in (show_on_leaderboard=True) AND has telegram_username
+        → "@telegram_username"
+      - Otherwise → "Anonymous #XXXX" (stable hash)
+
+    Privacy: never expose total_lent or any wealth signal — pure performance
+    rankings only. No auth required (this is the social proof page).
+    """
+    global _rank_cache
+    now = time.time()
+    if _rank_cache is not None and now - _rank_cache[0] < _RANK_CACHE_TTL_SEC:
+        return ApiResponse[EarnRankOut].ok(_rank_cache[1])
+
+    cutoff = date.today() - timedelta(days=30)
+
+    # CTE-style aggregate per user
+    rank_q = await db.execute(
+        select(
+            EarnAccount.user_id,
+            func.sum(EarnPositionSnapshot.bitfinex_daily_earned).label("total_earned"),
+            func.sum(EarnPositionSnapshot.bitfinex_lent_usdt).label("total_lent_days"),
+            func.count(EarnPositionSnapshot.id).label("days_active"),
+        )
+        .join(
+            EarnAccount,
+            EarnAccount.id == EarnPositionSnapshot.earn_account_id,
+        )
+        .where(
+            EarnPositionSnapshot.snapshot_date >= cutoff,
+            EarnPositionSnapshot.bitfinex_daily_earned.isnot(None),
+            EarnPositionSnapshot.bitfinex_lent_usdt.isnot(None),
+            EarnPositionSnapshot.bitfinex_lent_usdt > 0,
+            EarnAccount.archived_at.is_(None),
+        )
+        .group_by(EarnAccount.user_id)
+        .having(func.count(EarnPositionSnapshot.id) >= RANK_MIN_DAYS)
+    )
+
+    rows = []
+    for row in rank_q.all():
+        total_earned = Decimal(str(row.total_earned or 0))
+        total_lent_days = Decimal(str(row.total_lent_days or 0))
+        if total_lent_days <= 0:
+            continue
+        apr = (total_earned / total_lent_days * Decimal(365) * Decimal(100)).quantize(
+            Decimal("0.01")
+        )
+        rows.append(
+            (row.user_id, apr, int(row.days_active or 0))
+        )
+
+    # Sort desc by APR
+    rows.sort(key=lambda r: r[1], reverse=True)
+    qualified_count = len(rows)
+    rows = rows[:RANK_LIMIT]
+
+    # Bulk-lookup user records to resolve display name + premium state
+    if rows:
+        user_ids = [uid for uid, _, _ in rows]
+        users_q = await db.execute(
+            select(User.id, User.telegram_username, User.show_on_leaderboard).where(
+                User.id.in_(user_ids)
+            )
+        )
+        user_meta = {
+            uid: (tg_username, opted_in)
+            for uid, tg_username, opted_in in users_q.all()
+        }
+        # Bulk-check premium status
+        premium_set: set[int] = set()
+        for uid in user_ids:
+            try:
+                if await sub_repo.is_user_premium(db, uid):
+                    premium_set.add(uid)
+            except Exception:  # noqa: BLE001
+                pass
+    else:
+        user_meta = {}
+        premium_set = set()
+
+    entries: list[RankEntryOut] = []
+    for rank, (uid, apr, days_active) in enumerate(rows, start=1):
+        tg_username, opted_in = user_meta.get(uid, (None, False))
+        if opted_in and tg_username:
+            display_name = f"@{tg_username}"
+            is_anon = False
+        else:
+            display_name = _anonymous_handle(uid)
+            is_anon = True
+        entries.append(
+            RankEntryOut(
+                rank=rank,
+                display_name=display_name,
+                is_anonymous=is_anon,
+                apr_30d_pct=apr,
+                days_active=days_active,
+                is_premium=uid in premium_set,
+            )
+        )
+
+    result = EarnRankOut(
+        entries=entries,
+        total_qualified_count=qualified_count,
+        min_days_threshold=RANK_MIN_DAYS,
+        last_updated_at=datetime.now(timezone.utc),
+    )
+    _rank_cache = (now, result)
+    return ApiResponse[EarnRankOut].ok(result)

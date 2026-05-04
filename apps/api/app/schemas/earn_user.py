@@ -74,6 +74,8 @@ class EarnMeOut(BaseModel):
     # bot_username is null (= bot not configured server-side yet).
     telegram_bound: bool
     telegram_bot_username: str | None
+    # F-5a-4.3: leaderboard opt-in. Drives the toggle on bot-settings.
+    show_on_leaderboard: bool
     bitfinex_connected: bool
     bitfinex_funding_address: str | None  # cached deposit address
 
@@ -109,6 +111,8 @@ class EarnSettingsUpdateIn(BaseModel):
     auto_lend_enabled: bool | None = None
     # F-5a-3.5: risk dial. Validated against EarnStrategyPreset enum below.
     strategy_preset: str | None = None
+    # F-5a-4.3: opt-in for /rank leaderboard (stored on User, not EarnAccount).
+    show_on_leaderboard: bool | None = None
 
     @field_validator("strategy_preset")
     @classmethod
@@ -126,6 +130,7 @@ class EarnSettingsUpdateIn(BaseModel):
 class EarnSettingsOut(BaseModel):
     auto_lend_enabled: bool
     strategy_preset: str
+    show_on_leaderboard: bool
 
 
 # ─────────────────────────────────────────────────────────
@@ -313,3 +318,32 @@ class EarnFeeSummaryOut(BaseModel):
 
     # ── recent rows for transparency table ──
     recent_accruals: list[FeeAccrualRow]
+
+
+# ─────────────────────────────────────────────────────────
+# GET /api/earn/rank (F-5a-4.3) — public leaderboard, no auth
+# ─────────────────────────────────────────────────────────
+
+
+class RankEntryOut(BaseModel):
+    """One row of the public leaderboard.
+
+    `display_name` is the only identity surface — either "@username" (if
+    user opted in AND has Telegram bound) or "Anonymous #XXXX" (stable
+    SHA-256 hash of user_id, 4 hex chars). We deliberately don't expose
+    total_lent_usdt or any wealth signal — pure performance.
+    """
+    rank: int
+    display_name: str
+    is_anonymous: bool  # for UI styling (anonymous gets muted color)
+    apr_30d_pct: Decimal
+    days_active: int
+    is_premium: bool
+
+
+class EarnRankOut(BaseModel):
+    """Public leaderboard payload — cached server-side ~60s."""
+    entries: list[RankEntryOut]
+    total_qualified_count: int  # users meeting min_days threshold (may exceed limit)
+    min_days_threshold: int     # exposed for the page's "to qualify" copy
+    last_updated_at: datetime

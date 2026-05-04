@@ -17,6 +17,7 @@
  */
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import {
@@ -33,6 +34,7 @@ import {
   generateTelegramBindCode,
   type TelegramBindCodeOut,
 } from "@/lib/api/telegram";
+import { updateEarnSettings } from "@/lib/api/earn-user";
 import { cn } from "@/lib/utils";
 
 type Locale = "zh-TW" | "en" | "ja";
@@ -59,6 +61,12 @@ interface Strings {
   disconnectCta: string;
   disconnecting: string;
   errorPrefix: string;
+  // F-5a-4.3
+  leaderboardLabel: string;
+  leaderboardOnHint: (handle: string) => string;
+  leaderboardOffHint: string;
+  leaderboardSaving: string;
+  leaderboardLink: string;
 }
 
 const STRINGS: Record<Locale, Strings> = {
@@ -86,6 +94,11 @@ const STRINGS: Record<Locale, Strings> = {
     disconnectCta: "解除綁定",
     disconnecting: "解除中...",
     errorPrefix: "失敗:",
+    leaderboardLabel: "在 /rank 公開排行榜顯示我的 username",
+    leaderboardOnHint: (h) => `會顯示為 ${h}(其他人在 /rank 上看得到)`,
+    leaderboardOffHint: "目前匿名顯示為 hash(只有你自己認得)",
+    leaderboardSaving: "儲存中...",
+    leaderboardLink: "→ 看排行榜",
   },
   en: {
     comingSoonTitle: "Telegram notifications — coming soon",
@@ -112,6 +125,11 @@ const STRINGS: Record<Locale, Strings> = {
     disconnectCta: "Disconnect",
     disconnecting: "Disconnecting...",
     errorPrefix: "Failed: ",
+    leaderboardLabel: "Show my username on the public /rank leaderboard",
+    leaderboardOnHint: (h) => `Will appear as ${h} (visible to anyone on /rank)`,
+    leaderboardOffHint: "Currently anonymized as a hash (only you can recognize)",
+    leaderboardSaving: "Saving...",
+    leaderboardLink: "→ View leaderboard",
   },
   ja: {
     comingSoonTitle: "Telegram 通知 — 近日公開",
@@ -138,6 +156,11 @@ const STRINGS: Record<Locale, Strings> = {
     disconnectCta: "接続解除",
     disconnecting: "解除中...",
     errorPrefix: "失敗:",
+    leaderboardLabel: "/rank 公開リーダーボードで username を表示",
+    leaderboardOnHint: (h) => `${h} として表示されます (/rank で誰でも閲覧可能)`,
+    leaderboardOffHint: "現在は匿名ハッシュとして表示(あなただけが識別可能)",
+    leaderboardSaving: "保存中...",
+    leaderboardLink: "→ リーダーボードを見る",
   },
 };
 
@@ -150,12 +173,18 @@ interface Props {
   initialBound: boolean;
   initialBotUsername: string | null;
   initialUsername?: string | null;
+  /** F-5a-4.3: leaderboard opt-in initial state. */
+  initialShowOnLeaderboard?: boolean;
+  /** Locale for the "→ View leaderboard" link href. */
+  locale: string;
 }
 
 export function TelegramConnectCard({
   initialBound,
   initialBotUsername,
   initialUsername,
+  initialShowOnLeaderboard = false,
+  locale,
 }: Props) {
   const router = useRouter();
   const s = STRINGS[pickLocale(useLocale())];
@@ -189,60 +218,18 @@ export function TelegramConnectCard({
 
   // ─── State 3: already bound ───
   if (bound) {
-    async function handleDisconnect() {
-      setBusy(true);
-      setErr(null);
-      try {
-        await disconnectTelegram();
-        setBound(false);
-        setBoundUsername(null);
-        router.refresh();
-      } catch (e) {
-        setErr((e as { code?: string }).code ?? "failed");
-      } finally {
-        setBusy(false);
-      }
-    }
     return (
-      <div className="rounded-xl border border-emerald-300/60 bg-emerald-50/40 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 flex-none text-emerald-600" />
-            <div>
-              <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                {s.boundTitle}
-              </div>
-              <p className="mt-0.5 text-xs text-emerald-700/90 dark:text-emerald-300/90">
-                {s.boundBody}
-              </p>
-              <div className="mt-1 text-xs font-mono text-slate-600 dark:text-slate-400">
-                {boundUsername
-                  ? s.boundUsername(boundUsername)
-                  : s.boundNoUsername}
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleDisconnect}
-            disabled={busy}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white/60 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-white disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            {busy ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Unlink className="h-3.5 w-3.5" />
-            )}
-            {busy ? s.disconnecting : s.disconnectCta}
-          </button>
-        </div>
-        {err ? (
-          <div className="mt-2 text-xs text-red-500">
-            {s.errorPrefix}
-            {err}
-          </div>
-        ) : null}
-      </div>
+      <BoundView
+        s={s}
+        locale={locale}
+        boundUsername={boundUsername}
+        initialShowOnLeaderboard={initialShowOnLeaderboard}
+        onDisconnected={() => {
+          setBound(false);
+          setBoundUsername(null);
+          router.refresh();
+        }}
+      />
     );
   }
 
@@ -437,6 +424,153 @@ function ConnectFlow({
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * F-5a-4.3 — Bound state of TelegramConnectCard. Carved out as a separate
+ * component because it has its own state (leaderboard opt-in toggle, busy,
+ * err) that's only relevant when bound. Cleaner than nesting hooks
+ * conditionally in the parent.
+ */
+function BoundView({
+  s,
+  locale,
+  boundUsername,
+  initialShowOnLeaderboard,
+  onDisconnected,
+}: {
+  s: Strings;
+  locale: string;
+  boundUsername: string | null;
+  initialShowOnLeaderboard: boolean;
+  onDisconnected: () => void;
+}) {
+  const [showLeaderboard, setShowLeaderboard] = React.useState(
+    initialShowOnLeaderboard,
+  );
+  const [busy, setBusy] = React.useState(false);
+  const [savingLeaderboard, setSavingLeaderboard] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
+
+  async function handleDisconnect() {
+    setBusy(true);
+    setErr(null);
+    try {
+      await disconnectTelegram();
+      onDisconnected();
+    } catch (e) {
+      setErr((e as { code?: string }).code ?? "failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleToggleLeaderboard() {
+    if (savingLeaderboard) return;
+    const next = !showLeaderboard;
+    setSavingLeaderboard(true);
+    setErr(null);
+    try {
+      const r = await updateEarnSettings({ show_on_leaderboard: next });
+      setShowLeaderboard(r.show_on_leaderboard);
+    } catch (e) {
+      setErr((e as { code?: string }).code ?? "failed");
+    } finally {
+      setSavingLeaderboard(false);
+    }
+  }
+
+  // Pre-compute hint text for the leaderboard toggle
+  const handleDisplay = boundUsername ? `@${boundUsername}` : "(no @username)";
+  const hint = showLeaderboard
+    ? s.leaderboardOnHint(handleDisplay)
+    : s.leaderboardOffHint;
+
+  return (
+    <div className="space-y-3 rounded-xl border border-emerald-300/60 bg-emerald-50/40 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+      {/* Top: bound status + disconnect button */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 flex-none text-emerald-600" />
+          <div>
+            <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+              {s.boundTitle}
+            </div>
+            <p className="mt-0.5 text-xs text-emerald-700/90 dark:text-emerald-300/90">
+              {s.boundBody}
+            </p>
+            <div className="mt-1 text-xs font-mono text-slate-600 dark:text-slate-400">
+              {boundUsername
+                ? s.boundUsername(boundUsername)
+                : s.boundNoUsername}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleDisconnect}
+          disabled={busy}
+          className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white/60 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-white disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          {busy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Unlink className="h-3.5 w-3.5" />
+          )}
+          {busy ? s.disconnecting : s.disconnectCta}
+        </button>
+      </div>
+
+      {/* F-5a-4.3 leaderboard opt-in toggle (only meaningful when bound) */}
+      <div className="rounded-md border border-emerald-200/40 bg-white/40 p-3 dark:border-emerald-900/40 dark:bg-slate-900/30">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <div className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              {s.leaderboardLabel}
+            </div>
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+              {hint}
+            </p>
+            <Link
+              href={`/${locale}/rank`}
+              className="mt-1 inline-block text-[11px] font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            >
+              {s.leaderboardLink}
+            </Link>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleLeaderboard}
+            disabled={savingLeaderboard}
+            aria-pressed={showLeaderboard}
+            className={cn(
+              "relative inline-flex h-5 w-9 flex-none items-center rounded-full transition-colors disabled:opacity-50",
+              showLeaderboard
+                ? "bg-emerald-500"
+                : "bg-slate-300 dark:bg-slate-700",
+            )}
+          >
+            <span
+              className={cn(
+                "inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform",
+                showLeaderboard ? "translate-x-5" : "translate-x-1",
+              )}
+            />
+            {savingLeaderboard ? (
+              <Loader2 className="absolute inset-0 m-auto h-3 w-3 animate-spin text-white" />
+            ) : null}
+          </button>
+        </div>
+      </div>
+
+      {err ? (
+        <div className="text-xs text-red-500">
+          {s.errorPrefix}
+          {err}
+        </div>
+      ) : null}
     </div>
   );
 }

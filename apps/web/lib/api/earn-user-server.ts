@@ -8,6 +8,7 @@ import type {
   EarnMeOut,
   EarnPerformanceOut,
   EarnPublicStatsOut,
+  EarnRankOut,
 } from "@/lib/api/earn-user";
 
 const SERVER_API_BASE_URL = process.env.SERVER_API_BASE_URL ?? "http://api:8000";
@@ -64,4 +65,11 @@ export async function fetchEarnPublicStatsServer(): Promise<EarnPublicStatsOut |
   return get<EarnPublicStatsOut>("/api/earn/public-stats", "", {
     revalidateSec: 60,
   });
+}
+
+/**
+ * Public leaderboard — no cookie, server-cached 60s like public-stats.
+ */
+export async function fetchEarnRankServer(): Promise<EarnRankOut | null> {
+  return get<EarnRankOut>("/api/earn/rank", "", { revalidateSec: 60 });
 }

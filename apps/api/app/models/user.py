@@ -98,6 +98,14 @@ class User(Base, TimestampMixin):
         DateTime(timezone=True)
     )
 
+    # F-5a-4.3: opt-in for /rank leaderboard. Default FALSE to be
+    # privacy-conservative — even TG-bound users start anonymous and must
+    # explicitly toggle on to expose their @username on the public page.
+    # When False, /rank shows a stable "Anonymous #XXXX" hash instead.
+    show_on_leaderboard: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+
     @property
     def is_admin(self) -> bool:
         return UserRole.ADMIN.value in self.roles

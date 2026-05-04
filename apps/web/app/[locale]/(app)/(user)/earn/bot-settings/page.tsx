@@ -328,7 +328,7 @@ export default async function EarnConnectPage({
                 </CardContent>
               </Card>
 
-              {/* F-5a-4.1 Telegram bot connect */}
+              {/* F-5a-4.1 Telegram bot connect (F-5a-4.3 leaderboard toggle inside) */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">{s.telegramSection.title}</CardTitle>
@@ -338,6 +338,8 @@ export default async function EarnConnectPage({
                   <TelegramConnectCard
                     initialBound={earn.telegram_bound}
                     initialBotUsername={earn.telegram_bot_username}
+                    initialShowOnLeaderboard={earn.show_on_leaderboard}
+                    locale={locale}
                   />
                 </CardContent>
               </Card>

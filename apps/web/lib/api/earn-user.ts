@@ -67,6 +67,8 @@ export interface EarnMeOut {
   telegram_bound: boolean;
   /** F-5a-4.1: bot username (sans @). null = bot not configured server-side. */
   telegram_bot_username: string | null;
+  /** F-5a-4.3: leaderboard opt-in (default false until user toggles on). */
+  show_on_leaderboard: boolean;
   bitfinex_connected: boolean;
   bitfinex_funding_address: string | null;
   earn_tier: EarnTier | null;
@@ -93,6 +95,7 @@ export interface EarnConnectPreviewOut {
 export interface EarnSettingsOut {
   auto_lend_enabled: boolean;
   strategy_preset: EarnStrategyPreset;
+  show_on_leaderboard: boolean;
 }
 
 export interface EarnConnectOut {
@@ -194,10 +197,33 @@ export async function fetchEarnFees(): Promise<EarnFeeSummaryOut> {
   return apiFetch<EarnFeeSummaryOut>("/api/earn/fees");
 }
 
+// ──── F-5a-4.3 leaderboard ────
+
+export interface RankEntryOut {
+  rank: number;
+  display_name: string;
+  is_anonymous: boolean;
+  apr_30d_pct: string;
+  days_active: number;
+  is_premium: boolean;
+}
+
+export interface EarnRankOut {
+  entries: RankEntryOut[];
+  total_qualified_count: number;
+  min_days_threshold: number;
+  last_updated_at: string;
+}
+
+export async function fetchEarnRank(): Promise<EarnRankOut> {
+  return apiFetch<EarnRankOut>("/api/earn/rank");
+}
+
 export async function updateEarnSettings(
   payload: {
     auto_lend_enabled?: boolean;
     strategy_preset?: EarnStrategyPreset;
+    show_on_leaderboard?: boolean;
   },
 ): Promise<EarnSettingsOut> {
   return apiFetch<EarnSettingsOut>("/api/earn/settings", {
