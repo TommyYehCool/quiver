@@ -39,6 +39,7 @@ async def sync_one_account(
     # ── Bitfinex ──
     bf_funding = Decimal(0)
     bf_lent = Decimal(0)
+    bf_daily_earned: Decimal | None = None
     bf_error: str | None = None
     conn = await earn_repo.get_active_bitfinex_connection(db, earn_account_id)
     if conn:
@@ -49,6 +50,13 @@ async def sync_one_account(
             # 用 funding_available 不用 funding_balance(後者包含 lent 部分)
             bf_funding = position.funding_available
             bf_lent = position.lent_total
+            # F-5b-3 fix: pass through daily_earned_estimate (was hardcoded
+            # None per a Phase-1 placeholder). The adapter already computes
+            # sum(amount × daily_rate) across active credits — projected
+            # daily earnings if current rates hold. Without this, F-5b-1
+            # performance card + F-5a-4.3 leaderboard always showed null
+            # APR for everyone.
+            bf_daily_earned = position.daily_earned_estimate
         except Exception as e:
             bf_error = str(e)[:200]
             logger.warning(
@@ -91,7 +99,11 @@ async def sync_one_account(
         snapshot_date=snapshot_date,
         bitfinex_funding_usdt=bf_funding,
         bitfinex_lent_usdt=bf_lent,
-        bitfinex_daily_earned=None,  # Phase 1 沒算每日結算(要從歷史 ledger 算,留 D5+)
+        # F-5b-3: was hardcoded None, now uses live estimate from adapter
+        # (sum of amount × daily_rate across active credits). Cleaner data
+        # would come from /funding/loans/hist for actual paid interest, but
+        # the rate-based estimate is good enough for dashboards / leaderboard.
+        bitfinex_daily_earned=bf_daily_earned,
         aave_polygon_usdt=aave_balance,
         aave_daily_apr=aave_apr,
         total_usdt=total,
