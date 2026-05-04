@@ -18,6 +18,7 @@ import {
 import { ConnectBitfinexForm } from "@/components/earn/connect-bitfinex-form";
 import { AutoLendToggle } from "@/components/earn/auto-lend-toggle";
 import { StrategyPresetCard } from "@/components/earn/strategy-preset-card";
+import { BitfinexPermissionsMirror } from "@/components/earn/bitfinex-permissions-mirror";
 import { CheckCircle2 } from "lucide-react";
 
 type Locale = "zh-TW" | "en" | "ja";
@@ -48,17 +49,6 @@ const STRINGS: Record<Locale, {
   };
   guideCard: { title: string; desc: string; cta: string };
   formCard: { title: string; desc: string };
-  checklist: {
-    title: string;
-    yes: string;
-    yesItems: string[];
-    yesEmphasized: string;
-    no: string;
-    noItems: string[];
-    noEmphasized: string;
-    noEmphasizedSuffix: string;
-    ipLabel: string;
-  };
 }> = {
   "zh-TW": {
     back: "回 Earn",
@@ -92,25 +82,6 @@ const STRINGS: Record<Locale, {
     formCard: {
       title: "API Key + 入金地址",
       desc: "送出後 Quiver 會立刻 call Bitfinex 驗證 key 通過才存。Key 跟 secret 用 AES-GCM + KEK 加密(跟錢包私鑰同等級保護)。",
-    },
-    checklist: {
-      title: "快速 checklist",
-      yes: "✅ 要打開",
-      yesItems: [
-        "Wallets → Get wallet balances and addresses",
-        "Margin Funding → Get funding statuses and info",
-        "Account Info / History / Orders / Margin / Settings(read 類)",
-      ],
-      yesEmphasized: "Margin Funding → Offer, cancel and close funding",
-      no: "❌ 絕對不要打開",
-      noItems: [
-        "Wallets → Transfer between your wallets",
-        "Orders → Create and cancel orders",
-        "Margin Trading → Claim a position",
-      ],
-      noEmphasized: "Withdrawals → Create a new withdrawal",
-      noEmphasizedSuffix: "(被偷錢的最大入口)",
-      ipLabel: "📌 IP allowlist",
     },
   },
   en: {
@@ -146,25 +117,6 @@ const STRINGS: Record<Locale, {
       title: "API Key + Deposit Address",
       desc: "On submit, Quiver immediately calls Bitfinex to verify the key works before storing. Key + secret are encrypted with AES-GCM + KEK (same protection as wallet private keys).",
     },
-    checklist: {
-      title: "Quick checklist",
-      yes: "✅ Enable",
-      yesItems: [
-        "Wallets → Get wallet balances and addresses",
-        "Margin Funding → Get funding statuses and info",
-        "Account Info / History / Orders / Margin / Settings (read-only)",
-      ],
-      yesEmphasized: "Margin Funding → Offer, cancel and close funding",
-      no: "❌ Never enable",
-      noItems: [
-        "Wallets → Transfer between your wallets",
-        "Orders → Create and cancel orders",
-        "Margin Trading → Claim a position",
-      ],
-      noEmphasized: "Withdrawals → Create a new withdrawal",
-      noEmphasizedSuffix: " (the #1 attack vector)",
-      ipLabel: "📌 IP allowlist",
-    },
   },
   ja: {
     back: "Earn に戻る",
@@ -199,25 +151,6 @@ const STRINGS: Record<Locale, {
       title: "API キー + 入金アドレス",
       desc: "送信後、Quiver が即座に Bitfinex を呼び出してキーを検証してから保存します。キーとシークレットは AES-GCM + KEK で暗号化(ウォレット秘密鍵と同等の保護)。",
     },
-    checklist: {
-      title: "クイックチェックリスト",
-      yes: "✅ 有効にする",
-      yesItems: [
-        "Wallets → Get wallet balances and addresses",
-        "Margin Funding → Get funding statuses and info",
-        "Account Info / History / Orders / Margin / Settings(read 系)",
-      ],
-      yesEmphasized: "Margin Funding → Offer, cancel and close funding",
-      no: "❌ 絶対に有効にしない",
-      noItems: [
-        "Wallets → Transfer between your wallets",
-        "Orders → Create and cancel orders",
-        "Margin Trading → Claim a position",
-      ],
-      noEmphasized: "Withdrawals → Create a new withdrawal",
-      noEmphasizedSuffix: "(資金窃取の最大入口)",
-      ipLabel: "📌 IP allowlist",
-    },
   },
 };
 
@@ -248,49 +181,6 @@ export default async function EarnConnectPage({
   const preview = await fetchEarnConnectPreviewServer(cookieHeader);
   const s = STRINGS[pickLocale(locale)];
   const isConnected = earn.bitfinex_connected;
-
-  // Permission diagram (right column on desktop, below form on mobile).
-  // Rendered as JSX block so we can drop into both paths cleanly.
-  const permissionsCard = (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{s.checklist.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 text-xs">
-        <div>
-          <div className="mb-1 font-medium text-emerald-700 dark:text-emerald-400">
-            {s.checklist.yes}
-          </div>
-          <ul className="ml-4 space-y-0.5 text-slate-600 dark:text-slate-400">
-            <li>
-              <strong>{s.checklist.yesEmphasized}</strong>
-            </li>
-            {s.checklist.yesItems.map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <div className="mb-1 font-medium text-red-700 dark:text-red-400">{s.checklist.no}</div>
-          <ul className="ml-4 space-y-0.5 text-slate-600 dark:text-slate-400">
-            <li>
-              <strong>{s.checklist.noEmphasized}</strong>
-              {s.checklist.noEmphasizedSuffix}
-            </li>
-            {s.checklist.noItems.map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <div className="mb-1 font-medium text-sky-700 dark:text-sky-400">{s.checklist.ipLabel}</div>
-          <code className="ml-4 inline-block rounded bg-slate-100 px-2 py-0.5 dark:bg-slate-800">
-            45.77.30.174
-          </code>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 py-6">
@@ -447,9 +337,9 @@ export default async function EarnConnectPage({
           </Card>
         </div>
 
-        {/* Right column — permissions diagram (sticky on desktop) */}
+        {/* Right column — permissions mirror (sticky on desktop) */}
         <div className="space-y-6 lg:sticky lg:top-20 lg:self-start">
-          {permissionsCard}
+          <BitfinexPermissionsMirror locale={locale} />
         </div>
       </div>
     </div>
