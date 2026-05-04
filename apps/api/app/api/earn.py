@@ -612,12 +612,27 @@ async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
     )
     active_bots_count = int(bots_q.scalar_one() or 0)
 
-    # Total lent: sum of bitfinex_lent_usdt from snapshots in last 24h.
-    # Each user has one snapshot per day, so sum across them gives platform total.
-    yesterday = date.today() - timedelta(days=1)
+    # Total lent: sum of LATEST snapshot's bitfinex_lent_usdt per account.
+    # Naive sum across all rows in last 24h double-counts when an account has
+    # snapshots from both today and yesterday (very common — daily cron + 24h
+    # cutoff window). We use a correlated subquery to pull just each account's
+    # most recent row within the 7-day staleness budget.
+    cutoff_recent = date.today() - timedelta(days=7)
+    latest_per_account = (
+        select(
+            EarnPositionSnapshot.earn_account_id,
+            func.max(EarnPositionSnapshot.snapshot_date).label("max_date"),
+        )
+        .where(EarnPositionSnapshot.snapshot_date >= cutoff_recent)
+        .group_by(EarnPositionSnapshot.earn_account_id)
+        .subquery()
+    )
     lent_q = await db.execute(
-        select(func.coalesce(func.sum(EarnPositionSnapshot.bitfinex_lent_usdt), 0)).where(
-            EarnPositionSnapshot.snapshot_date >= yesterday
+        select(func.coalesce(func.sum(EarnPositionSnapshot.bitfinex_lent_usdt), 0))
+        .join(
+            latest_per_account,
+            (EarnPositionSnapshot.earn_account_id == latest_per_account.c.earn_account_id)
+            & (EarnPositionSnapshot.snapshot_date == latest_per_account.c.max_date),
         )
     )
     total_lent = Decimal(str(lent_q.scalar_one() or 0))
