@@ -427,12 +427,22 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         pos.bitfinex_credited_at = datetime.now(timezone.utc)
         await db.commit()
 
-    competitive_rate = await _compute_competitive_rate(position_amount)
+    # F-5a-3.7: anchor the ladder on the live FRR ticker rather than a
+    # depth-walk of the order book. The base tranche (or single-offer
+    # fallback) submits with rate=None and gets matched by Bitfinex's FRR
+    # engine — no more undercutting cheap top-of-book offers. The FRR value
+    # is still used to (a) compute fixed rates for higher tranches
+    # (1.2× / 1.5× / 2× / 4×), and (b) pick lock-up period via the rate
+    # threshold table.
+    market = await fetch_market_frr()
+    competitive_rate = (
+        market.last_daily if market and market.last_daily > 0 else None
+    )
     logger.info(
-        "auto_lend_competitive_rate",
+        "auto_lend_frr_anchor",
         position_id=position_id,
         amount=str(position_amount),
-        rate_daily=str(competitive_rate) if competitive_rate is not None else "FRR",
+        frr_daily=str(competitive_rate) if competitive_rate is not None else "FRR_market_unavailable",
     )
 
     # F-5a-3.3: build ladder if amount qualifies, else single-offer fallback.
@@ -512,12 +522,22 @@ def _build_ladder(
     high-rate tranches lock their elevated yield for longer (F-5a-3.4 dynamic
     period strategy), with the threshold table picked by `preset` (F-5a-3.5).
 
+    F-5a-3.7: the base tranche (multiplier == 1.0×) and the single-offer
+    fallback both submit with rate=None, which Bitfinex treats as a *FRR
+    market order* — auto-matches at the prevailing FRR with platform-side
+    matching priority. This replaces the F-5a-3.2 depth-walk anchor for the
+    base tranche, which was costing realised rate by undercutting cheap top-of
+    -book offers (PoC poc_pricing_compare.py measured -27% to -6% vs FRR for
+    sub-$5K offers in May 2026 conditions). Higher tranches (≥1.2×) keep
+    their fixed-rate-above-FRR semantics — they want to be price-takers from
+    elevated demand, not get auto-matched.
+
     Eligibility:
       - amount >= floor where smallest_fraction × amount >= MIN_AUTO_LEND_USDT
         → laddered (K tuples). For BALANCED that's amount >= $5000 (smallest
         fraction 3%); CONSERVATIVE qualifies earlier ($3000 — smallest 5%);
         AGGRESSIVE later ($1875 — smallest 8%).
-      - else → single tuple [(amount, base_rate, period)] (legacy single offer)
+      - else → single tuple [(amount, None, period)] — FRR market order
       - base_rate is None → single tuple at FRR (no rate computation possible)
 
     Per-tranche minimum: MIN_AUTO_LEND_USDT (Bitfinex platform rule).
@@ -526,13 +546,15 @@ def _build_ladder(
     that don't pass one (matches pre-F-5a-3.5 behaviour exactly).
     """
     table = _ladder_tranches_for(preset)
-    # Single-offer fallbacks
+    # Single-offer fallbacks — always FRR market order (F-5a-3.7)
     if base_rate is None:
         return [(amount, None, _select_period_days(None, preset))]
     smallest_fraction = min(frac for frac, _ in table)
     smallest_chunk = amount * smallest_fraction
     if smallest_chunk < MIN_AUTO_LEND_USDT:
-        return [(amount, base_rate, _select_period_days(base_rate, preset))]
+        # F-5a-3.7: rate=None instead of base_rate — let Bitfinex auto-match
+        # at FRR rather than fix-priced below-book.
+        return [(amount, None, _select_period_days(base_rate, preset))]
 
     # Build laddered tranches
     tranches: list[tuple[Decimal, Decimal | None, int]] = []
@@ -544,9 +566,18 @@ def _build_ladder(
         else:
             chunk = (amount * frac).quantize(Decimal("0.01"))
             cumulative += chunk
-        rate = base_rate * mult
-        period = _select_period_days(rate, preset)
-        tranches.append((chunk, rate, period))
+        if mult == Decimal("1.00"):
+            # F-5a-3.7: base tranche → FRR market order (rate=None).
+            # Period selection still uses base_rate (== current FRR) to pick
+            # bucket — at FRR < 5% APR the market is cold, lock 2 days for
+            # fast reprice; at FRR > 15% it's hot, lock 30.
+            rate_for_offer: Decimal | None = None
+            period = _select_period_days(base_rate, preset)
+        else:
+            # Higher tranches → fixed rate above FRR (price-taker for spike events)
+            rate_for_offer = base_rate * mult
+            period = _select_period_days(rate_for_offer, preset)
+        tranches.append((chunk, rate_for_offer, period))
     return tranches
 
 

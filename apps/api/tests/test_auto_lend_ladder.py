@@ -190,10 +190,15 @@ def test_select_period_days_default_preset_is_balanced() -> None:
 # ─────────────────────────────────────────────────────────
 
 
-def test_build_ladder_below_threshold_returns_single_tranche() -> None:
+def test_build_ladder_below_threshold_returns_single_frr_tranche() -> None:
     """Amount × smallest_fraction < MIN_AUTO_LEND_USDT (150) means at least one
     tranche would be under Bitfinex's per-offer minimum. Falls back to one
-    big offer at base_rate."""
+    big offer.
+
+    F-5a-3.7: the fallback offer uses rate=None (Bitfinex FRR market order)
+    rather than the depth-walked base_rate. This avoids undercutting the
+    book — see commit message for measured 6-27% improvement.
+    """
     # Balanced smallest fraction is 0.03 → activates at 5000 USDT.
     # 4999 × 0.03 = 149.97 < 150 → fallback
     base = _apr_to_daily(5.25)
@@ -201,7 +206,7 @@ def test_build_ladder_below_threshold_returns_single_tranche() -> None:
     assert len(result) == 1
     chunk, rate, period = result[0]
     assert chunk == Decimal("4999")
-    assert rate == base
+    assert rate is None  # F-5a-3.7: FRR market order, not the depth-walk anchor
     assert period == _select_period_days(base, "balanced")
 
 
@@ -263,20 +268,44 @@ def test_build_ladder_chunks_sum_exactly_to_amount() -> None:
             )
 
 
-def test_build_ladder_rates_strictly_increase_through_tranches() -> None:
-    """Within a single ladder, rates must monotonically increase — that's the
-    whole 'baseline + spike capture' design intent."""
+def test_build_ladder_base_tranche_is_frr_market_order() -> None:
+    """F-5a-3.7: the first (1.0× multiplier) tranche of every ladder
+    submits with rate=None — FRR market order on Bitfinex.
+
+    This is the core change of F-5a-3.7: stop undercutting the order book
+    via depth-walk for the base supply, instead let Bitfinex auto-match at
+    FRR (which has matching priority on the platform).
+    """
+    base = _apr_to_daily(5.25)
+    for preset in ("conservative", "balanced", "aggressive"):
+        # Use $10K — enough to ladder under all three presets
+        ladder = _build_ladder(Decimal("10000"), base, preset)
+        assert len(ladder) >= 2, f"{preset} should ladder at $10K"
+        first_chunk, first_rate, _ = ladder[0]
+        assert first_rate is None, (
+            f"{preset}: base tranche should be FRR market order (rate=None), "
+            f"got {first_rate}"
+        )
+        # Higher tranches keep their fixed-rate semantics
+        for i, (_, rate, _) in enumerate(ladder[1:], start=1):
+            assert rate is not None, (
+                f"{preset}: tranche {i} should have a fixed rate, got None"
+            )
+
+
+def test_build_ladder_higher_tranches_strictly_increase() -> None:
+    """The non-base tranches (1.2× / 1.5× / 2× / 4×) must monotonically
+    increase. The base tranche rate (None) is excluded from the chain since
+    it floats with FRR at match time."""
     base = _apr_to_daily(5.25)
     for preset in ("conservative", "balanced", "aggressive"):
         ladder = _build_ladder(Decimal("10000"), base, preset)
-        if len(ladder) < 2:
+        if len(ladder) < 3:  # need ≥ 2 fixed-rate tranches to compare
             continue
-        rates = [r for _, r, _ in ladder]
-        # All rates non-None when base_rate is non-None
-        assert all(r is not None for r in rates)
+        rates = [r for _, r, _ in ladder[1:]]  # skip base (None)
         for i in range(1, len(rates)):
             assert rates[i] >= rates[i - 1], (
-                f"{preset}: tranche {i} rate {rates[i]} < {rates[i - 1]}"
+                f"{preset}: tranche {i+1} rate {rates[i]} < {rates[i - 1]}"
             )
 
 

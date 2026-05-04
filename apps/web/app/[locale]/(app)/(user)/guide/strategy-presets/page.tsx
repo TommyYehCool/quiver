@@ -218,7 +218,7 @@ const STRINGS: Record<Locale, Strings> = {
         },
         {
           q: "為什麼基礎那檔都 1.0×？Quiver 怎麼決定基礎利率？",
-          a: "Quiver 抓 Bitfinex 即時的訂單簿，往下走深度 = 2 × 你的金額，找到「累積比我便宜的供給達到 2 倍」那一格的利率，當作基礎。這個邏輯確保你掛的單會排在前面、優先被借走，不會卡在隊伍尾巴。",
+          a: "基礎那檔送的是 Bitfinex 的「FRR 市場單」(rate=None)，意思是「以當下 FRR 自動撮合」— FRR 是 Bitfinex 對所有 funding 利率的動態加權平均。這種單在 Bitfinex 撮合引擎有優先序(借款人預設選 FRR pool)，所以成交速度快又永遠拿到 FRR 公允價，不會被掛得比 FRR 還便宜。高階(1.2× / 1.5× / 2× / 4×)那幾檔則用固定價掛在 FRR 之上，等飆漲行情。",
         },
         {
           q: "高飆漲檔(1.5× / 2× / 4×)如果一直沒成交，我是不是少賺了？",
@@ -356,7 +356,7 @@ const STRINGS: Record<Locale, Strings> = {
         },
         {
           q: "Why is the baseline always 1.0×? How does Quiver pick the base rate?",
-          a: "Quiver walks the Bitfinex order book to depth = 2× your amount, finds the rate where cumulative cheaper supply equals that depth, and uses it as base. This ensures your offer ranks well in the queue and gets filled fast.",
+          a: "The base tranche is submitted as a Bitfinex \"FRR market order\" (rate=None) — meaning \"auto-match at the current FRR\". FRR is Bitfinex's dynamically-weighted average of all active funding rates. These orders get matching priority on the platform (borrowers default to the FRR pool), so they fill fast at the fair market rate without ever underbidding. Higher tranches (1.2× / 1.5× / 2× / 4×) are posted as fixed-rate offers above FRR, waiting for spike events.",
         },
         {
           q: "If the high spike tranches (1.5× / 2× / 4×) never fill, am I leaving money on the table?",
@@ -494,7 +494,7 @@ const STRINGS: Record<Locale, Strings> = {
         },
         {
           q: "なぜ基礎段は常に 1.0× ですか?Quiver はどうやって基準金利を決めているのですか?",
-          a: "Quiver は Bitfinex のリアルタイム板情報を、深度 = 2 × あなたの金額まで歩き、「累積供給がその深度に達する」金利を基準として採用します。これにより、あなたのオファーがキューの前列に並び、優先的に約定されます。",
+          a: "基礎段は Bitfinex の「FRR マーケットオーダー」(rate=None)として送信されます — つまり「現在の FRR で自動約定」。FRR は Bitfinex がすべての funding 金利を動的に加重平均した値です。このタイプのオーダーは Bitfinex 撮合エンジンで優先順位を持つ(借り手はデフォルトで FRR プールを選ぶ)ため、市場の公正価格で素早く約定し、決して FRR より低く出されません。高い段(1.2× / 1.5× / 2× / 4×)は FRR の上に固定金利で出され、スパイクイベントを待ちます。",
         },
         {
           q: "高い急騰段(1.5× / 2× / 4×)が約定しない場合、機会損失になりますか?",
