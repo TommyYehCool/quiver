@@ -247,3 +247,90 @@ async def notify_dunning_resumed(*, user_id: int) -> None:
     )
 
     await _safe_send(chat_id, text, event_name="dunning_resumed", user_id=user_id)
+
+
+# ─────────────────────────────────────────────────────────
+# notify_perf_fee_settle_pending — first time settle fails for insufficient
+# wallet balance. Fires WAY before dunning_paused (which is at week 4) so
+# the user gets a chance to top up before things get serious.
+# ─────────────────────────────────────────────────────────
+
+
+async def notify_perf_fee_settle_pending(
+    *,
+    user_id: int,
+    fee_amount: Decimal,
+    wallet_balance: Decimal,
+) -> None:
+    """Sent on the FIRST week perf_fee.settle_outstanding can't deduct from
+    the user's Quiver wallet (insufficient balance). Caller is responsible
+    for the "first time only" check — this function just sends.
+
+    Goal: give the user a heads-up well before dunning_paused fires (which
+    only triggers after 4 unpaid weeks). 4 weeks of silence = surprise
+    pause. This message means "we noticed today, top up please."
+    """
+    if not telegram_service.is_configured():
+        return
+    chat_id = await _resolve_chat_id(user_id)
+    if chat_id is None:
+        return
+
+    shortfall = max(Decimal("0"), fee_amount - wallet_balance)
+    text = (
+        "💸 <b>Quiver 績效費這週收不到</b>\n\n"
+        f"應收金額: <b>${fee_amount:,.2f}</b>\n"
+        f"你的 Quiver 錢包餘額: <b>${wallet_balance:,.2f}</b>\n"
+        f"差額: <b>${shortfall:,.2f}</b>\n\n"
+        "這筆費用已先留下,等下次扣款。<b>連續 4 週收不到,自動放貸會被自動暫停</b>。\n\n"
+        "<b>建議做法</b>:\n"
+        f"· 儲值 Quiver 錢包至少 ${shortfall:,.2f},下次會自動扣\n"
+        "· 或升級 Premium 月訂閱,績效費永久 0%\n\n"
+        "<a href=\"https://quiverdefi.com/zh-TW/earn\">→ 前往儀表板處理</a>"
+    )
+
+    await _safe_send(
+        chat_id, text, event_name="perf_fee_settle_pending", user_id=user_id
+    )
+
+
+# ─────────────────────────────────────────────────────────
+# notify_premium_payment_failed — first time Premium monthly charge fails.
+# 7-day grace begins; let the user know proactively.
+# ─────────────────────────────────────────────────────────
+
+
+async def notify_premium_payment_failed(
+    *,
+    user_id: int,
+    monthly_amount: Decimal,
+    wallet_balance: Decimal,
+    grace_days: int,
+) -> None:
+    """Sent the moment Premium subscription transitions ACTIVE → PAST_DUE.
+
+    User has `grace_days` days to top up before benefits stop. Don't spam
+    each retry — caller should only fire this on the transition (status
+    was ACTIVE before this attempt).
+    """
+    if not telegram_service.is_configured():
+        return
+    chat_id = await _resolve_chat_id(user_id)
+    if chat_id is None:
+        return
+
+    shortfall = max(Decimal("0"), monthly_amount - wallet_balance)
+    text = (
+        "⚠️ <b>Premium 月費這次收不到</b>\n\n"
+        f"應收月費: <b>${monthly_amount:,.2f}</b>\n"
+        f"你的 Quiver 錢包餘額: <b>${wallet_balance:,.2f}</b>\n"
+        f"差額: <b>${shortfall:,.2f}</b>\n\n"
+        f"📅 <b>{grace_days} 天寬限期內補繳</b>,Premium 福利持續(0% 績效費)。"
+        f"超過寬限期會自動到期,績效費恢復收取。\n\n"
+        f"儲值 Quiver 錢包至少 ${shortfall:,.2f} 即可,系統會自動重試扣款。\n\n"
+        "<a href=\"https://quiverdefi.com/zh-TW/subscription\">→ 前往訂閱頁查看狀態</a>"
+    )
+
+    await _safe_send(
+        chat_id, text, event_name="premium_payment_failed", user_id=user_id
+    )

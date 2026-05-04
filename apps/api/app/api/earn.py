@@ -128,6 +128,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 dunning_pause_active=False,
                 telegram_bound=user.telegram_chat_id is not None,
                 telegram_bot_username=telegram_service.get_bot_username(),
+                telegram_username=user.telegram_username,
                 show_on_leaderboard=user.show_on_leaderboard,
                 bitfinex_connected=False,
                 bitfinex_funding_address=None,
@@ -198,6 +199,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             dunning_pause_active=account.dunning_pause_active,
             telegram_bound=user.telegram_chat_id is not None,
             telegram_bot_username=telegram_service.get_bot_username(),
+            telegram_username=user.telegram_username,
             show_on_leaderboard=user.show_on_leaderboard,
             bitfinex_connected=conn is not None,
             bitfinex_funding_address=account.bitfinex_funding_address,
@@ -274,6 +276,14 @@ async def update_earn_settings(
             old=prev,
             new=payload.strategy_preset,
         )
+        # F-5b-4 funnel — only track when preset actually changes (not no-op
+        # PATCH to same value)
+        if prev != payload.strategy_preset:
+            from app.services import funnel
+            await funnel.track(
+                db, user.id, funnel.STRATEGY_PRESET_CHANGED,
+                properties={"old": prev, "new": payload.strategy_preset},
+            )
     # F-5a-4.3 leaderboard opt-in lives on User, not EarnAccount, but it's
     # exposed via this endpoint because the UI toggle is co-located on
     # /earn/bot-settings. Re-fetch the user row attached to this session
@@ -291,6 +301,12 @@ async def update_earn_settings(
             old=prev,
             new=payload.show_on_leaderboard,
         )
+        # F-5b-4 funnel — only the FIRST opt-in is interesting (track_once)
+        if payload.show_on_leaderboard and not prev:
+            from app.services import funnel
+            await funnel.track_once(
+                db, user.id, funnel.LEADERBOARD_OPTIN_ENABLED,
+            )
     if changed:
         await db.commit()
         # Re-resolve user.show_on_leaderboard for the response (we may have
@@ -327,9 +343,22 @@ async def connect_bitfinex(
       4. Create/update earn_account; cache funding address; mark user.earn_tier='friend'
       5. Return funding balance as confirmation
     """
+    # F-5b-4: track every connect ATTEMPT (whether or not KYC gate passes).
+    # Funnel needs to see "user tried" so we can distinguish "didn't try" vs
+    # "tried but failed at step X". Commit immediately so even if the request
+    # raises later, the attempt is recorded.
+    from app.services import funnel
+    await funnel.track(db, user.id, funnel.BITFINEX_CONNECT_ATTEMPTED)
+    await db.commit()
+
     # Step 1: KYC gate
     kyc_status = await _get_kyc_status(db, user.id)
     if kyc_status != KycStatus.APPROVED.value:
+        await funnel.track(
+            db, user.id, funnel.BITFINEX_CONNECT_FAILED,
+            properties={"reason": "earn.kycRequired", "kyc_status": kyc_status},
+        )
+        await db.commit()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "earn.kycRequired", "params": {"current": kyc_status}},
@@ -359,6 +388,17 @@ async def connect_bitfinex(
         position = await test_adapter.get_funding_position()
     except Exception as e:
         logger.warning("earn_connect_verify_failed", user_id=user.id, error=str(e))
+        # F-5b-4 funnel — verify failed (most common: API key permissions
+        # not set right, key revoked, IP allowlist mismatch). Capture for
+        # admin to spot patterns ("everyone fails on permission X").
+        await funnel.track(
+            db, user.id, funnel.BITFINEX_CONNECT_FAILED,
+            properties={
+                "reason": "earn.bitfinexVerifyFailed",
+                "error": str(e)[:200],
+            },
+        )
+        await db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -426,6 +466,17 @@ async def connect_bitfinex(
             )
             referral_bind_status = e.code
 
+    # F-5b-4 funnel — connect succeeded. Includes assigned tier so we can
+    # see how many made it past the gate (vs. how many tried but failed).
+    await funnel.track(
+        db, user.id, funnel.BITFINEX_CONNECT_SUCCEEDED,
+        properties={
+            "earn_account_id": account.id,
+            "tier": user.earn_tier,
+            "funding_balance": str(position.funding_balance),
+        },
+    )
+
     await db.commit()
 
     logger.info(
@@ -464,6 +515,15 @@ async def connect_preview(
     If the user already has an earn_account, this echoes their current tier +
     fee instead of pre-assigning a new one.
     """
+    # F-5b-4: this endpoint is only fetched from /earn/bot-settings page
+    # render → use it as a proxy for "user opened bot-settings". Critical
+    # for diagnosing the most common funnel stall ("KYC approved but didn't
+    # connect Bitfinex" — was it because they didn't even open the page?).
+    from app.services import funnel
+    inserted = await funnel.track_once(db, user.id, funnel.BOT_SETTINGS_OPENED)
+    if inserted:
+        await db.commit()
+
     friend_count = await fee_policy.count_friend_accounts(db)
     slots_remaining = max(0, fee_policy.FRIEND_CAP - friend_count)
 
@@ -618,10 +678,13 @@ async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
     """Aggregate platform stats — no auth required, cached server-side ~60s.
 
     Three numbers for marketing / social proof:
-      - active_bots_count: distinct earn_accounts with at least one LENT
-        position. Counts active users without exposing identities.
+      - active_bots_count: distinct earn_accounts whose most-recent snapshot
+        within the last 7d still shows lent_usdt > 0. Uses snapshot data (not
+        earn_positions.status) because the position state machine can lag
+        reality — e.g. a row marked closed_external when Bitfinex still has
+        funds lent. Snapshots reflect what Bitfinex actually reports.
       - total_lent_usdt:   sum of bitfinex_lent_usdt from each account's
-        most recent snapshot (within last 24h to exclude stale rows).
+        most recent snapshot (within last 7d to exclude stale rows).
       - avg_apr_30d_pct:   weighted across all snapshots in last 30d using
         daily_earned ÷ lent_usdt → daily rate → annualised. Captures real
         platform-wide performance, not just current top tranche.
@@ -636,19 +699,11 @@ async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
     ):
         return ApiResponse[EarnPublicStatsOut].ok(_public_stats_cache[1])
 
-    # Active bots: distinct accounts with currently lent positions
-    bots_q = await db.execute(
-        select(func.count(distinct(EarnPosition.earn_account_id))).where(
-            EarnPosition.status == EarnPositionStatus.LENT.value
-        )
-    )
-    active_bots_count = int(bots_q.scalar_one() or 0)
-
-    # Total lent: sum of LATEST snapshot's bitfinex_lent_usdt per account.
-    # Naive sum across all rows in last 24h double-counts when an account has
-    # snapshots from both today and yesterday (very common — daily cron + 24h
-    # cutoff window). We use a correlated subquery to pull just each account's
-    # most recent row within the 7-day staleness budget.
+    # Active bots + total lent: both derived from each account's LATEST
+    # snapshot within the 7-day staleness budget. Naive aggregation across
+    # all rows in the window double-counts when an account has snapshots
+    # from multiple days. We use a correlated subquery to pull just each
+    # account's most recent row.
     cutoff_recent = date.today() - timedelta(days=7)
     latest_per_account = (
         select(
@@ -659,6 +714,24 @@ async def get_earn_public_stats(db: DbDep) -> ApiResponse[EarnPublicStatsOut]:
         .group_by(EarnPositionSnapshot.earn_account_id)
         .subquery()
     )
+
+    # Active bots: count accounts whose latest snapshot still has funds lent.
+    # We do NOT join to earn_positions.status — that table's state machine
+    # can lag reality (e.g. a position marked closed_external while Bitfinex
+    # still actively lends the funds). Snapshot is the source of truth.
+    bots_q = await db.execute(
+        select(
+            func.count(distinct(EarnPositionSnapshot.earn_account_id))
+        )
+        .join(
+            latest_per_account,
+            (EarnPositionSnapshot.earn_account_id == latest_per_account.c.earn_account_id)
+            & (EarnPositionSnapshot.snapshot_date == latest_per_account.c.max_date),
+        )
+        .where(EarnPositionSnapshot.bitfinex_lent_usdt > 0)
+    )
+    active_bots_count = int(bots_q.scalar_one() or 0)
+
     lent_q = await db.execute(
         select(func.coalesce(func.sum(EarnPositionSnapshot.bitfinex_lent_usdt), 0))
         .join(

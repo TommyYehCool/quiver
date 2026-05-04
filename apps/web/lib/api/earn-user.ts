@@ -67,6 +67,9 @@ export interface EarnMeOut {
   telegram_bound: boolean;
   /** F-5a-4.1: bot username (sans @). null = bot not configured server-side. */
   telegram_bot_username: string | null;
+  /** F-5a-4.1.1: user's own TG @username (cached at bind time). null when
+   * not bound or when user has no @username on Telegram side. */
+  telegram_username: string | null;
   /** F-5a-4.3: leaderboard opt-in (default false until user toggles on). */
   show_on_leaderboard: boolean;
   bitfinex_connected: boolean;

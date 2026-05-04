@@ -486,6 +486,17 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         )
     )
 
+    # F-5b-4 funnel — first_lent_succeeded (track_once so multi-loops don't
+    # re-fire). Fresh DB session because the request session is closed by now.
+    async with AsyncSessionLocal() as funnel_db:
+        from app.services import funnel
+        inserted = await funnel.track_once(
+            funnel_db, user_id, funnel.FIRST_LENT_SUCCEEDED,
+            properties={"position_id": position_id, "offer_id": offer_id},
+        )
+        if inserted:
+            await funnel_db.commit()
+
     return f"lent:{offer_id}"
 
 
