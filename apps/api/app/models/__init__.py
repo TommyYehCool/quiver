@@ -14,6 +14,7 @@ from app.models.earn import (
     FeeAccrualStatus,
     FeePaidMethod,
 )
+from app.models.funnel_event import FunnelEvent
 from app.models.kyc import KycStatus, KycSubmission
 from app.models.ledger import (
     Account,
@@ -64,6 +65,7 @@ __all__ = [
     "EntryDirection",
     "FeeAccrualStatus",
     "FeePaidMethod",
+    "FunnelEvent",
     "KycStatus",
     "KycSubmission",
     "LedgerEntry",

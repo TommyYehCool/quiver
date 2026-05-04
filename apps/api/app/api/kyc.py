@@ -41,6 +41,12 @@ async def get_my_submission(
         .limit(1)
     )
     submission = result.scalar_one_or_none()
+    # F-5b-4: track first time user opens the KYC page (== first GET /kyc/me).
+    # Lets us see "user opened KYC but never submitted" in funnel.
+    from app.services import funnel
+    inserted = await funnel.track_once(db, user.id, funnel.KYC_FORM_OPENED)
+    if inserted:
+        await db.commit()
     return ApiResponse[KycSubmissionOut | None].ok(
         KycSubmissionOut.model_validate(submission) if submission else None
     )
@@ -89,6 +95,13 @@ async def create_submission(
     submission.id_front_url = await save_kyc_upload(submission.id, "id_front", id_front)
     submission.id_back_url = await save_kyc_upload(submission.id, "id_back", id_back)
     submission.selfie_url = await save_kyc_upload(submission.id, "selfie", selfie)
+
+    # F-5b-4: funnel hook — KYC files actually submitted.
+    from app.services import funnel
+    await funnel.track(
+        db, user.id, funnel.KYC_SUBMITTED,
+        properties={"submission_id": submission.id, "country": submission.country},
+    )
 
     await db.commit()
     await db.refresh(submission)

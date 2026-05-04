@@ -275,6 +275,12 @@ async def telegram_webhook(
     user.telegram_bound_at = now
     user.telegram_bind_code = None
     user.telegram_bind_code_expires_at = None
+    # F-5b-4 funnel
+    from app.services import funnel
+    await funnel.track(
+        db, user.id, funnel.TELEGRAM_BOUND,
+        properties={"username": username},
+    )
     await db.commit()
 
     try:

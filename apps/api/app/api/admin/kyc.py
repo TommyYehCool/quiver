@@ -178,6 +178,13 @@ async def approve_submission(
         request=request,
     )
 
+    # F-5b-4: funnel event for the user (they got approved)
+    from app.services import funnel
+    await funnel.track(
+        db, user.id, funnel.KYC_APPROVED,
+        properties={"submission_id": submission.id, "admin_id": admin.id},
+    )
+
     await db.commit()
     await db.refresh(submission)
 
@@ -225,6 +232,17 @@ async def reject_submission(
         target_id=submission.id,
         payload={"user_id": user.id, "reason": payload.reason},
         request=request,
+    )
+
+    # F-5b-4 funnel event
+    from app.services import funnel
+    await funnel.track(
+        db, user.id, funnel.KYC_REJECTED,
+        properties={
+            "submission_id": submission.id,
+            "admin_id": admin.id,
+            "reason": payload.reason[:200],
+        },
     )
 
     await db.commit()

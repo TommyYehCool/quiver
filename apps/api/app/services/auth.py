@@ -50,6 +50,13 @@ async def upsert_google_user(
             email=_mask_email(email),
             is_admin=is_admin,
         )
+        # F-5b-4: funnel event — first OAuth login = signup_completed.
+        # Fire-and-forget; failure logged in service, never re-raises.
+        from app.services import funnel
+        await funnel.track(
+            db, user.id, funnel.SIGNUP_COMPLETED,
+            properties={"is_admin": is_admin},
+        )
     else:
         user.display_name = google_userinfo.get("name") or user.display_name
         user.avatar_url = google_userinfo.get("picture") or user.avatar_url

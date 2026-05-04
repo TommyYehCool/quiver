@@ -369,6 +369,12 @@ async def accept_tos(
         payload={"version": TOS_CURRENT_VERSION},
         request=request,
     )
+    # F-5b-4: funnel hook (track_once — multiple version-bump accepts only fire first)
+    from app.services import funnel
+    await funnel.track_once(
+        db, user.id, funnel.TOS_ACCEPTED,
+        properties={"version": TOS_CURRENT_VERSION},
+    )
     await db.commit()
     return ApiResponse[TosStatusOut].ok(
         TosStatusOut(

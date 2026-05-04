@@ -34,6 +34,7 @@ from app.api.admin import audit as admin_audit
 from app.api.admin import deletions as admin_deletions
 from app.api.admin import dev as admin_dev
 from app.api.admin import earn as admin_earn
+from app.api.admin import funnel as admin_funnel
 from app.api.admin import overview as admin_overview
 from app.api.admin import kyc as admin_kyc
 from app.api.admin import platform as admin_platform
@@ -209,6 +210,7 @@ app.include_router(subscription.router)
 app.include_router(telegram_api.router)
 app.include_router(webhooks.router)
 app.include_router(admin_kyc.router)
+app.include_router(admin_funnel.router)
 app.include_router(admin_setup.router)
 app.include_router(admin_dev.router)
 app.include_router(admin_withdrawals.router)

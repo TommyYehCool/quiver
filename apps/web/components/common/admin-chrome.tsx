@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
+  Activity,
   AlertTriangle,
   ArrowLeft,
   ClipboardList,
@@ -50,6 +51,7 @@ export function AdminChrome({
 
   const items: NavItem[] = [
     { href: `/${locale}/admin`, i18nKey: "adminOverview", Icon: Gauge },
+    { href: `/${locale}/admin/funnel`, i18nKey: "adminFunnel", Icon: Activity },
     { href: `/${locale}/admin/kyc`, i18nKey: "adminKyc", Icon: ShieldCheck },
     { href: `/${locale}/admin/withdrawals`, i18nKey: "adminWithdrawals", Icon: ClipboardList },
     { href: `/${locale}/admin/earn`, i18nKey: "adminEarn", Icon: Coins },

@@ -274,6 +274,14 @@ async def update_earn_settings(
             old=prev,
             new=payload.strategy_preset,
         )
+        # F-5b-4 funnel — only track when preset actually changes (not no-op
+        # PATCH to same value)
+        if prev != payload.strategy_preset:
+            from app.services import funnel
+            await funnel.track(
+                db, user.id, funnel.STRATEGY_PRESET_CHANGED,
+                properties={"old": prev, "new": payload.strategy_preset},
+            )
     # F-5a-4.3 leaderboard opt-in lives on User, not EarnAccount, but it's
     # exposed via this endpoint because the UI toggle is co-located on
     # /earn/bot-settings. Re-fetch the user row attached to this session
@@ -291,6 +299,12 @@ async def update_earn_settings(
             old=prev,
             new=payload.show_on_leaderboard,
         )
+        # F-5b-4 funnel — only the FIRST opt-in is interesting (track_once)
+        if payload.show_on_leaderboard and not prev:
+            from app.services import funnel
+            await funnel.track_once(
+                db, user.id, funnel.LEADERBOARD_OPTIN_ENABLED,
+            )
     if changed:
         await db.commit()
         # Re-resolve user.show_on_leaderboard for the response (we may have
@@ -327,9 +341,22 @@ async def connect_bitfinex(
       4. Create/update earn_account; cache funding address; mark user.earn_tier='friend'
       5. Return funding balance as confirmation
     """
+    # F-5b-4: track every connect ATTEMPT (whether or not KYC gate passes).
+    # Funnel needs to see "user tried" so we can distinguish "didn't try" vs
+    # "tried but failed at step X". Commit immediately so even if the request
+    # raises later, the attempt is recorded.
+    from app.services import funnel
+    await funnel.track(db, user.id, funnel.BITFINEX_CONNECT_ATTEMPTED)
+    await db.commit()
+
     # Step 1: KYC gate
     kyc_status = await _get_kyc_status(db, user.id)
     if kyc_status != KycStatus.APPROVED.value:
+        await funnel.track(
+            db, user.id, funnel.BITFINEX_CONNECT_FAILED,
+            properties={"reason": "earn.kycRequired", "kyc_status": kyc_status},
+        )
+        await db.commit()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "earn.kycRequired", "params": {"current": kyc_status}},
@@ -359,6 +386,17 @@ async def connect_bitfinex(
         position = await test_adapter.get_funding_position()
     except Exception as e:
         logger.warning("earn_connect_verify_failed", user_id=user.id, error=str(e))
+        # F-5b-4 funnel — verify failed (most common: API key permissions
+        # not set right, key revoked, IP allowlist mismatch). Capture for
+        # admin to spot patterns ("everyone fails on permission X").
+        await funnel.track(
+            db, user.id, funnel.BITFINEX_CONNECT_FAILED,
+            properties={
+                "reason": "earn.bitfinexVerifyFailed",
+                "error": str(e)[:200],
+            },
+        )
+        await db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -426,6 +464,17 @@ async def connect_bitfinex(
             )
             referral_bind_status = e.code
 
+    # F-5b-4 funnel — connect succeeded. Includes assigned tier so we can
+    # see how many made it past the gate (vs. how many tried but failed).
+    await funnel.track(
+        db, user.id, funnel.BITFINEX_CONNECT_SUCCEEDED,
+        properties={
+            "earn_account_id": account.id,
+            "tier": user.earn_tier,
+            "funding_balance": str(position.funding_balance),
+        },
+    )
+
     await db.commit()
 
     logger.info(
@@ -464,6 +513,15 @@ async def connect_preview(
     If the user already has an earn_account, this echoes their current tier +
     fee instead of pre-assigning a new one.
     """
+    # F-5b-4: this endpoint is only fetched from /earn/bot-settings page
+    # render → use it as a proxy for "user opened bot-settings". Critical
+    # for diagnosing the most common funnel stall ("KYC approved but didn't
+    # connect Bitfinex" — was it because they didn't even open the page?).
+    from app.services import funnel
+    inserted = await funnel.track_once(db, user.id, funnel.BOT_SETTINGS_OPENED)
+    if inserted:
+        await db.commit()
+
     friend_count = await fee_policy.count_friend_accounts(db)
     slots_remaining = max(0, fee_policy.FRIEND_CAP - friend_count)
 
