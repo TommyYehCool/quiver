@@ -22,6 +22,7 @@ from app.api import (
     rates,
     referral,
     subscription,
+    telegram as telegram_api,
     transfers,
     twofa,
     wallet,
@@ -205,6 +206,7 @@ app.include_router(notifications.router)
 app.include_router(earn.router)
 app.include_router(referral.router)
 app.include_router(subscription.router)
+app.include_router(telegram_api.router)
 app.include_router(webhooks.router)
 app.include_router(admin_kyc.router)
 app.include_router(admin_setup.router)

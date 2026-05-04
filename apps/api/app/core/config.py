@@ -67,6 +67,13 @@ class Settings(BaseSettings):
 
     # ---- Sentry (Phase 6E) ----
     sentry_dsn: str = ""  # 空字串 → Sentry 不啟用
+
+    # ---- Telegram bot (F-5a-4.1) ----
+    # 空字串 = 還沒設,所有 telegram 相關功能 graceful no-op + UI 顯示
+    # "coming soon"。Tommy 在 BotFather 建好 bot 後填這 3 個。
+    telegram_bot_token: SecretStr = SecretStr("")
+    telegram_bot_username: str = ""  # e.g. "QuiverDeFiBot" — for deep link
+    telegram_webhook_secret: SecretStr = SecretStr("")  # X-Telegram-Bot-Api-Secret-Token
     sentry_traces_sample_rate: float = 0.0
     sentry_release: str = ""  # 通常用 git sha
 

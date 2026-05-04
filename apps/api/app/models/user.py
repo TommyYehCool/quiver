@@ -76,6 +76,36 @@ class User(Base, TimestampMixin):
         String(16), nullable=False, server_default="none"
     )
 
+    # F-5a-4.1: Telegram bot binding for notifications.
+    # Once bound, auto_lend_finalizer (and future spike/dunning events) push
+    # messages to telegram_chat_id. UNIQUE on chat_id prevents one TG account
+    # from binding to multiple Quiver users (account-takeover defense).
+    telegram_chat_id: Mapped[int | None] = mapped_column(
+        BigInteger, unique=True, index=True
+    )
+    # Cached for display (e.g., on /rank leaderboard). May go stale if user
+    # changes their TG username; re-cached on each /start.
+    telegram_username: Mapped[str | None] = mapped_column(String(64))
+    telegram_bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # One-time bind code, expires 30 min after generation. User generates from
+    # /earn/bot-settings, opens https://t.me/{bot}?start={code} in Telegram,
+    # the bot's webhook receives /start <code>, looks up by this column, sets
+    # chat_id, clears the code.
+    telegram_bind_code: Mapped[str | None] = mapped_column(
+        String(16), unique=True, index=True
+    )
+    telegram_bind_code_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+
+    # F-5a-4.3: opt-in for /rank leaderboard. Default FALSE to be
+    # privacy-conservative — even TG-bound users start anonymous and must
+    # explicitly toggle on to expose their @username on the public page.
+    # When False, /rank shows a stable "Anonymous #XXXX" hash instead.
+    show_on_leaderboard: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+
     @property
     def is_admin(self) -> bool:
         return UserRole.ADMIN.value in self.roles

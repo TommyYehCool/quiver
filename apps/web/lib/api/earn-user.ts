@@ -52,11 +52,23 @@ export interface ActiveCreditOut {
 
 export type EarnTier = "none" | "internal" | "friend" | "public" | "commercial";
 
+export type EarnStrategyPreset = "conservative" | "balanced" | "aggressive";
+
 export interface EarnMeOut {
   kyc_status: KycStatusValue;
   can_connect: boolean;
   has_earn_account: boolean;
   auto_lend_enabled: boolean;
+  /** F-5a-3.5: risk dial. null only when has_earn_account is false. */
+  strategy_preset: EarnStrategyPreset | null;
+  /** F-5b-2: true iff Quiver auto-paused auto-lend due to ≥4 unpaid weeks. */
+  dunning_pause_active: boolean;
+  /** F-5a-4.1: telegram bot binding state. */
+  telegram_bound: boolean;
+  /** F-5a-4.1: bot username (sans @). null = bot not configured server-side. */
+  telegram_bot_username: string | null;
+  /** F-5a-4.3: leaderboard opt-in (default false until user toggles on). */
+  show_on_leaderboard: boolean;
   bitfinex_connected: boolean;
   bitfinex_funding_address: string | null;
   earn_tier: EarnTier | null;
@@ -82,6 +94,8 @@ export interface EarnConnectPreviewOut {
 
 export interface EarnSettingsOut {
   auto_lend_enabled: boolean;
+  strategy_preset: EarnStrategyPreset;
+  show_on_leaderboard: boolean;
 }
 
 export interface EarnConnectOut {
@@ -104,8 +118,113 @@ export async function fetchEarnConnectPreview(): Promise<EarnConnectPreviewOut> 
   return apiFetch<EarnConnectPreviewOut>("/api/earn/connect-preview");
 }
 
+// ──── F-5b-1 performance / public-stats ────
+
+export interface DailyEarning {
+  date: string;
+  usdt: string;
+}
+
+export interface EarnPerformanceOut {
+  current_frr_apr_pct: string | null;
+  weighted_avg_apr_pct: string | null;
+  apr_vs_frr_delta_pct: string | null;
+  total_interest_30d_usdt: string | null;
+  days_with_data: number;
+  daily_earnings: DailyEarning[];
+  spike_credits_count: number;
+  spike_credits_total_usdt: string;
+  best_active_apr_pct: string | null;
+  active_credits_count: number;
+  ladder_total_usdt: string | null;
+}
+
+export interface EarnPublicStatsOut {
+  active_bots_count: number;
+  total_lent_usdt: string;
+  avg_apr_30d_pct: string | null;
+}
+
+export async function fetchEarnPerformance(): Promise<EarnPerformanceOut> {
+  return apiFetch<EarnPerformanceOut>("/api/earn/performance");
+}
+
+export async function fetchEarnPublicStats(): Promise<EarnPublicStatsOut> {
+  return apiFetch<EarnPublicStatsOut>("/api/earn/public-stats");
+}
+
+// ──── F-5b-2 fees ────
+
+export type FeeAccrualStatus = "ACCRUED" | "PAID" | "WAIVED";
+
+export type FeePaidMethod =
+  | "platform_deduction"
+  | "tron_usdt"
+  | "manual_offline";
+
+export interface FeeAccrualRow {
+  id: number;
+  period_start: string;
+  period_end: string;
+  earnings_amount: string;
+  fee_bps_applied: number;
+  fee_amount: string;
+  status: FeeAccrualStatus;
+  paid_at: string | null;
+  paid_method: FeePaidMethod | null;
+}
+
+export type DunningLevel = "ok" | "warning" | "paused";
+
+export interface EarnFeeSummaryOut {
+  perf_fee_bps: number;
+  is_premium: boolean;
+  pending_accrued_usdt: string;
+  pending_count: number;
+  quiver_wallet_balance_usdt: string;
+  has_buffer_warning: boolean;
+  /** F-5b-2: derived dunning level for UI. */
+  dunning_level: DunningLevel;
+  dunning_pause_active: boolean;
+  paid_30d_usdt: string;
+  paid_lifetime_usdt: string;
+  last_paid_at: string | null;
+  next_settle_at: string;
+  recent_accruals: FeeAccrualRow[];
+}
+
+export async function fetchEarnFees(): Promise<EarnFeeSummaryOut> {
+  return apiFetch<EarnFeeSummaryOut>("/api/earn/fees");
+}
+
+// ──── F-5a-4.3 leaderboard ────
+
+export interface RankEntryOut {
+  rank: number;
+  display_name: string;
+  is_anonymous: boolean;
+  apr_30d_pct: string;
+  days_active: number;
+  is_premium: boolean;
+}
+
+export interface EarnRankOut {
+  entries: RankEntryOut[];
+  total_qualified_count: number;
+  min_days_threshold: number;
+  last_updated_at: string;
+}
+
+export async function fetchEarnRank(): Promise<EarnRankOut> {
+  return apiFetch<EarnRankOut>("/api/earn/rank");
+}
+
 export async function updateEarnSettings(
-  payload: { auto_lend_enabled?: boolean },
+  payload: {
+    auto_lend_enabled?: boolean;
+    strategy_preset?: EarnStrategyPreset;
+    show_on_leaderboard?: boolean;
+  },
 ): Promise<EarnSettingsOut> {
   return apiFetch<EarnSettingsOut>("/api/earn/settings", {
     method: "PATCH",

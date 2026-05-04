@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   TrendingUp,
+  Trophy,
   UserCog,
   Wallet,
   X,
@@ -74,6 +75,7 @@ export function UserChrome({
       items: [
         { href: `/${locale}/earn`, i18nKey: "earn", Icon: TrendingUp },
         { href: `/${locale}/earn/bot-settings`, i18nKey: "botSettings", Icon: Bot },
+        { href: `/${locale}/rank`, i18nKey: "rank", Icon: Trophy },
         { href: `/${locale}/subscription`, i18nKey: "premium", Icon: Crown },
       ],
     },
@@ -94,13 +96,40 @@ export function UserChrome({
     accountItems.push({ href: `/${locale}/kyc`, i18nKey: "kyc", Icon: ShieldCheck });
   }
 
+  // All registered hrefs across every section + accountItems — used to make
+  // `isActive` longest-prefix-wins. Without this, `/earn/bot-settings` would
+  // light up BOTH the `/earn` and `/earn/bot-settings` items because the
+  // parent's startsWith check would match too.
+  const allHrefs = React.useMemo(
+    () => [
+      ...sections.flatMap((s) => s.items.map((i) => i.href)),
+      ...accountItems.map((i) => i.href),
+    ],
+    // sections + accountItems are recomputed every render but stable per
+    // (locale, showKycEntry); the deps below drive recomputation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, showKycEntry],
+  );
+
   function isActive(href: string) {
+    // Dashboard is exact-match only — `/dashboard/foo` doesn't exist but if
+    // we ever add a sub-route, we'd want it to behave like `/earn` below.
     if (href.endsWith("/dashboard")) return pathname === href;
-    return (
+    const matches =
       pathname === href ||
       pathname.startsWith(href + "/") ||
-      pathname.startsWith(href + "?")
+      pathname.startsWith(href + "?");
+    if (!matches) return false;
+    // Longest-prefix-wins: another nav item is more specific → not us.
+    const moreSpecific = allHrefs.some(
+      (h) =>
+        h !== href &&
+        h.startsWith(href + "/") &&
+        (pathname === h ||
+          pathname.startsWith(h + "/") ||
+          pathname.startsWith(h + "?")),
     );
+    return !moreSpecific;
   }
 
   // ───────────────────────────────────────────────

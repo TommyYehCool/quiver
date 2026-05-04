@@ -12,6 +12,8 @@
       "secondary": "了解更多"
     },
     "features": {
+      "sectionTitle": "錢包功能",
+      "sectionDesc": "上線、收款、轉帳、提領 — 一個帳號全部搞定。",
       "f1": {
         "title": "用熟悉的法幣顯示",
         "desc": "看到的數字就是你熟悉的本地貨幣，不用換算、不用心算。"
@@ -59,19 +61,19 @@
       "howTitle": "怎麼運作？",
       "step1Title": "1. 你有自己的 Bitfinex 帳戶 + USDT",
       "step1Desc": "我們不持有任何用戶資金。你的 USDT 永遠在你自己的 Bitfinex Funding wallet。",
-      "step2Title": "2. 給 Quiver 一支 read-only API key",
-      "step2Desc": "用 AES-GCM + KEK 加密儲存。Quiver 只能讀，不能 withdraw、不能 trade。隨時可在 Bitfinex 撤銷。",
-      "step3Title": "3. Quiver 每天追蹤你的部位",
-      "step3Desc": "幫你看 Bitfinex Funding wallet 餘額、已借出的本金、累積收益。可選加 Polygon 地址追 AAVE 部位。",
-      "step4Title": "4. 你看 dashboard，自己決定下一步",
-      "step4Desc": "Quiver 不替你做投資決策。看數據、了解市場、自己選何時加碼或撤回。",
+      "step2Title": "2. 給 Quiver Bitfinex API key（只開 Funding 權限）",
+      "step2Desc": "用 AES-GCM + KEK 加密儲存，跟錢包私鑰同等級保護。Quiver 只能在 Bitfinex 的 Funding 區做事 — 掛 funding offer、取消 offer。永遠不能 withdraw、不能 trade、不能把錢轉去其他錢包。隨時可在 Bitfinex 撤銷 key。",
+      "step3Title": "3. Quiver 自動幫你掛 funding offer",
+      "step3Desc": "依照你選的策略（保守 / 平衡 / 進取），把資金切成多階 ladder 同時掛。每筆借期到期後自動續借。Spike 抓到、利息結算、出狀況都會推 Telegram 通知。",
+      "step4Title": "4. 你選策略偏好，Quiver 執行",
+      "step4Desc": "你決定 risk 等級 + 隨時可開關 auto-lend。Quiver 不替你判斷時機，不主動買幣，不轉去其他平台。要停就一鍵 disconnect。",
       "h1": {
         "title": "真實市場利率",
         "desc": "Bitfinex Funding 把 USDT 借給 margin trader，APY 隨市場波動。AAVE V3 Polygon 純鏈上借貸，TVL $1.2B。實際 net APY 高過一般銀行定存很多。"
       },
       "h2": {
-        "title": "你的錢始終在你帳戶",
-        "desc": "資金永遠在你自己的 Bitfinex 帳戶 / EVM 錢包，Quiver 只是讀資料的儀表板，不持有、不能 withdraw。"
+        "title": "你的錢始終在你 Bitfinex",
+        "desc": "資金永遠在你自己的 Bitfinex Funding wallet。Quiver 連 withdrawal API 權限都不要 — 結構上沒有任何方法把錢轉出你帳戶,只能在 Funding 區掛單 / 取消單。"
       },
       "h3": {
         "title": "完全免費（friend tier）",
@@ -160,6 +162,7 @@
     "wallet": "錢包",
     "earn": "Earn",
     "botSettings": "放貸機器人設定",
+    "rank": "排行榜",
     "premium": "Premium",
     "referral": "推薦",
     "guide": "教學",

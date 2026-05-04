@@ -25,6 +25,7 @@ pending_outbound) emits warnings for admin to investigate.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -35,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.models.earn import EarnAccount, EarnPosition, EarnPositionStatus
+from app.services.earn import notifications as earn_notifications
 from app.services.earn import repo as earn_repo
 from app.services.earn.auto_lend import (
     MIN_AUTO_LEND_USDT,
@@ -42,13 +44,18 @@ from app.services.earn.auto_lend import (
     _compute_competitive_rate,
     _submit_ladder,
 )
-from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
+from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter, fetch_market_frr
 
 logger = get_logger(__name__)
 
 # Pipeline stuck threshold — positions sitting in non-terminal in-flight states
 # beyond this are surfaced as warnings.
 STUCK_THRESHOLD = timedelta(hours=1)
+
+# F-5a-4.2 spike-capture threshold (mirror of api/earn.py SPIKE_APR_THRESHOLD
+# and spike_detector.SPIKE_THRESHOLD_APY). Keep in sync — when a credit fills
+# at this APR or higher, we fire a spike notification.
+SPIKE_APR_THRESHOLD = Decimal("12")
 
 
 async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str, Any]:
@@ -80,6 +87,50 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         return summary
 
     active_offer_ids = {o.id for o in active_offers}
+
+    # ── F-5a-4.2 spike-capture detection ──
+    # Walk active credits (filled funding loans). Any credit opened SINCE the
+    # last cron run AND with APR ≥ SPIKE_APR_THRESHOLD (12%) is a spike that
+    # the user wants to know about. Fire one notification per new spike credit.
+    # We also need current FRR for the "vs FRR" comparison line; cheap if we
+    # already have a Bitfinex query in flight, fail-soft if FRR fetch hiccups.
+    now_ts = datetime.now(timezone.utc)
+    last_check = account.last_credits_check_at  # backfilled to NOW() at migration
+    current_frr_apr: Decimal | None = None
+    spike_credits = []
+    for credit in bf_position.active_credits:
+        opened_at = datetime.fromtimestamp(
+            credit.opened_at_ms / 1000, tz=timezone.utc
+        )
+        if opened_at > last_check and credit.apr_pct >= SPIKE_APR_THRESHOLD:
+            spike_credits.append(credit)
+
+    if spike_credits:
+        try:
+            market = await fetch_market_frr()
+            current_frr_apr = market.frr_apy_pct if market is not None else None
+        except Exception:  # noqa: BLE001
+            current_frr_apr = None
+        for credit in spike_credits:
+            asyncio.create_task(
+                earn_notifications.notify_spike_captured(
+                    user_id=account.user_id,
+                    amount=credit.amount,
+                    apr_pct=credit.apr_pct,
+                    period_days=credit.period_days,
+                    expires_at_ms=credit.expires_at_ms,
+                    expected_interest=credit.expected_interest_at_expiry,
+                    current_frr_apr=current_frr_apr,
+                )
+            )
+            logger.info(
+                "earn_reconcile_spike_notified",
+                earn_account_id=account.id,
+                credit_id=credit.id,
+                apr_pct=str(credit.apr_pct),
+            )
+    # Always advance the watermark so we don't re-evaluate the same credits.
+    account.last_credits_check_at = now_ts
 
     # ── 1. close lent positions whose offers no longer exist on Bitfinex ──
     lent_positions_q = await db.execute(
@@ -181,10 +232,11 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
 
     # Submit fresh offer(s) for the idle funds (use available, not balance).
     # F-5a-3.2: depth-aware base rate. F-5a-3.3: laddered tranches if amount
-    # qualifies (≥ 750 USDT).
+    # qualifies (≥ 750 USDT). F-5a-3.5: ladder shape + period table driven
+    # by the user's strategy_preset.
     amount = bf_position.funding_available
     base_rate = await _compute_competitive_rate(amount)
-    ladder = _build_ladder(amount, base_rate)
+    ladder = _build_ladder(amount, base_rate, account.strategy_preset)
     try:
         offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
     except Exception as e:
@@ -215,6 +267,16 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     )
     db.add(new_pos)
     await db.commit()
+
+    # F-5a-4.2: auto-renew notification (kind="renew" → 「Quiver 自動續借」 copy)
+    asyncio.create_task(
+        earn_notifications.notify_lent_event(
+            user_id=account.user_id,
+            ladder=ladder,
+            offer_ids=offer_ids,
+            kind="renew",
+        )
+    )
 
     summary["renewed"] += 1
     logger.info(

@@ -12,6 +12,8 @@
       "secondary": "詳しく見る"
     },
     "features": {
+      "sectionTitle": "ウォレット機能",
+      "sectionDesc": "入金、受取、送金、出金 — 一つのアカウントで全て完結。",
       "f1": {
         "title": "常に法定通貨で表示",
         "desc": "残高は TWD または USD で表示 — 暗算は不要。"
@@ -59,19 +61,19 @@
       "howTitle": "仕組み",
       "step1Title": "1. ご自身の Bitfinex アカウントと USDT を保有",
       "step1Desc": "当社はユーザー資金を一切預かりません。USDT はあなた自身の Bitfinex Funding ウォレットに残ります。",
-      "step2Title": "2. Quiver に読み取り専用 API キーを提供",
-      "step2Desc": "AES-GCM + KEK で暗号化保管。Quiver は読み取りのみ — 出金・取引は不可。Bitfinex 側でいつでも取り消せます。",
-      "step3Title": "3. Quiver が日々ポジションを追跡",
-      "step3Desc": "Bitfinex Funding ウォレット残高、貸出元本、収益を確認できます。AAVE 用に任意で Polygon アドレスも追加可能。",
-      "step4Title": "4. ダッシュボードを見て、次の行動を自分で決定",
-      "step4Desc": "Quiver は投資判断を代行しません。データを読み、市場を理解し、自分で動きを決めてください。",
+      "step2Title": "2. Quiver に Bitfinex API キーを提供(Funding 権限のみ)",
+      "step2Desc": "AES-GCM + KEK で暗号化保管 — ウォレット秘密鍵と同等の保護。Quiver は Bitfinex の Funding 領域のみ操作可能 — funding offer の発注・キャンセル。出金・取引・他ウォレットへの移動は絶対不可。Bitfinex 側でいつでもキーを取り消せます。",
+      "step3Title": "3. Quiver が自動で funding offer を発注",
+      "step3Desc": "選択した戦略(保守 / バランス / アグレッシブ)に基づき、資金を多段ラダーに分けて同時発注。期限満了時に自動更新。スパイク捕獲、利息決済、問題発生時に Telegram 通知。",
+      "step4Title": "4. あなたが戦略を選び、Quiver が実行",
+      "step4Desc": "リスクレベル設定 + auto-lend のオン/オフはいつでも切替可能。Quiver は市場タイミングを判断せず、他のコインを買わず、他のプラットフォームへ移動しません。ワンクリックで切断可能。",
       "h1": {
         "title": "本物の市場金利",
         "desc": "Bitfinex Funding は USDT を margin トレーダーに貸し出し、APY は市場により変動。AAVE V3 Polygon は完全オンチェーン、TVL $1.2B。従来の銀行定期預金より 3-10 倍高い純 APY。"
       },
       "h2": {
-        "title": "あなたの資金はあなたのアカウントに",
-        "desc": "資金は常にあなたの Bitfinex / EVM ウォレット内。Quiver は読み取り専用ダッシュボードで、預かることも引き出すこともできません。"
+        "title": "あなたの資金はあなたの Bitfinex に",
+        "desc": "資金は常にあなた自身の Bitfinex Funding ウォレット内。Quiver は withdrawal API 権限さえ要求しません — 構造的に資金を引き出す方法がなく、Funding 領域での発注・キャンセルのみ可能です。"
       },
       "h3": {
         "title": "友人向けは無料",
@@ -160,6 +162,7 @@
     "wallet": "ウォレット",
     "earn": "Earn",
     "botSettings": "ボット設定",
+    "rank": "リーダーボード",
     "premium": "Premium",
     "referral": "リファラル",
     "guide": "ガイド",

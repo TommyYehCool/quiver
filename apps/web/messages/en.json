@@ -12,6 +12,8 @@
       "secondary": "Learn more"
     },
     "features": {
+      "sectionTitle": "Wallet features",
+      "sectionDesc": "Top-up, receive, transfer, withdraw — all in one account.",
       "f1": {
         "title": "Always your local currency",
         "desc": "See balances in the fiat currency you know — no mental math needed."
@@ -59,19 +61,19 @@
       "howTitle": "How it works",
       "step1Title": "1. You have your own Bitfinex account + USDT",
       "step1Desc": "We hold zero user funds. Your USDT stays in your own Bitfinex Funding wallet.",
-      "step2Title": "2. Give Quiver a read-only API key",
-      "step2Desc": "Encrypted with AES-GCM + KEK. Quiver can only read — no withdraw, no trade. Revoke anytime on Bitfinex.",
-      "step3Title": "3. Quiver tracks your position daily",
-      "step3Desc": "Watch Bitfinex Funding wallet balance, lent principal, earnings. Optional Polygon address for AAVE.",
-      "step4Title": "4. You see the dashboard, you decide next",
-      "step4Desc": "Quiver doesn't make investment decisions for you. Read data, understand markets, choose your own moves.",
+      "step2Title": "2. Give Quiver a Bitfinex API key (Funding scope only)",
+      "step2Desc": "Encrypted with AES-GCM + KEK — same protection as wallet private keys. Quiver can only operate in Bitfinex's Funding section — place / cancel funding offers. Never can withdraw, trade, or transfer to other wallets. Revoke the key anytime on Bitfinex.",
+      "step3Title": "3. Quiver auto-places funding offers for you",
+      "step3Desc": "Slices your capital into a multi-tier ladder per your chosen strategy (Conservative / Balanced / Aggressive) and posts them simultaneously. Auto-renews on offer expiry. Telegram notifications on spike captures, settlements, and any issues.",
+      "step4Title": "4. You pick the preset, Quiver executes",
+      "step4Desc": "You set the risk level + toggle auto-lend on/off anytime. Quiver doesn't time the market for you, never buys other coins, never moves to other platforms. One click to disconnect.",
       "h1": {
         "title": "Real market rates",
         "desc": "Bitfinex Funding lends USDT to margin traders, APY varies with market. AAVE V3 Polygon is pure on-chain lending, $1.2B TVL. Net APY beats traditional bank deposits by 3-10x."
       },
       "h2": {
-        "title": "Your money stays in your account",
-        "desc": "Funds always in YOUR Bitfinex / EVM wallet. Quiver is just a read-only dashboard, doesn't hold and can't withdraw."
+        "title": "Your money stays in YOUR Bitfinex",
+        "desc": "Funds always in your own Bitfinex Funding wallet. Quiver doesn't even ask for withdrawal API permission — there's structurally no way to move money out of your account, only place and cancel funding offers."
       },
       "h3": {
         "title": "Free for friend tier",
@@ -160,6 +162,7 @@
     "wallet": "Wallet",
     "earn": "Earn",
     "botSettings": "Bot settings",
+    "rank": "Leaderboard",
     "premium": "Premium",
     "referral": "Referral",
     "guide": "Guide",

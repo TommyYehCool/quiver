@@ -34,6 +34,7 @@ from app.models.earn import (
     EarnAccount,
     EarnPosition,
     EarnPositionStatus,
+    EarnStrategyPreset,
 )
 from app.services import tatum
 from app.services.earn import repo as earn_repo
@@ -73,15 +74,47 @@ DEFAULT_OFFER_PERIOD_DAYS = 2
 # Bitfinex funding period constraints: min 2 days, max 120 days. Rates
 # expressed as APR (annualized) for readability — each tick represents
 # the boundary between two period choices.
-PERIOD_RATE_THRESHOLDS_APR = [
+#
+# F-5a-3.5: per-preset thresholds. CONSERVATIVE prefers shorter lock-ups
+# (max 7 days) for liquidity; AGGRESSIVE locks high-rate tranches up to 60d
+# to maximise spike yield capture. BALANCED is the F-5a-3.4 default.
+PERIOD_RATE_THRESHOLDS_APR_BALANCED = [
     (Decimal("15"), 30),  # >= 15% APR → lock 30 days
     (Decimal("10"), 14),  # 10-15% APR → 14 days
     (Decimal("5"), 7),    # 5-10% APR  → 7 days
     (Decimal("0"), 2),    # < 5% APR   → 2 days (default short)
 ]
+PERIOD_RATE_THRESHOLDS_APR_CONSERVATIVE = [
+    (Decimal("10"), 7),   # >= 10% APR → 7 days (cap, never lock long)
+    (Decimal("5"), 4),    # 5-10% APR  → 4 days
+    (Decimal("0"), 2),    # < 5% APR   → 2 days
+]
+PERIOD_RATE_THRESHOLDS_APR_AGGRESSIVE = [
+    (Decimal("20"), 60),  # >= 20% APR → lock 60 days (extreme spike — milk it)
+    (Decimal("12"), 30),  # 12-20% APR → 30 days
+    (Decimal("7"), 14),   # 7-12% APR  → 14 days
+    (Decimal("3"), 7),    # 3-7% APR   → 7 days
+    (Decimal("0"), 2),    # < 3% APR   → 2 days
+]
+
+# Backward compat alias — older callers + tests that don't pass a preset get
+# the same behaviour they always had (Balanced was the only preset before).
+PERIOD_RATE_THRESHOLDS_APR = PERIOD_RATE_THRESHOLDS_APR_BALANCED
 
 
-def _select_period_days(rate_daily: Decimal | None) -> int:
+def _period_thresholds_for(preset: str) -> list[tuple[Decimal, int]]:
+    """Return the period-selection threshold table for a preset value."""
+    if preset == EarnStrategyPreset.CONSERVATIVE.value:
+        return PERIOD_RATE_THRESHOLDS_APR_CONSERVATIVE
+    if preset == EarnStrategyPreset.AGGRESSIVE.value:
+        return PERIOD_RATE_THRESHOLDS_APR_AGGRESSIVE
+    return PERIOD_RATE_THRESHOLDS_APR_BALANCED
+
+
+def _select_period_days(
+    rate_daily: Decimal | None,
+    preset: str = EarnStrategyPreset.BALANCED.value,
+) -> int:
     """Pick funding offer period (days) based on the rate environment.
 
     Strategy:
@@ -90,12 +123,15 @@ def _select_period_days(rate_daily: Decimal | None) -> int:
       - Low rates are bad — keep period short so we can re-price up when
         rates recover.
 
+    The per-preset table is chosen by `preset` (F-5a-3.5). Default keeps
+    backward-compatible BALANCED behaviour for callers that don't pass one.
+
     Returns DEFAULT_OFFER_PERIOD_DAYS (2) if rate is None (FRR mode).
     """
     if rate_daily is None:
         return DEFAULT_OFFER_PERIOD_DAYS
     apr = rate_daily * Decimal(365) * Decimal(100)
-    for threshold_apr, days in PERIOD_RATE_THRESHOLDS_APR:
+    for threshold_apr, days in _period_thresholds_for(preset):
         if apr >= threshold_apr:
             return days
     return DEFAULT_OFFER_PERIOD_DAYS
@@ -127,14 +163,43 @@ BOOK_DEPTH_FACTOR = Decimal("2")
 #
 # Format: list of (fraction_of_amount, rate_multiplier_above_base).
 # Fractions must sum to 1.0. Multiplier 1.0 = base rate, 1.5 = 50% above.
-LADDER_TRANCHES: list[tuple[Decimal, Decimal]] = [
+#
+# F-5a-3.5: per-preset ladder. CONSERVATIVE concentrates supply at low
+# multipliers (fast fill, sacrifices spike upside). AGGRESSIVE pushes more
+# supply into the high-premium tranches (slower base fill but bigger spike
+# capture). BALANCED is the F-5a-3.3 default.
+LADDER_TRANCHES_BALANCED: list[tuple[Decimal, Decimal]] = [
     (Decimal("0.60"), Decimal("1.00")),  # baseline (fast fill)
     (Decimal("0.20"), Decimal("1.20")),  # mild spike capture
     (Decimal("0.10"), Decimal("1.50")),  # moderate spike
     (Decimal("0.07"), Decimal("2.00")),  # major spike
     (Decimal("0.03"), Decimal("4.00")),  # extreme liquidation event
 ]
-LADDER_MIN_TRANCHES = len(LADDER_TRANCHES)  # 5
+LADDER_TRANCHES_CONSERVATIVE: list[tuple[Decimal, Decimal]] = [
+    (Decimal("0.80"), Decimal("1.00")),  # most weight on baseline (fast fill)
+    (Decimal("0.15"), Decimal("1.20")),  # mild spike
+    (Decimal("0.05"), Decimal("1.50")),  # moderate spike (last)
+]
+LADDER_TRANCHES_AGGRESSIVE: list[tuple[Decimal, Decimal]] = [
+    (Decimal("0.40"), Decimal("1.00")),  # baseline (smaller bulk)
+    (Decimal("0.25"), Decimal("1.20")),  # mild spike (heavier)
+    (Decimal("0.15"), Decimal("1.50")),  # moderate spike (heavier)
+    (Decimal("0.12"), Decimal("2.00")),  # major spike (heavier)
+    (Decimal("0.08"), Decimal("4.00")),  # extreme spike (heavier)
+]
+
+# Backward compat alias (BALANCED was the only preset before F-5a-3.5).
+LADDER_TRANCHES = LADDER_TRANCHES_BALANCED
+LADDER_MIN_TRANCHES = len(LADDER_TRANCHES_BALANCED)  # 5
+
+
+def _ladder_tranches_for(preset: str) -> list[tuple[Decimal, Decimal]]:
+    """Return the (fraction, rate_multiplier) tranche table for a preset."""
+    if preset == EarnStrategyPreset.CONSERVATIVE.value:
+        return LADDER_TRANCHES_CONSERVATIVE
+    if preset == EarnStrategyPreset.AGGRESSIVE.value:
+        return LADDER_TRANCHES_AGGRESSIVE
+    return LADDER_TRANCHES_BALANCED
 
 
 # ─────────────────────────────────────────────────────────
@@ -333,6 +398,8 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         adapter = await BitfinexFundingAdapter.from_connection(db, conn)
         position_amount = pos.amount
         retry_count = pos.retry_count
+        strategy_preset = account.strategy_preset
+        user_id = account.user_id  # for F-5a-4.1 telegram notification
 
     # ─── outside DB: hit Bitfinex ───
     try:
@@ -370,7 +437,8 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
 
     # F-5a-3.3: build ladder if amount qualifies, else single-offer fallback.
     # F-5a-3.4: ladder builder embeds per-tranche period (high rates lock long).
-    ladder = _build_ladder(position_amount, competitive_rate)
+    # F-5a-3.5: ladder slicing + period selection driven by user's preset.
+    ladder = _build_ladder(position_amount, competitive_rate, strategy_preset)
     try:
         offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
     except Exception as e:
@@ -400,49 +468,73 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         offer_id=offer_id,
         amount=str(position_amount),
     )
+
+    # F-5a-4.1: fire-and-forget telegram notification. We don't await because
+    # a Telegram outage / 5xx must NEVER fail the auto-lend (the offer is
+    # already on Bitfinex, the rest is just user comms). asyncio.create_task
+    # schedules the coroutine to run on the next event loop iteration; any
+    # exception inside is logged by the service itself.
+    # F-5a-4.2: kind="fresh" distinguishes from auto-renew (reconcile path).
+    from app.services.earn import notifications as earn_notifications
+
+    asyncio.create_task(
+        earn_notifications.notify_lent_event(
+            user_id=user_id,
+            ladder=ladder,
+            offer_ids=offer_ids,
+            kind="fresh",
+        )
+    )
+
     return f"lent:{offer_id}"
 
 
 def _build_ladder(
     amount: Decimal,
     base_rate: Decimal | None,
+    preset: str = EarnStrategyPreset.BALANCED.value,
 ) -> list[tuple[Decimal, Decimal | None, int]]:
-    """Slice `amount` into K tranches at increasing rates per LADDER_TRANCHES.
+    """Slice `amount` into K tranches at increasing rates per the preset table.
 
     Returns list of (chunk_amount, chunk_rate, period_days). Each tranche
-    has its own period chosen by `_select_period_days(chunk_rate)` so high-
-    rate tranches lock their elevated yield for longer (F-5a-3.4 dynamic
-    period strategy).
+    has its own period chosen by `_select_period_days(chunk_rate, preset)` so
+    high-rate tranches lock their elevated yield for longer (F-5a-3.4 dynamic
+    period strategy), with the threshold table picked by `preset` (F-5a-3.5).
 
     Eligibility:
       - amount >= floor where smallest_fraction × amount >= MIN_AUTO_LEND_USDT
-        → laddered (K tuples). With smallest_fraction=3% and MIN=150, that's
-        amount >= $5000.
+        → laddered (K tuples). For BALANCED that's amount >= $5000 (smallest
+        fraction 3%); CONSERVATIVE qualifies earlier ($3000 — smallest 5%);
+        AGGRESSIVE later ($1875 — smallest 8%).
       - else → single tuple [(amount, base_rate, period)] (legacy single offer)
       - base_rate is None → single tuple at FRR (no rate computation possible)
 
     Per-tranche minimum: MIN_AUTO_LEND_USDT (Bitfinex platform rule).
+
+    `preset` defaults to BALANCED for backward compat with callers / tests
+    that don't pass one (matches pre-F-5a-3.5 behaviour exactly).
     """
+    table = _ladder_tranches_for(preset)
     # Single-offer fallbacks
     if base_rate is None:
-        return [(amount, None, _select_period_days(None))]
-    smallest_fraction = min(frac for frac, _ in LADDER_TRANCHES)
+        return [(amount, None, _select_period_days(None, preset))]
+    smallest_fraction = min(frac for frac, _ in table)
     smallest_chunk = amount * smallest_fraction
     if smallest_chunk < MIN_AUTO_LEND_USDT:
-        return [(amount, base_rate, _select_period_days(base_rate))]
+        return [(amount, base_rate, _select_period_days(base_rate, preset))]
 
     # Build laddered tranches
     tranches: list[tuple[Decimal, Decimal | None, int]] = []
     cumulative = Decimal(0)
-    for i, (frac, mult) in enumerate(LADDER_TRANCHES):
+    for i, (frac, mult) in enumerate(table):
         # Last tranche absorbs rounding to ensure exact total
-        if i == len(LADDER_TRANCHES) - 1:
+        if i == len(table) - 1:
             chunk = amount - cumulative
         else:
             chunk = (amount * frac).quantize(Decimal("0.01"))
             cumulative += chunk
         rate = base_rate * mult
-        period = _select_period_days(rate)
+        period = _select_period_days(rate, preset)
         tranches.append((chunk, rate, period))
     return tranches
 
