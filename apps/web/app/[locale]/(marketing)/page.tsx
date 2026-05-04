@@ -254,10 +254,10 @@ function Features() {
     <section id="features" className="container py-16">
       <div className="mx-auto max-w-3xl text-center">
         <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-          錢包功能
+          {t("sectionTitle")}
         </h2>
         <p className="mt-3 text-base text-slate-600 dark:text-slate-300">
-          上線、收款、轉帳、提領 — 一個帳號全部搞定。
+          {t("sectionDesc")}
         </p>
       </div>
       <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
