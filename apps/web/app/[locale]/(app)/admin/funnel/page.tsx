@@ -167,7 +167,62 @@ export default async function AdminFunnelPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Mobile: stacked card list (md+ swaps to wide table). 8 cols
+              don't fit even with overflow-x-auto on iPhone — content gets
+              clipped without showing a scrollbar. */}
+          <div className="space-y-2 md:hidden">
+            {users.map((u) => (
+              <div
+                key={u.user_id}
+                className="rounded-lg border border-cream-edge bg-paper p-3 dark:border-slate-700 dark:bg-slate-900/30"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-mono text-[11px]">{u.email}</div>
+                    <div className="text-[10px] text-slate-400">
+                      #{u.user_id} · 註冊 {fmtDateTime(u.signup_at)}
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "flex-none font-mono text-sm font-semibold tabular-nums",
+                    u.stalled_minutes !== null && u.stalled_minutes > 60 * 24
+                      ? "text-red-600 dark:text-red-400"
+                      : u.stalled_minutes !== null && u.stalled_minutes > 60 * 4
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-slate-500",
+                  )}>
+                    {fmtMinutes(u.stalled_minutes)}
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+                  <TierBadge tier={u.earn_tier} />
+                  <KycBadge status={u.kyc_status} />
+                  <span className="inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 dark:bg-slate-800">
+                    {u.bitfinex_connected ? (
+                      <><CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" /> Bitfinex</>
+                    ) : (
+                      <><AlertTriangle className="h-2.5 w-2.5 text-slate-300" /> Bitfinex</>
+                    )}
+                  </span>
+                  <span className="inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 dark:bg-slate-800">
+                    <Send className={cn(
+                      "h-2.5 w-2.5",
+                      u.telegram_bound ? "text-emerald-500" : "text-slate-300",
+                    )} /> TG
+                  </span>
+                </div>
+                <div className="mt-1.5 text-[10px] text-slate-500">
+                  Last: <span className="font-mono">{u.last_event_name ?? "—"}</span>
+                  {u.last_event_at ? (
+                    <span className="ml-1 text-slate-400">@ {fmtDateTime(u.last_event_at)}</span>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop (md+): wide table */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-cream-edge text-left text-slate-500 dark:border-slate-700">

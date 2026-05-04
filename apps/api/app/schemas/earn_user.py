@@ -74,6 +74,10 @@ class EarnMeOut(BaseModel):
     # bot_username is null (= bot not configured server-side yet).
     telegram_bound: bool
     telegram_bot_username: str | None
+    # F-5a-4.1.1: cached TG username (e.g., "TommyYeh") so the bound state
+    # can render @TommyYeh without an extra round-trip. Null when not bound
+    # OR when the user has no @username on Telegram side.
+    telegram_username: str | None
     # F-5a-4.3: leaderboard opt-in. Drives the toggle on bot-settings.
     show_on_leaderboard: bool
     bitfinex_connected: bool

@@ -338,6 +338,7 @@ export default async function EarnConnectPage({
                   <TelegramConnectCard
                     initialBound={earn.telegram_bound}
                     initialBotUsername={earn.telegram_bot_username}
+                    initialUsername={earn.telegram_username}
                     initialShowOnLeaderboard={earn.show_on_leaderboard}
                     locale={locale}
                   />
