@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
+  Bot,
   Crown,
   Gift,
   LayoutDashboard,
@@ -72,6 +73,7 @@ export function UserChrome({
       labelKey: "navSectionEarn",
       items: [
         { href: `/${locale}/earn`, i18nKey: "earn", Icon: TrendingUp },
+        { href: `/${locale}/earn/bot-settings`, i18nKey: "botSettings", Icon: Bot },
         { href: `/${locale}/subscription`, i18nKey: "premium", Icon: Crown },
       ],
     },
@@ -84,12 +86,13 @@ export function UserChrome({
     },
   ];
 
-  // Account section — KYC entry only when needed, settings always present.
+  // KYC stays in sidebar as a nav item when not yet approved (it's a workflow,
+  // not a utility). Settings / admin badge / locale / logout moved to top-right
+  // per F-5a-1.1 — standard SaaS pattern (Notion / Linear / Stripe).
   const accountItems: NavItem[] = [];
   if (showKycEntry) {
     accountItems.push({ href: `/${locale}/kyc`, i18nKey: "kyc", Icon: ShieldCheck });
   }
-  accountItems.push({ href: `/${locale}/settings`, i18nKey: "settings", Icon: Settings });
 
   function isActive(href: string) {
     if (href.endsWith("/dashboard")) return pathname === href;
@@ -143,40 +146,40 @@ export function UserChrome({
         ))}
       </nav>
 
-      {/* Bottom: account + admin badge + logout */}
-      <div className="border-t border-cream-edge px-3 py-3 dark:border-slate-800">
-        {accountItems.length > 0 ? (
-          <ul className="space-y-0.5">
-            {accountItems.map((item) => (
-              <li key={item.href}>
-                <NavLink
-                  item={item}
-                  active={isActive(item.href)}
-                  t={t}
-                  onNavigate={() => setMobileOpen(false)}
-                />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {isAdmin ? (
-          <Link
-            href={`/${locale}/admin`}
-            onClick={() => setMobileOpen(false)}
-            className="mt-2 flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-100 px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-200 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60"
-            title={t("switchToAdmin")}
-          >
-            <UserCog className="h-4 w-4" />
-            {t("switchToAdmin")}
-          </Link>
-        ) : null}
-
-        <div className="mt-3 flex items-center justify-between gap-2 px-1">
-          <LocaleSwitcher />
-          <LogoutButton locale={locale} />
+      {/* Bottom: KYC entry (workflow item) + admin shortcut for mobile.
+           Settings / locale / logout are in the top-right header. */}
+      {accountItems.length > 0 || isAdmin ? (
+        <div className="border-t border-cream-edge px-3 py-3 dark:border-slate-800">
+          {accountItems.length > 0 ? (
+            <ul className="space-y-0.5">
+              {accountItems.map((item) => (
+                <li key={item.href}>
+                  <NavLink
+                    item={item}
+                    active={isActive(item.href)}
+                    t={t}
+                    onNavigate={() => setMobileOpen(false)}
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {isAdmin ? (
+            <Link
+              href={`/${locale}/admin`}
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border border-violet-300 bg-violet-100 px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-200 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60",
+                accountItems.length > 0 ? "mt-2" : "",
+              )}
+              title={t("switchToAdmin")}
+            >
+              <UserCog className="h-4 w-4" />
+              {t("switchToAdmin")}
+            </Link>
+          ) : null}
         </div>
-      </div>
+      ) : null}
     </>
   );
 
@@ -238,9 +241,30 @@ export function UserChrome({
             {/* Desktop: spacer (sidebar already shows brand) */}
             <div className="hidden md:block" />
 
-            {/* Right utilities — present on both desktop and mobile */}
+            {/* Right utilities — Settings / admin badge / bell / locale /
+                 logout. Standard SaaS top-right pattern. */}
             <div className="flex items-center gap-1 sm:gap-2">
+              <Link
+                href={`/${locale}/settings`}
+                aria-label={t("settings")}
+                title={t("settings")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+              >
+                <Settings className="h-5 w-5" />
+              </Link>
+              {isAdmin ? (
+                <Link
+                  href={`/${locale}/admin`}
+                  className="hidden items-center gap-1.5 rounded-full border border-violet-300 bg-violet-100 px-3 py-1.5 text-xs font-medium text-violet-700 transition-colors hover:bg-violet-200 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60 sm:inline-flex"
+                  title={t("switchToAdmin")}
+                >
+                  <UserCog className="h-3.5 w-3.5" />
+                  <span className="hidden lg:inline">{t("switchToAdmin")}</span>
+                </Link>
+              ) : null}
               <NotificationBell />
+              <LocaleSwitcher />
+              <LogoutButton locale={locale} />
             </div>
           </header>
 

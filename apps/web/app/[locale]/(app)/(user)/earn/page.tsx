@@ -19,7 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AutoLendToggle } from "@/components/earn/auto-lend-toggle";
 import { ActiveCreditRow } from "@/components/earn/active-credit-row";
 import type { EarnPositionStatus } from "@/lib/api/earn-user";
 
@@ -51,7 +50,14 @@ interface PageStrings {
     earned: { label: string; sub: string };
   };
   activeLoans: { title: string; desc: string };
-  autoLend: { title: string; desc: string };
+  autoLend: {
+    title: string;
+    desc: string;
+    statusOn: string;
+    statusOff: string;
+    movedNote: string;
+    manageCta: string;
+  };
   pipeline: { title: string; desc: string };
   recentSnapshots: { title: string; desc: string; date: string; lent: string; daily: string };
   footer: { connected: string; viewGuide: string };
@@ -91,6 +97,10 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     autoLend: {
       title: "Auto-lend 自動放貸",
       desc: "打開時:每筆新存進 Quiver 的 USDT 會自動送到你 Bitfinex 並掛 offer。關掉時:新 deposit 不會自動進入 Bitfinex(已借出的部位不受影響,自然到期回 funding wallet)。",
+      statusOn: "已開啟",
+      statusOff: "已關閉",
+      movedNote: "(toggle 已移到放貸機器人設定)",
+      manageCta: "前往設定",
     },
     pipeline: { title: "進行中的部位", desc: "每筆 deposit 從進 Quiver 到掛上 offer 的 pipeline 狀態" },
     recentSnapshots: {
@@ -144,6 +154,10 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     autoLend: {
       title: "Auto-lend",
       desc: "When ON: every new USDT deposit to Quiver is automatically sent to your Bitfinex and offered out. When OFF: new deposits stay in Quiver (existing lent positions are unaffected and roll off naturally on offer expiry).",
+      statusOn: "ON",
+      statusOff: "OFF",
+      movedNote: "(toggle moved to bot settings)",
+      manageCta: "Manage",
     },
     pipeline: { title: "In-flight positions", desc: "Pipeline status of each deposit from Quiver to a funding offer" },
     recentSnapshots: {
@@ -196,6 +210,10 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     autoLend: {
       title: "Auto-lend 自動貸出",
       desc: "ON の場合:Quiver への新規入金は自動的に Bitfinex に送られ offer が出ます。OFF の場合:新規入金は Bitfinex に自動で送られません(既存の貸出ポジションは影響を受けず、満期に自然に funding wallet に戻ります)。",
+      statusOn: "ON",
+      statusOff: "OFF",
+      movedNote: "(toggle はボット設定に移動)",
+      manageCta: "管理",
     },
     pipeline: { title: "進行中のポジション", desc: "各入金が Quiver から funding offer まで進むパイプラインのステータス" },
     recentSnapshots: {
@@ -303,7 +321,7 @@ export default async function EarnPage({
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row">
             <Button asChild>
-              <Link href={`/${locale}/earn/connect`}>
+              <Link href={`/${locale}/earn/bot-settings`}>
                 {s.notSetup.cta} <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
@@ -361,14 +379,33 @@ export default async function EarnPage({
             </Card>
           )}
 
-          {/* Auto-lend toggle */}
-          <Card>
+          {/* Auto-lend toggle moved to /earn/bot-settings (F-5a-1.1).
+              Show a small status badge here with a link, instead of duplicating
+              the toggle. Keeps this page focused on read-only stats. */}
+          <Card className="bg-cream-warm/40 dark:bg-slate-900/40">
             <CardHeader className="flex-row items-start justify-between gap-4">
-              <div>
+              <div className="flex-1">
                 <CardTitle className="text-base">{s.autoLend.title}</CardTitle>
-                <CardDescription>{s.autoLend.desc}</CardDescription>
+                <CardDescription>
+                  <span
+                    className={
+                      earn.auto_lend_enabled
+                        ? "font-medium text-emerald-700 dark:text-emerald-400"
+                        : "font-medium text-slate-600 dark:text-slate-400"
+                    }
+                  >
+                    {earn.auto_lend_enabled ? s.autoLend.statusOn : s.autoLend.statusOff}
+                  </span>
+                  <span className="ml-2 text-xs text-slate-500">
+                    {s.autoLend.movedNote}
+                  </span>
+                </CardDescription>
               </div>
-              <AutoLendToggle initial={earn.auto_lend_enabled} />
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/${locale}/earn/bot-settings`}>
+                  {s.autoLend.manageCta} <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </Link>
+              </Button>
             </CardHeader>
           </Card>
 

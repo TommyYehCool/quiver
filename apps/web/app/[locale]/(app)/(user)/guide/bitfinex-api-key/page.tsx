@@ -95,7 +95,7 @@ const STRINGS: Record<Locale, Strings> = {
     step6: {
       title: "步驟六:回 Quiver 連接",
       bodyBefore: "把 API key + Secret + Funding 入金地址貼進 ",
-      linkText: "/earn/connect",
+      linkText: "/earn/bot-settings",
       bodyAfter: " 的表單。Quiver 會立刻 call Bitfinex 驗證 key 通過才存。",
     },
     faq: {
@@ -186,7 +186,7 @@ const STRINGS: Record<Locale, Strings> = {
       title: "Step 6 — Back to Quiver and connect",
       bodyBefore:
         "Paste the API key + secret + Funding deposit address into the form at ",
-      linkText: "/earn/connect",
+      linkText: "/earn/bot-settings",
       bodyAfter: ". Quiver immediately calls Bitfinex to verify the key works before storing.",
     },
     faq: {
@@ -277,7 +277,7 @@ const STRINGS: Record<Locale, Strings> = {
       title: "ステップ 6 — Quiver に戻って接続",
       bodyBefore:
         "API キー + Secret + Funding 入金アドレスを ",
-      linkText: "/earn/connect",
+      linkText: "/earn/bot-settings",
       bodyAfter:
         " のフォームに貼り付けてください。Quiver は即座に Bitfinex を呼び出してキーを検証してから保存します。",
     },
@@ -430,7 +430,7 @@ export default function SetupGuidePage({
         <CardContent className="space-y-2 text-sm">
           <p>
             {s.step6.bodyBefore}
-            <Link href={`/${locale}/earn/connect`} className="text-brand hover:underline">
+            <Link href={`/${locale}/earn/bot-settings`} className="text-brand hover:underline">
               {s.step6.linkText}
             </Link>
             {s.step6.bodyAfter}
@@ -453,7 +453,7 @@ export default function SetupGuidePage({
       </Card>
 
       <div className="text-center">
-        <Link href={`/${locale}/earn/connect`}>
+        <Link href={`/${locale}/earn/bot-settings`}>
           <button className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand/90">
             {s.cta}
           </button>

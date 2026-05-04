@@ -44,6 +44,10 @@ export function AdminChrome({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   const items: NavItem[] = [
     { href: `/${locale}/admin`, i18nKey: "adminOverview", Icon: Gauge },
     { href: `/${locale}/admin/kyc`, i18nKey: "adminKyc", Icon: ShieldCheck },
@@ -58,86 +62,123 @@ export function AdminChrome({
   }
 
   function isActive(href: string) {
-    // exact match for /admin (overview), prefix for sub-sections
     if (href.endsWith("/admin")) return pathname === href;
     return pathname === href || pathname.startsWith(href + "/");
   }
 
+  // Shared sidebar content used by desktop fixed sidebar + mobile drawer.
+  const sidebarContent = (
+    <>
+      <Link
+        href={`/${locale}/admin`}
+        className="flex items-center gap-2 px-4 py-5"
+        onClick={() => setMobileOpen(false)}
+      >
+        <QuiverLogo size={32} />
+        <span className="font-display text-lg font-bold tracking-tight text-violet-900 dark:text-violet-200">
+          Quiver Admin
+        </span>
+      </Link>
+
+      <nav className="flex-1 overflow-y-auto px-3 py-2" aria-label="Admin navigation">
+        <ul className="space-y-0.5">
+          {items.map((item) => (
+            <li key={item.href}>
+              <NavLink
+                item={item}
+                active={isActive(item.href)}
+                t={t}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* Bottom: back-to-user shortcut (also up in the warning banner; keeping
+           it in the sidebar so mobile drawer users can find it without scrolling
+           up to the top banner). */}
+      <div className="border-t border-violet-200 px-3 py-3 dark:border-violet-900">
+        <Link
+          href={`/${locale}/dashboard`}
+          onClick={() => setMobileOpen(false)}
+          className="flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-100/70 px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-200 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t("backToUser")}
+        </Link>
+      </div>
+    </>
+  );
+
   return (
     <>
-      {/* ADMIN MODE warning bar */}
-      <div className="sticky top-0 z-40 flex items-center justify-between bg-violet-700 px-4 py-1.5 text-xs font-medium text-white dark:bg-violet-950">
+      {/* ADMIN MODE warning bar — full-width, top of viewport */}
+      <div className="sticky top-0 z-40 flex items-center justify-center bg-violet-700 px-4 py-1.5 text-xs font-medium text-white dark:bg-violet-950">
         <span className="flex items-center gap-1.5">
           <AlertTriangle className="h-3.5 w-3.5" />
           {t("adminModeBanner")}
         </span>
-        <Link
-          href={`/${locale}/dashboard`}
-          className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs hover:bg-white/25"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          {t("backToUser")}
-        </Link>
       </div>
 
-      <header className="sticky top-7 z-30 border-b border-violet-200 bg-violet-50/90 backdrop-blur dark:border-violet-900 dark:bg-violet-950/60">
-        <div className="container flex h-16 items-center justify-between gap-3">
-          <div className="flex items-center gap-6">
-            <Link href={`/${locale}/admin`} className="flex items-center gap-2">
-              <QuiverLogo size={36} />
-              <span className="hidden font-display text-lg font-bold tracking-tight text-violet-900 dark:text-violet-200 sm:inline">
-                Quiver Admin
-              </span>
-            </Link>
-            <nav className="hidden flex-wrap items-center gap-1 lg:flex" aria-label="Admin primary">
-              {items.map((it) => (
-                <NavLink key={it.href} item={it} active={isActive(it.href)} t={t} />
-              ))}
-            </nav>
-          </div>
+      <div className="relative flex min-h-screen">
+        {/* Desktop sidebar */}
+        <aside
+          className="sticky top-7 hidden h-[calc(100vh-1.75rem)] w-60 shrink-0 flex-col border-r border-violet-200 bg-violet-50/80 backdrop-blur dark:border-violet-900 dark:bg-violet-950/60 lg:flex"
+          aria-label="Admin sidebar"
+        >
+          {sidebarContent}
+        </aside>
 
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="hidden lg:block">
-              <LocaleSwitcher />
+        {/* Mobile drawer */}
+        {mobileOpen ? (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileOpen(false)}
+              aria-hidden
+            />
+            <aside
+              className="fixed inset-y-7 left-0 z-50 flex w-72 flex-col border-r border-violet-200 bg-violet-50 shadow-xl dark:border-violet-900 dark:bg-violet-950 lg:hidden"
+              aria-label="Mobile admin sidebar"
+            >
+              {sidebarContent}
+            </aside>
+          </>
+        ) : null}
+
+        {/* Main column */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Slim top header */}
+          <header className="sticky top-7 z-30 flex h-14 items-center justify-between gap-3 border-b border-violet-200 bg-violet-50/80 px-4 backdrop-blur dark:border-violet-900 dark:bg-violet-950/60">
+            <div className="flex items-center gap-3 lg:hidden">
+              <button
+                onClick={() => setMobileOpen((v) => !v)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-violet-700 hover:bg-violet-100 dark:text-violet-300 dark:hover:bg-violet-950"
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileOpen}
+              >
+                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+              <Link href={`/${locale}/admin`} className="flex items-center gap-2">
+                <QuiverLogo size={28} />
+                <span className="font-display text-base font-bold tracking-tight text-violet-900 dark:text-violet-200">
+                  Admin
+                </span>
+              </Link>
             </div>
-            <div className="hidden lg:block">
+
+            <div className="hidden lg:block" />
+
+            <div className="flex items-center gap-1 sm:gap-2">
+              <LocaleSwitcher />
               <LogoutButton locale={locale} />
             </div>
-            <button
-              onClick={() => setMobileOpen((v) => !v)}
-              className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-violet-700 hover:bg-violet-100 dark:text-violet-300 dark:hover:bg-violet-950 lg:hidden"
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileOpen}
-            >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
+          </header>
+
+          <main className="container py-8">{children}</main>
         </div>
-
-        {mobileOpen ? (
-          <div className="border-t border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-900 dark:bg-violet-950 lg:hidden">
-            <nav className="flex flex-col gap-1" aria-label="Mobile admin">
-              {items.map((it) => (
-                <NavLink
-                  key={it.href}
-                  item={it}
-                  active={isActive(it.href)}
-                  t={t}
-                  mobile
-                  onClose={() => setMobileOpen(false)}
-                />
-              ))}
-
-              {/* Mobile-only:把 desktop header 右側的工具收進來 */}
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-violet-200 pt-3 px-1 dark:border-violet-900">
-                <LocaleSwitcher />
-                <LogoutButton locale={locale} />
-              </div>
-            </nav>
-          </div>
-        ) : null}
-      </header>
-      <main className="container py-8">{children}</main>
+      </div>
     </>
   );
 }
@@ -146,30 +187,27 @@ function NavLink({
   item,
   active,
   t,
-  mobile,
-  onClose,
+  onNavigate,
 }: {
   item: NavItem;
   active: boolean;
   t: ReturnType<typeof useTranslations>;
-  mobile?: boolean;
-  onClose?: () => void;
+  onNavigate: () => void;
 }) {
   const Icon = item.Icon;
   return (
     <Link
       href={item.href}
-      onClick={onClose}
+      onClick={onNavigate}
       className={cn(
-        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
-        mobile ? "w-full" : "",
+        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
         active
           ? "bg-violet-200 text-violet-900 dark:bg-violet-900/60 dark:text-violet-100"
           : "text-violet-700 hover:bg-violet-100 hover:text-violet-900 dark:text-violet-300 dark:hover:bg-violet-950 dark:hover:text-violet-100",
       )}
     >
-      <Icon className="h-4 w-4" />
-      {t(item.i18nKey)}
+      <Icon className="h-4 w-4 flex-none" />
+      <span className="truncate">{t(item.i18nKey)}</span>
     </Link>
   );
 }
