@@ -213,7 +213,10 @@ async def renew_due_subscriptions(db: AsyncSession) -> dict[str, int]:
         balance = await ledger_service.get_user_balance(db, sub.user_id)
         if balance < sub.monthly_usdt:
             # Insufficient — go/stay PAST_DUE
-            if sub.status != SubscriptionStatus.PAST_DUE.value:
+            transitioning_to_past_due = (
+                sub.status != SubscriptionStatus.PAST_DUE.value
+            )
+            if transitioning_to_past_due:
                 sub.status = SubscriptionStatus.PAST_DUE.value
                 sub.past_due_since = now
             # Audit row for the failed attempt
@@ -237,6 +240,28 @@ async def renew_due_subscriptions(db: AsyncSession) -> dict[str, int]:
                 need=str(sub.monthly_usdt),
                 balance=str(balance),
             )
+            # F-5b-5: TG ping the FIRST time we transition into PAST_DUE.
+            # Subsequent weeks during the grace window stay quiet (the user
+            # already knows). track_once gives us per-user idempotency.
+            if transitioning_to_past_due:
+                import asyncio
+                from app.services import funnel
+                from app.services.earn import notifications as earn_notifications
+
+                already_sent = not await funnel.track_once(
+                    db,
+                    sub.user_id,
+                    funnel.TG_NOTIFICATION_PREMIUM_PAYMENT_FAILED_SENT,
+                )
+                if not already_sent:
+                    asyncio.create_task(
+                        earn_notifications.notify_premium_payment_failed(
+                            user_id=sub.user_id,
+                            monthly_amount=sub.monthly_usdt,
+                            wallet_balance=balance,
+                            grace_days=policy.PAST_DUE_GRACE_DAYS,
+                        )
+                    )
             continue
 
         # Charge succeeds — debit + advance period

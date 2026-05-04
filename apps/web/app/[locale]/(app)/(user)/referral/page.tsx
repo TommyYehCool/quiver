@@ -37,7 +37,9 @@ const STRINGS = {
       l1Pct: (pct: string) => `**直邀(L1)**:被你邀請的人每次被收績效費,你拿其中 **${pct}%**`,
       l2Pct: (pct: string) => `**間接(L2)**:被邀請人邀請的下一層,你拿 **${pct}%**`,
       window: (days: number) => `每位被邀請人的分潤窗口為 **${days} 天**,從他們第一筆績效費結算當天起算。`,
-      payment: "撥款即時 — 績效費結算當下,自動撥到你的 Quiver 主錢包,可直接提領或繼續賺利息。",
+      payment: "撥款即時 — 績效費結算當下,自動撥到你的 Quiver 錢包,可直接提領或繼續賺利息。",
+      eligibility:
+        "⚠️ 分潤產生條件:**你推薦的人必須是標準等級用戶**(預設 15% 績效費),而且當週確實有績效費被扣到。Friend 等級永久 0% 不收費,Premium 訂戶也是 0%,這兩種都不會產生你的分潤。",
     },
     code: {
       haveCodeTitle: "你的推薦碼",
@@ -105,6 +107,8 @@ const STRINGS = {
       l2Pct: (pct: string) => `**Indirect (L2)**: people invited by your invitees pay **${pct}%** to you`,
       window: (days: number) => `Each invitee's revshare window is **${days} days**, starting from the day their first performance fee settles.`,
       payment: "Real-time — payouts credit to your Quiver wallet the moment a performance fee settles. Withdraw immediately or keep earning interest.",
+      eligibility:
+        "⚠️ Revshare requires: **your invitee must be on the standard tier** (default 15% performance fee) AND must actually have a performance fee settled that week. Friend tier (0% fee forever) and Premium subscribers (0% fee while subscribed) generate NO revshare events.",
     },
     code: {
       haveCodeTitle: "Your referral code",
@@ -171,7 +175,9 @@ const STRINGS = {
       l1Pct: (pct: string) => `**直接(L1)**:あなたが招待した人がパフォーマンスフィーを支払うたびに **${pct}%** 受け取り`,
       l2Pct: (pct: string) => `**間接(L2)**:あなたの招待者が招待した次の階層から **${pct}%**`,
       window: (days: number) => `各招待者のレベニューシェア窓口は **${days} 日間**、最初のパフォーマンスフィー決済日から開始。`,
-      payment: "リアルタイム支払い —パフォーマンスフィー決済時に自動で Quiver メインウォレットに振込。すぐに引き出すか利息運用を続けるか自由。",
+      payment: "リアルタイム支払い —パフォーマンスフィー決済時に自動で Quiver ウォレットに振込。すぐに引き出すか利息運用を続けるか自由。",
+      eligibility:
+        "⚠️ レベニューシェアの発生条件:**招待した相手が標準ティアのユーザー**(デフォルト 15% パフォーマンスフィー)であり、その週に実際にフィーが決済されたとき。Friend ティア(永久 0%)と Premium 購読者(購読中 0%)はフィーが発生しないため、レベニューシェアも発生しません。",
     },
     code: {
       haveCodeTitle: "あなたのリファラルコード",
@@ -326,6 +332,9 @@ export default async function ReferralPage({
           <p>{renderBold(s.howItWorks.l2Pct(me.l2_pct))}</p>
           <p>{renderBold(s.howItWorks.window(me.window_days))}</p>
           <p className="text-xs text-slate-600 dark:text-slate-300">{s.howItWorks.payment}</p>
+          <p className="rounded-md border border-amber-300/60 bg-amber-100/50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+            {renderBold(s.howItWorks.eligibility)}
+          </p>
         </CardContent>
       </Card>
 

@@ -211,6 +211,25 @@ async def settle_outstanding(db: AsyncSession) -> list[SettleResult]:
                 fee_amount=str(accrual.fee_amount),
                 balance=str(balance),
             )
+            # F-5b-5: first-time-only TG ping. dunning_paused only fires at
+            # week 4 — without this, users get 4 weeks of silence then a
+            # surprise pause. track_once is the dedup mechanism (entry in
+            # funnel_events serves as the "we already pinged" marker).
+            from app.services import funnel
+            from app.services.earn import notifications as earn_notifications
+            sent = await funnel.track_once(
+                db,
+                account.user_id,
+                funnel.TG_NOTIFICATION_PERF_FEE_PENDING_SENT,
+            )
+            if sent:
+                asyncio.create_task(
+                    earn_notifications.notify_perf_fee_settle_pending(
+                        user_id=account.user_id,
+                        fee_amount=accrual.fee_amount,
+                        wallet_balance=balance,
+                    )
+                )
             results.append(
                 SettleResult(
                     accrual_id=accrual.id,

@@ -72,6 +72,16 @@ AUTO_LEND_DISABLED = "auto_lend_disabled"
 DUNNING_PAUSED = "dunning_paused"
 DUNNING_RESUMED = "dunning_resumed"
 
+# Stage 7 — TG notification idempotency markers (one-shot per user, ever).
+# Used with track_once to guarantee we only send these "first time" alerts
+# once. If the user resolves and re-encounters the same condition, no
+# proactive ping (the dunning_paused / EXPIRED notifications still fire
+# at the more-serious thresholds).
+TG_NOTIFICATION_PERF_FEE_PENDING_SENT = "tg_notification_perf_fee_pending_sent"
+TG_NOTIFICATION_PREMIUM_PAYMENT_FAILED_SENT = (
+    "tg_notification_premium_payment_failed_sent"
+)
+
 
 # Convenience grouping for admin overview UI — order matters (drives
 # funnel chart sequence).

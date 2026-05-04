@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ActiveCreditRow } from "@/components/earn/active-credit-row";
+import { BufferEmptyBanner } from "@/components/earn/buffer-empty-banner";
 import { FeeStatusCard } from "@/components/earn/fee-status-card";
 import { PerformanceCard } from "@/components/earn/performance-card";
 import { PublicStatsStrip } from "@/components/earn/public-stats-strip";
@@ -354,6 +355,18 @@ export default async function EarnPage({
       {/* Active state — main dashboard */}
       {setupComplete && (
         <>
+          {/* F-5b-5 buffer-empty banner — proactive prompt to deposit USDT
+               into Quiver wallet so perf fees can settle each Monday. Auto-
+               disappears once balance >= $30. Skipped for Friend tier and
+               Premium subscribers (they don't pay perf fees). */}
+          {fees ? (
+            <BufferEmptyBanner
+              locale={locale}
+              walletBalance={fees.quiver_wallet_balance_usdt}
+              isExempt={fees.perf_fee_bps === 0 || fees.is_premium}
+            />
+          ) : null}
+
           {/* Big numbers */}
           <div className="grid gap-4 sm:grid-cols-3">
             <Card>
