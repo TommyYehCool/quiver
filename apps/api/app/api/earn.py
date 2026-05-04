@@ -60,6 +60,7 @@ from app.services.earn.bitfinex_adapter import (
     BitfinexFundingAdapter,
     fetch_market_frr,
 )
+from app.services import telegram as telegram_service
 from app.services.referral import binding as referral_binding
 from app.services.premium import repo as sub_repo
 
@@ -122,6 +123,8 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 auto_lend_enabled=False,
                 strategy_preset=None,
                 dunning_pause_active=False,
+                telegram_bound=user.telegram_chat_id is not None,
+                telegram_bot_username=telegram_service.get_bot_username(),
                 bitfinex_connected=False,
                 bitfinex_funding_address=None,
                 earn_tier=None,
@@ -189,6 +192,8 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             auto_lend_enabled=account.auto_lend_enabled,
             strategy_preset=account.strategy_preset,
             dunning_pause_active=account.dunning_pause_active,
+            telegram_bound=user.telegram_chat_id is not None,
+            telegram_bot_username=telegram_service.get_bot_username(),
             bitfinex_connected=conn is not None,
             bitfinex_funding_address=account.bitfinex_funding_address,
             earn_tier=user.earn_tier,

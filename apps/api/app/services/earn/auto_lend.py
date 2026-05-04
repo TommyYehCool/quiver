@@ -399,6 +399,7 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         position_amount = pos.amount
         retry_count = pos.retry_count
         strategy_preset = account.strategy_preset
+        user_id = account.user_id  # for F-5a-4.1 telegram notification
 
     # ─── outside DB: hit Bitfinex ───
     try:
@@ -467,7 +468,92 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         offer_id=offer_id,
         amount=str(position_amount),
     )
+
+    # F-5a-4.1: fire-and-forget telegram notification. We don't await because
+    # a Telegram outage / 5xx must NEVER fail the auto-lend (the offer is
+    # already on Bitfinex, the rest is just user comms). asyncio.create_task
+    # schedules the coroutine to run on the next event loop iteration; any
+    # exception inside is logged by the service itself.
+    asyncio.create_task(
+        _notify_lent(user_id=user_id, ladder=ladder, offer_ids=offer_ids)
+    )
+
     return f"lent:{offer_id}"
+
+
+async def _notify_lent(
+    *,
+    user_id: int,
+    ladder: list[tuple[Decimal, Decimal | None, int]],
+    offer_ids: list[int],
+) -> None:
+    """Send a Telegram notification about a successful lent event (F-5a-4.1).
+
+    Opens its own DB session — caller's session may already be closed by the
+    time this fires. Looks up the user's telegram_chat_id; no-ops if not
+    bound or if the bot is not configured.
+    """
+    from app.core.db import AsyncSessionLocal
+    from app.models.user import User
+    from app.services import telegram as telegram_service
+
+    if not telegram_service.is_configured():
+        return
+
+    try:
+        async with AsyncSessionLocal() as db:
+            q = await db.execute(select(User).where(User.id == user_id))
+            user = q.scalar_one_or_none()
+        if user is None or user.telegram_chat_id is None:
+            return
+
+        # Format the message. Aggregate ladder for clarity — most users care
+        # about the headline (total + weighted avg APR), not per-tranche detail.
+        total_amount = sum((c for c, _, _ in ladder), Decimal(0))
+        # Weighted-avg APR (skip FRR rows where rate is None)
+        rated = [(c, r, p) for c, r, p in ladder if r is not None]
+        weighted_apr = None
+        if rated:
+            denom = sum((c for c, _, _ in rated), Decimal(0))
+            if denom > 0:
+                weighted_apr = (
+                    sum((c * r * Decimal(365) * Decimal(100) for c, r, _ in rated), Decimal(0))
+                    / denom
+                )
+
+        # Min/max period for the period-range display
+        periods = sorted({p for _, _, p in ladder})
+        period_str = (
+            f"{periods[0]} 天" if len(periods) == 1
+            else f"{periods[0]}-{periods[-1]} 天"
+        )
+
+        if weighted_apr is not None:
+            apr_line = f"加權平均 APR: <b>{weighted_apr:.2f}%</b>"
+        else:
+            apr_line = "利率: FRR(浮動)"
+
+        if len(ladder) > 1:
+            ladder_line = f"📊 {len(ladder)} 階 ladder · {period_str}"
+        else:
+            ladder_line = f"⏱ 期間 {period_str}"
+
+        text = (
+            "✅ <b>Quiver 借出成功</b>\n\n"
+            f"金額: <b>${total_amount:,.2f}</b>\n"
+            f"{apr_line}\n"
+            f"{ladder_line}\n\n"
+            "<i>下次 cron 偵測到 idle 時會自動續借。</i>"
+        )
+
+        await telegram_service.send_message(user.telegram_chat_id, text)
+    except Exception as e:  # noqa: BLE001
+        # Never re-raise — fire-and-forget contract.
+        logger.warning(
+            "telegram_notify_lent_failed",
+            user_id=user_id,
+            error=str(e),
+        )
 
 
 def _build_ladder(

@@ -63,6 +63,10 @@ export interface EarnMeOut {
   strategy_preset: EarnStrategyPreset | null;
   /** F-5b-2: true iff Quiver auto-paused auto-lend due to ≥4 unpaid weeks. */
   dunning_pause_active: boolean;
+  /** F-5a-4.1: telegram bot binding state. */
+  telegram_bound: boolean;
+  /** F-5a-4.1: bot username (sans @). null = bot not configured server-side. */
+  telegram_bot_username: string | null;
   bitfinex_connected: boolean;
   bitfinex_funding_address: string | null;
   earn_tier: EarnTier | null;

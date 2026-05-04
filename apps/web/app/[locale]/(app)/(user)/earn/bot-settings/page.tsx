@@ -19,6 +19,7 @@ import { ConnectBitfinexForm } from "@/components/earn/connect-bitfinex-form";
 import { AutoLendToggle } from "@/components/earn/auto-lend-toggle";
 import { StrategyPresetCard } from "@/components/earn/strategy-preset-card";
 import { BitfinexPermissionsMirror } from "@/components/earn/bitfinex-permissions-mirror";
+import { TelegramConnectCard } from "@/components/earn/telegram-connect-card";
 import { CheckCircle2 } from "lucide-react";
 
 type Locale = "zh-TW" | "en" | "ja";
@@ -51,6 +52,8 @@ const STRINGS: Record<Locale, {
   bufferTip: string;
   /** F-5b-2: shown when earn.dunning_pause_active is true. */
   dunningPaused: { title: string; body: string; topupCta: string; premiumCta: string };
+  /** F-5a-4.1: heading for the Telegram connect card section. */
+  telegramSection: { title: string; desc: string };
   guideCard: { title: string; desc: string; cta: string };
   formCard: { title: string; desc: string };
 }> = {
@@ -84,6 +87,10 @@ const STRINGS: Record<Locale, {
       body: "你的 auto-lend 目前被 Quiver 自動暫停 — 即使你下面把 toggle 打開,下個週一 cron 跑完還是會再被暫停。要恢復:儲值 Quiver wallet 補足欠款,或升級 Premium。",
       topupCta: "去儲值 Quiver wallet",
       premiumCta: "升級 Premium →",
+    },
+    telegramSection: {
+      title: "Telegram 通知",
+      desc: "綁定 Telegram 後,Quiver 會在「借出成功」「Spike 抓到」「自動續借」等事件即時推訊息。",
     },
     guideCard: {
       title: "第一次設定?先看完整教學",
@@ -126,6 +133,10 @@ const STRINGS: Record<Locale, {
       topupCta: "Top up Quiver wallet",
       premiumCta: "Upgrade to Premium →",
     },
+    telegramSection: {
+      title: "Telegram alerts",
+      desc: "Once bound, Quiver pushes you a message on each event: lent success, spike captured, auto-renew, etc.",
+    },
     guideCard: {
       title: "First time? Read the full guide",
       desc: "The guide covers: how to create the API key, which permissions to enable / never enable (especially Withdrawal — never), IP allowlist setup, and where to find the deposit address.",
@@ -166,6 +177,10 @@ const STRINGS: Record<Locale, {
       body: "Auto-lend は Quiver により自動的に一時停止されています — 下のトグルをオンにしても、次回月曜の cron で再び停止されます。再開するには、Quiver wallet をチャージして滞納を解消するか、Premium にアップグレードしてください。",
       topupCta: "Quiver wallet にチャージ",
       premiumCta: "Premium にアップグレード →",
+    },
+    telegramSection: {
+      title: "Telegram 通知",
+      desc: "バインドすると、Quiver は「貸出成功」「スパイク捕獲」「自動更新」などのイベントでメッセージをリアルタイムで送ります。",
     },
     guideCard: {
       title: "初めての設定?先にガイドを読む",
@@ -309,6 +324,20 @@ export default async function EarnConnectPage({
                 <CardContent>
                   <StrategyPresetCard
                     initial={earn.strategy_preset ?? "balanced"}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* F-5a-4.1 Telegram bot connect */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{s.telegramSection.title}</CardTitle>
+                  <CardDescription>{s.telegramSection.desc}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TelegramConnectCard
+                    initialBound={earn.telegram_bound}
+                    initialBotUsername={earn.telegram_bot_username}
                   />
                 </CardContent>
               </Card>

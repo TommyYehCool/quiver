@@ -70,6 +70,10 @@ class EarnMeOut(BaseModel):
     # toggled off". When true, the bot-settings page shows a paused banner
     # explaining how to resume (top up wallet OR upgrade to Premium).
     dunning_pause_active: bool
+    # F-5a-4.1: telegram bot binding state. UI hides the connect card when
+    # bot_username is null (= bot not configured server-side yet).
+    telegram_bound: bool
+    telegram_bot_username: str | None
     bitfinex_connected: bool
     bitfinex_funding_address: str | None  # cached deposit address
 
