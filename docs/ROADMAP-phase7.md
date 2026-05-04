@@ -359,6 +359,11 @@ Config:
 
 > 不影響上線、想做再做。
 
+- 🪜 **F-5a-3.6 — Strategy preset ladder eligibility hint**
+    - 問題:策略選擇器(/earn 設定頁)讓用戶選保守/平衡/進取,但 ladder 真正啟動門檻是 $1,875(進取)/ $3,000(保守)/ $5,000(平衡)。低於門檻時 silently fallback 到單一 offer 模式 — 用戶以為自己有 5 階 ladder,其實沒有。
+    - Fix:選擇器卡片下方根據用戶當下 funding wallet 餘額顯示「✅ Ladder 會啟動 (5 階)」或「⚠️ 餘額 $X < $Y,Ladder 不會啟動,實際走單一 offer」
+    - 也順便加 /guide/strategy-presets 連結讓用戶看完整說明
+    - 預估 1-2 hr,純 UI
 - 🎁 推薦獎勵(邀請碼 + 雙方各得 1 USDT credit)
 - 🪙 多幣種(USDC、USDT-ERC20、TUSD)
 - 💱 站內換匯(USDT ↔ TWD,接 BitoPro / 第三方流動性)
