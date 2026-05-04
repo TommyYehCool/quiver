@@ -438,7 +438,10 @@ async def cron_sweep_all(ctx: dict[str, Any]) -> str:
 
 
 async def cron_earn_reconcile(ctx: dict[str, Any]) -> str:
-    """每 30 分鐘對所有 active earn_account 跑 reconcile + auto-renew。
+    """每 5 分鐘對所有 active earn_account 跑 reconcile + auto-renew + spike scan。
+
+    F-5a-3.1: 從 30 分鐘改 5 分鐘,並加 spike detection logging。為 F-5a-3.4
+    spike capture pool 鋪路 — 現階段只 log,不實際下單。
 
     Reconciliation:close lent positions whose Bitfinex offers no longer
     exist; warn on positions stuck > 1hr in non-terminal states.
@@ -446,14 +449,26 @@ async def cron_earn_reconcile(ctx: dict[str, Any]) -> str:
     Auto-renew:if user's Bitfinex funding wallet has ≥ MIN idle and no
     in-flight pipeline, submit a fresh funding offer (this is how 2-day
     offers naturally roll over after maturity).
+
+    Spike scan:fetch public funding book, log FRR + top-of-book + any
+    high-rate offers. Per-IP rate limit 90 req/min — 1 call/5min is fine.
     """
     from app.services.earn.reconcile import reconcile_all_accounts
+    from app.services.earn.spike_detector import log_reading, scan_market
     from app.services.heartbeat import write_heartbeat
+
+    # Spike scan first (independent of accounts; safe even if no users)
+    try:
+        reading = await scan_market()
+        log_reading(reading)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("earn_spike_scan_failed", error=str(e))
 
     async with db_session() as session:
         summaries = await reconcile_all_accounts(session)
 
-    await write_heartbeat(ctx["redis"], "earn_reconcile", expected_interval_s=1800)
+    # 5 min cron — heartbeat interval matches.
+    await write_heartbeat(ctx["redis"], "earn_reconcile", expected_interval_s=300)
 
     total_renewed = sum(s.get("renewed", 0) for s in summaries)
     total_closed = sum(s.get("lent_closed", 0) for s in summaries)
@@ -671,10 +686,12 @@ class WorkerSettings:
             minute={0, 10, 20, 30, 40, 50},
             run_at_startup=False,
         ),
-        # F-3e: 每 30 分鐘對 earn_account 跑 reconcile + auto-renew
+        # F-5a-3.1: 每 5 分鐘對 earn_account 跑 reconcile + auto-renew + spike
+        # scan(原本 F-3e 是 30 分鐘 {5, 35},改快 6 倍以更早接到 Bitfinex
+        # funding rate 飆升)
         cron(
             cron_earn_reconcile,
-            minute={5, 35},
+            minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55},
             run_at_startup=False,
         ),
         # F-4b: 每週一 02:00 UTC 結算上週 perf_fee + 觸發 referral 撥款

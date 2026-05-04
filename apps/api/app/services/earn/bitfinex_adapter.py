@@ -443,3 +443,71 @@ async def fetch_market_frr() -> BitfinexMarket | None:
             Decimal(str(t[15])) if t[15] is not None else None
         ),
     )
+
+
+@dataclass(frozen=True)
+class BookOffer:
+    """One row from the public funding order book.
+
+    Bitfinex's funding book returns offers (lenders willing to lend at a
+    given rate for a given period) and bids (borrowers). For F-5a-3 spike
+    capture we care about the OFFER side — what rate is the marginal
+    lender posting? If our offer matches or beats it, we get filled.
+    """
+
+    rate_daily: Decimal       # 0.0001 = 0.01% / day
+    period_days: int
+    amount: Decimal           # positive for offers, negative for bids
+    count: int                # number of distinct offers at this rate
+
+    @property
+    def apr_pct(self) -> Decimal:
+        return self.rate_daily * Decimal(365) * Decimal(100)
+
+
+async def fetch_funding_book(
+    symbol: str = SYMBOL_PUBLIC, precision: str = "P0", length: int = 100
+) -> list[BookOffer]:
+    """Fetch live funding order book — public, no auth.
+
+    Returns positive-amount entries (offers from lenders). Bids are negative
+    and stripped (we don't lend against bids, we post our own offers).
+
+    Bitfinex book format (P0 raw, length 25/100): list of [rate, period,
+    count, amount]. Offer rate is positive, period in days, amount positive
+    for sell side. Negative amount = borrower bid; we filter those out.
+
+    Rate-limit: 90 req/min per IP across all public endpoints. F-5a-3.1
+    cron at 5min × 1 call per cycle is well under.
+    """
+    url = f"{API_BASE}/v2/book/{symbol}/{precision}"
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, params={"len": length}, timeout=10.0)
+            r.raise_for_status()
+            rows = r.json()
+    except Exception as e:
+        logger.warning(
+            "bitfinex_book_fetch_failed", symbol=symbol, error=str(e)
+        )
+        return []
+
+    offers: list[BookOffer] = []
+    for row in rows:
+        if not row or len(row) < 4:
+            continue
+        # P0 format: [rate, period, count, amount]
+        amount = Decimal(str(row[3]))
+        if amount <= 0:
+            continue  # bids — skip
+        offers.append(
+            BookOffer(
+                rate_daily=Decimal(str(row[0])),
+                period_days=int(row[1]),
+                count=int(row[2]),
+                amount=amount,
+            )
+        )
+    # Sort ascending by rate so caller can iterate from cheapest to most aggressive
+    offers.sort(key=lambda o: o.rate_daily)
+    return offers
