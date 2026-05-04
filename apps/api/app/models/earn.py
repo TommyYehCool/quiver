@@ -77,6 +77,27 @@ class FeePaidMethod(str, enum.Enum):
     MANUAL_OFFLINE = "manual_offline"          # 朋友直接給現金 / 請吃飯,Tommy 手動 mark
 
 
+class EarnStrategyPreset(str, enum.Enum):
+    """earn_accounts.strategy_preset — F-5a-3.5 risk dial.
+
+    Affects how `_build_ladder` slices the deposit and how
+    `_select_period_days` picks lock-up duration:
+
+      - CONSERVATIVE: most weight on baseline rate, short lock-ups (≤ 7d).
+                      Trades upside for liquidity. Good for users who may
+                      want to withdraw soon.
+      - BALANCED:     current production behaviour (60/20/10/7/3 ladder
+                      with 2/7/14/30 day periods). Default for new users.
+      - AGGRESSIVE:   more weight on high-premium tranches, longer lock-ups
+                      (high-rate tranches lock up to 60d). Maximises spike
+                      yield but funds may be unavailable longer.
+    """
+
+    CONSERVATIVE = "conservative"
+    BALANCED = "balanced"
+    AGGRESSIVE = "aggressive"
+
+
 class EarnPositionStatus(str, enum.Enum):
     """earn_positions.status — Path A auto-lend pipeline state machine.
 
@@ -137,6 +158,11 @@ class EarnAccount(Base):
     )
     # toggle B(default on,user 可關)。Off 不阻止已 lent 部位自然到期,只阻
     # 新 deposit 進 auto-lend pipeline。
+    strategy_preset: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default="balanced"
+    )
+    # F-5a-3.5: risk dial. EarnStrategyPreset.CONSERVATIVE / BALANCED / AGGRESSIVE.
+    # Drives ladder slicing + period selection in services/earn/auto_lend.py.
     bitfinex_funding_address: Mapped[str | None] = mapped_column(String(64))
     # cache 從 Bitfinex API 撈出的 user TRC20 USDT funding wallet 入金地址。
     # 第一次 connect 時 fetch + 存,之後 broadcast 前可 refresh 防止 user 在

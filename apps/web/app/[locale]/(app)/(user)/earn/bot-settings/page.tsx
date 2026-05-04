@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { ConnectBitfinexForm } from "@/components/earn/connect-bitfinex-form";
 import { AutoLendToggle } from "@/components/earn/auto-lend-toggle";
+import { StrategyPresetCard } from "@/components/earn/strategy-preset-card";
 import { CheckCircle2 } from "lucide-react";
 
 type Locale = "zh-TW" | "en" | "ja";
@@ -32,6 +33,8 @@ const STRINGS: Record<Locale, {
     fundingAddrLabel: string;
     autoLendTitle: string;
     autoLendDesc: string;
+    strategyTitle: string;
+    strategyDesc: string;
     updateKeyTitle: string;
     updateKeyDesc: string;
   };
@@ -67,6 +70,8 @@ const STRINGS: Record<Locale, {
       fundingAddrLabel: "Funding 入金地址",
       autoLendTitle: "Auto-lend 自動放貸",
       autoLendDesc: "ON:每筆新存進 Quiver 的 USDT 自動送到你 Bitfinex 並掛 offer。OFF:新 deposit 不進入 Bitfinex(已借出的部位不受影響,自然到期回 funding wallet)。",
+      strategyTitle: "策略偏好",
+      strategyDesc: "選擇放貸風格 — 影響 Quiver 怎麼切分梯隊 (ladder) 與選擇掛單天數。隨時可換,下一次新存入或自動續借生效。",
       updateKeyTitle: "更新 API key",
       updateKeyDesc: "key 過期或想換一支?重新填表單覆寫即可。舊 key 會自動 revoke。",
     },
@@ -118,6 +123,8 @@ const STRINGS: Record<Locale, {
       fundingAddrLabel: "Funding deposit address",
       autoLendTitle: "Auto-lend",
       autoLendDesc: "ON: every new USDT deposit to Quiver is auto-sent to your Bitfinex and offered out. OFF: new deposits stay in Quiver (existing lent positions are unaffected and roll off naturally on offer expiry).",
+      strategyTitle: "Strategy preset",
+      strategyDesc: "Pick a lending style — controls how Quiver splits the ladder and selects the offer period. Switch any time; takes effect on the next deposit or auto-renew cycle.",
       updateKeyTitle: "Update API key",
       updateKeyDesc: "Key expired or want to rotate? Just fill the form again — the old key is automatically revoked.",
     },
@@ -169,6 +176,8 @@ const STRINGS: Record<Locale, {
       fundingAddrLabel: "Funding 入金アドレス",
       autoLendTitle: "Auto-lend 自動貸付",
       autoLendDesc: "ON:Quiver への新規 USDT 入金は自動で Bitfinex に送られ offer が出ます。OFF:新規入金は Quiver に留まり、Bitfinex には送られません(既存の貸出ポジションは影響を受けず、満期時に funding wallet に自然に戻ります)。",
+      strategyTitle: "戦略プリセット",
+      strategyDesc: "貸付スタイルを選択 — Quiver のラダー分割と offer 期間の選び方を制御します。いつでも変更可能 — 次の入金または自動更新から反映されます。",
       updateKeyTitle: "API キーを更新",
       updateKeyDesc: "キーが期限切れ?ローテーションしたい?フォームを再入力するだけで、古いキーは自動的に revoke されます。",
     },
@@ -333,6 +342,19 @@ export default async function EarnConnectPage({
                   </div>
                   <AutoLendToggle initial={earn.auto_lend_enabled} />
                 </CardHeader>
+              </Card>
+
+              {/* F-5a-3.5 strategy preset selector */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">{s.connected.strategyTitle}</CardTitle>
+                  <CardDescription>{s.connected.strategyDesc}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StrategyPresetCard
+                    initial={earn.strategy_preset ?? "balanced"}
+                  />
+                </CardContent>
               </Card>
             </>
           ) : (

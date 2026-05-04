@@ -12,6 +12,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.earn import EarnStrategyPreset
+
 
 # ─────────────────────────────────────────────────────────
 # GET /api/earn/me
@@ -60,6 +62,9 @@ class EarnMeOut(BaseModel):
     # Account state (None / false / empty if no earn_account yet)
     has_earn_account: bool
     auto_lend_enabled: bool
+    # F-5a-3.5: risk dial. "conservative" | "balanced" | "aggressive".
+    # null when has_earn_account=false (no row yet); defaults "balanced" otherwise.
+    strategy_preset: str | None
     bitfinex_connected: bool
     bitfinex_funding_address: str | None  # cached deposit address
 
@@ -93,10 +98,25 @@ class EarnMeOut(BaseModel):
 
 class EarnSettingsUpdateIn(BaseModel):
     auto_lend_enabled: bool | None = None
+    # F-5a-3.5: risk dial. Validated against EarnStrategyPreset enum below.
+    strategy_preset: str | None = None
+
+    @field_validator("strategy_preset")
+    @classmethod
+    def _validate_preset(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        valid = {p.value for p in EarnStrategyPreset}
+        if v not in valid:
+            raise ValueError(
+                f"strategy_preset must be one of {sorted(valid)}, got {v!r}"
+            )
+        return v
 
 
 class EarnSettingsOut(BaseModel):
     auto_lend_enabled: bool
+    strategy_preset: str
 
 
 # ─────────────────────────────────────────────────────────

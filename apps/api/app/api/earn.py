@@ -98,6 +98,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 can_connect=can_connect,
                 has_earn_account=False,
                 auto_lend_enabled=False,
+                strategy_preset=None,
                 bitfinex_connected=False,
                 bitfinex_funding_address=None,
                 earn_tier=None,
@@ -163,6 +164,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             can_connect=can_connect,
             has_earn_account=True,
             auto_lend_enabled=account.auto_lend_enabled,
+            strategy_preset=account.strategy_preset,
             bitfinex_connected=conn is not None,
             bitfinex_funding_address=account.bitfinex_funding_address,
             earn_tier=user.earn_tier,
@@ -217,17 +219,34 @@ async def update_earn_settings(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "earn.notSetup"},
         )
+    changed = False
     if payload.auto_lend_enabled is not None:
         account.auto_lend_enabled = payload.auto_lend_enabled
-        await db.commit()
+        changed = True
         logger.info(
             "earn_auto_lend_toggled",
             user_id=user.id,
             earn_account_id=account.id,
             new_value=payload.auto_lend_enabled,
         )
+    if payload.strategy_preset is not None:
+        prev = account.strategy_preset
+        account.strategy_preset = payload.strategy_preset
+        changed = True
+        logger.info(
+            "earn_strategy_preset_changed",
+            user_id=user.id,
+            earn_account_id=account.id,
+            old=prev,
+            new=payload.strategy_preset,
+        )
+    if changed:
+        await db.commit()
     return ApiResponse[EarnSettingsOut].ok(
-        EarnSettingsOut(auto_lend_enabled=account.auto_lend_enabled)
+        EarnSettingsOut(
+            auto_lend_enabled=account.auto_lend_enabled,
+            strategy_preset=account.strategy_preset,
+        )
     )
 
 

@@ -181,10 +181,11 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
 
     # Submit fresh offer(s) for the idle funds (use available, not balance).
     # F-5a-3.2: depth-aware base rate. F-5a-3.3: laddered tranches if amount
-    # qualifies (≥ 750 USDT).
+    # qualifies (≥ 750 USDT). F-5a-3.5: ladder shape + period table driven
+    # by the user's strategy_preset.
     amount = bf_position.funding_available
     base_rate = await _compute_competitive_rate(amount)
-    ladder = _build_ladder(amount, base_rate)
+    ladder = _build_ladder(amount, base_rate, account.strategy_preset)
     try:
         offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
     except Exception as e:

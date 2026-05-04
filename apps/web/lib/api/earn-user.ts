@@ -52,11 +52,15 @@ export interface ActiveCreditOut {
 
 export type EarnTier = "none" | "internal" | "friend" | "public" | "commercial";
 
+export type EarnStrategyPreset = "conservative" | "balanced" | "aggressive";
+
 export interface EarnMeOut {
   kyc_status: KycStatusValue;
   can_connect: boolean;
   has_earn_account: boolean;
   auto_lend_enabled: boolean;
+  /** F-5a-3.5: risk dial. null only when has_earn_account is false. */
+  strategy_preset: EarnStrategyPreset | null;
   bitfinex_connected: boolean;
   bitfinex_funding_address: string | null;
   earn_tier: EarnTier | null;
@@ -82,6 +86,7 @@ export interface EarnConnectPreviewOut {
 
 export interface EarnSettingsOut {
   auto_lend_enabled: boolean;
+  strategy_preset: EarnStrategyPreset;
 }
 
 export interface EarnConnectOut {
@@ -105,7 +110,10 @@ export async function fetchEarnConnectPreview(): Promise<EarnConnectPreviewOut> 
 }
 
 export async function updateEarnSettings(
-  payload: { auto_lend_enabled?: boolean },
+  payload: {
+    auto_lend_enabled?: boolean;
+    strategy_preset?: EarnStrategyPreset;
+  },
 ): Promise<EarnSettingsOut> {
   return apiFetch<EarnSettingsOut>("/api/earn/settings", {
     method: "PATCH",
