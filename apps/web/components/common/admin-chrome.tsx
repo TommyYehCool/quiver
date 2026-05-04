@@ -94,20 +94,6 @@ export function AdminChrome({
           ))}
         </ul>
       </nav>
-
-      {/* Bottom: back-to-user shortcut (also up in the warning banner; keeping
-           it in the sidebar so mobile drawer users can find it without scrolling
-           up to the top banner). */}
-      <div className="border-t border-violet-200 px-3 py-3 dark:border-violet-900">
-        <Link
-          href={`/${locale}/dashboard`}
-          onClick={() => setMobileOpen(false)}
-          className="flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-100/70 px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-200 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          {t("backToUser")}
-        </Link>
-      </div>
     </>
   );
 
@@ -171,6 +157,13 @@ export function AdminChrome({
             <div className="hidden lg:block" />
 
             <div className="flex items-center gap-1 sm:gap-2">
+              <Link
+                href={`/${locale}/dashboard`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-100/70 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-200 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300 dark:hover:bg-violet-950/60"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t("backToUser")}</span>
+              </Link>
               <LocaleSwitcher />
               <LogoutButton locale={locale} />
             </div>
