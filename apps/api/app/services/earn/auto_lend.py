@@ -61,8 +61,44 @@ MIN_AUTO_LEND_USDT = Decimal("150")
 # HOT 對 user.bitfinex_funding broadcast 前要有的 TRX(沿用 sweep 模式)
 HOT_TRX_MIN_FOR_BROADCAST = Decimal("30")
 
-# Default funding offer params
+# Default funding offer params (used when dynamic period decision can't be
+# made — e.g., rate is None / FRR mode).
 DEFAULT_OFFER_PERIOD_DAYS = 2
+
+# F-5a-3.4: dynamic period selection. Anchors the offer's lock-up duration
+# to the rate environment. Higher rates → longer lock-up to capture the
+# elevated yield before the market normalizes. Lower rates → short lock-up
+# so we can re-price quickly when rates recover.
+#
+# Bitfinex funding period constraints: min 2 days, max 120 days. Rates
+# expressed as APR (annualized) for readability — each tick represents
+# the boundary between two period choices.
+PERIOD_RATE_THRESHOLDS_APR = [
+    (Decimal("15"), 30),  # >= 15% APR → lock 30 days
+    (Decimal("10"), 14),  # 10-15% APR → 14 days
+    (Decimal("5"), 7),    # 5-10% APR  → 7 days
+    (Decimal("0"), 2),    # < 5% APR   → 2 days (default short)
+]
+
+
+def _select_period_days(rate_daily: Decimal | None) -> int:
+    """Pick funding offer period (days) based on the rate environment.
+
+    Strategy:
+      - High rates are usually transient (spike events). Lock them in long
+        before the market reverts to baseline.
+      - Low rates are bad — keep period short so we can re-price up when
+        rates recover.
+
+    Returns DEFAULT_OFFER_PERIOD_DAYS (2) if rate is None (FRR mode).
+    """
+    if rate_daily is None:
+        return DEFAULT_OFFER_PERIOD_DAYS
+    apr = rate_daily * Decimal(365) * Decimal(100)
+    for threshold_apr, days in PERIOD_RATE_THRESHOLDS_APR:
+        if apr >= threshold_apr:
+            return days
+    return DEFAULT_OFFER_PERIOD_DAYS
 
 # Bitfinex method name for USDT-TRX
 BITFINEX_USDT_TRX_METHOD = "tetherusx"
@@ -332,14 +368,11 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         rate_daily=str(competitive_rate) if competitive_rate is not None else "FRR",
     )
 
-    # F-5a-3.3: build ladder if amount qualifies, else single-offer fallback
+    # F-5a-3.3: build ladder if amount qualifies, else single-offer fallback.
+    # F-5a-3.4: ladder builder embeds per-tranche period (high rates lock long).
     ladder = _build_ladder(position_amount, competitive_rate)
     try:
-        offer_ids = await _submit_ladder(
-            adapter=adapter,
-            ladder=ladder,
-            period_days=DEFAULT_OFFER_PERIOD_DAYS,
-        )
+        offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
     except Exception as e:
         logger.exception(
             "auto_lend_submit_offer_failed",
@@ -373,32 +406,33 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
 def _build_ladder(
     amount: Decimal,
     base_rate: Decimal | None,
-) -> list[tuple[Decimal, Decimal | None]]:
+) -> list[tuple[Decimal, Decimal | None, int]]:
     """Slice `amount` into K tranches at increasing rates per LADDER_TRANCHES.
 
-    Returns list of (chunk_amount, chunk_rate). The first tranche is the
-    largest at base rate; subsequent tranches are smaller with progressively
-    higher rates designed to capture spike events.
+    Returns list of (chunk_amount, chunk_rate, period_days). Each tranche
+    has its own period chosen by `_select_period_days(chunk_rate)` so high-
+    rate tranches lock their elevated yield for longer (F-5a-3.4 dynamic
+    period strategy).
 
     Eligibility:
-      - amount >= MIN_AUTO_LEND_USDT × LADDER_MIN_TRANCHES → laddered (K rows)
-      - else → single-row [(amount, base_rate)] (legacy single offer)
-      - base_rate is None → single-row at FRR (no rate computation possible)
+      - amount >= floor where smallest_fraction × amount >= MIN_AUTO_LEND_USDT
+        → laddered (K tuples). With smallest_fraction=3% and MIN=150, that's
+        amount >= $5000.
+      - else → single tuple [(amount, base_rate, period)] (legacy single offer)
+      - base_rate is None → single tuple at FRR (no rate computation possible)
 
     Per-tranche minimum: MIN_AUTO_LEND_USDT (Bitfinex platform rule).
-    Smallest tranche fraction × amount must be >= MIN_AUTO_LEND_USDT or
-    the whole ladder is rejected (caller falls back to single-row).
     """
     # Single-offer fallbacks
     if base_rate is None:
-        return [(amount, None)]
+        return [(amount, None, _select_period_days(None))]
     smallest_fraction = min(frac for frac, _ in LADDER_TRANCHES)
     smallest_chunk = amount * smallest_fraction
     if smallest_chunk < MIN_AUTO_LEND_USDT:
-        return [(amount, base_rate)]
+        return [(amount, base_rate, _select_period_days(base_rate))]
 
     # Build laddered tranches
-    tranches: list[tuple[Decimal, Decimal | None]] = []
+    tranches: list[tuple[Decimal, Decimal | None, int]] = []
     cumulative = Decimal(0)
     for i, (frac, mult) in enumerate(LADDER_TRANCHES):
         # Last tranche absorbs rounding to ensure exact total
@@ -408,18 +442,21 @@ def _build_ladder(
             chunk = (amount * frac).quantize(Decimal("0.01"))
             cumulative += chunk
         rate = base_rate * mult
-        tranches.append((chunk, rate))
+        period = _select_period_days(rate)
+        tranches.append((chunk, rate, period))
     return tranches
 
 
 async def _submit_ladder(
     *,
     adapter: BitfinexFundingAdapter,
-    ladder: list[tuple[Decimal, Decimal | None]],
-    period_days: int,
+    ladder: list[tuple[Decimal, Decimal | None, int]],
 ) -> list[int]:
     """Submit each tranche as a separate Bitfinex offer. Returns list of
     offer IDs in submission order (first = primary tranche).
+
+    Period is now per-tranche (F-5a-3.4 dynamic days) — each tuple carries
+    its own period_days from the ladder builder.
 
     Sequential, not concurrent — Bitfinex rejects API calls that arrive
     too close together with the same nonce; sequential is safer.
@@ -427,13 +464,13 @@ async def _submit_ladder(
     If ANY tranche fails, raises and caller retries the whole pipeline
     (the failed tranches won't have offer IDs and the prior successful
     ones become orphans we'd need to manually clean up — for MVP we accept
-    this risk; F-5a-3.4 will harden with rollback).
+    this risk; future hardening will add rollback).
     """
     offer_ids: list[int] = []
-    for i, (chunk_amount, chunk_rate) in enumerate(ladder):
+    for i, (chunk_amount, chunk_rate, chunk_period) in enumerate(ladder):
         offer_id = await adapter.submit_funding_offer(
             amount=chunk_amount,
-            period_days=period_days,
+            period_days=chunk_period,
             rate=chunk_rate,
         )
         offer_ids.append(offer_id)
@@ -448,6 +485,7 @@ async def _submit_ladder(
                 if chunk_rate is not None
                 else "FRR"
             ),
+            period_days=chunk_period,
             offer_id=offer_id,
         )
     return offer_ids

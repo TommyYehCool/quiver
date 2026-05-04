@@ -37,7 +37,6 @@ from app.core.logging import get_logger
 from app.models.earn import EarnAccount, EarnPosition, EarnPositionStatus
 from app.services.earn import repo as earn_repo
 from app.services.earn.auto_lend import (
-    DEFAULT_OFFER_PERIOD_DAYS,
     MIN_AUTO_LEND_USDT,
     _build_ladder,
     _compute_competitive_rate,
@@ -187,11 +186,7 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     base_rate = await _compute_competitive_rate(amount)
     ladder = _build_ladder(amount, base_rate)
     try:
-        offer_ids = await _submit_ladder(
-            adapter=adapter,
-            ladder=ladder,
-            period_days=DEFAULT_OFFER_PERIOD_DAYS,
-        )
+        offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
     except Exception as e:
         # Most common: Bitfinex's "available=0" right after our previous cancel
         # settles. Will retry on next cron run.
