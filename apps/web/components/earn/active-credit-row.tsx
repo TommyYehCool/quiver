@@ -103,7 +103,10 @@ export function ActiveCreditRow({ credit }: { credit: ActiveCreditOut }) {
       <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
         <Stat
           label={s.ratePerDay}
-          value={`${rateDailyPct.toFixed(4)}%`}
+          // 6 decimal places matches Bitfinex's funding panel display
+          // exactly (e.g., "0.008010%"). 4 decimals silently truncated
+          // the trailing digit, making users wonder if our number was off.
+          value={`${rateDailyPct.toFixed(6)}%`}
           icon={<TrendingUp className="h-3 w-3" />}
         />
         <Stat label={s.apr} value={`${apr.toFixed(2)}%`} />
