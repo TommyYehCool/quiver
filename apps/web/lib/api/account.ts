@@ -2,7 +2,7 @@
  * Account self-service API client (phase 6E-1).
  */
 
-import { API_BASE_URL, apiFetch } from "@/lib/api";
+import { apiFetch, getApiBase } from "@/lib/api";
 
 export interface LoginSessionItem {
   id: number;
@@ -50,7 +50,9 @@ export async function cancelDeletion(): Promise<DeletionRequestStatus> {
  * 個資匯出 — 觸發瀏覽器下載 JSON 檔。
  */
 export async function downloadMyData(): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/me/export`, {
+  // Use runtime getApiBase() instead of build-time API_BASE_URL — see kyc.ts
+  // header comment for why (Dockerfile doesn't bake NEXT_PUBLIC env vars).
+  const res = await fetch(`${getApiBase()}/api/me/export`, {
     credentials: "include",
   });
   if (!res.ok) throw new Error(`export failed: ${res.status}`);

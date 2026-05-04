@@ -1,11 +1,14 @@
 /**
- * KYC API client（含 user + admin endpoints）。
+ * KYC API client(含 user + admin endpoints)。
+ *
+ * Always use `getApiBase()` (runtime) for browser-side URLs — the legacy
+ * build-time `API_BASE_URL` constant resolves to "http://localhost:8000"
+ * in production because the Dockerfile doesn't pass NEXT_PUBLIC_*
+ * env vars at build time. getApiBase() detects production hosts at
+ * runtime and returns "" (relative URL) so nginx routes /api correctly.
  */
 
-import { apiFetch } from "@/lib/api";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+import { apiFetch, getApiBase } from "@/lib/api";
 
 export type KycStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -46,8 +49,8 @@ export async function submitKyc(input: KycSubmitInput): Promise<KycSubmission> {
   fd.append("id_back", input.id_back);
   fd.append("selfie", input.selfie);
 
-  // multipart 不能用 apiFetch（它強制 Content-Type: application/json）
-  const res = await fetch(`${API_BASE_URL}/api/kyc/submissions`, {
+  // multipart 不能用 apiFetch(它強制 Content-Type: application/json)
+  const res = await fetch(`${getApiBase()}/api/kyc/submissions`, {
     method: "POST",
     credentials: "include",
     body: fd,
@@ -76,7 +79,7 @@ export async function submitKyc(input: KycSubmitInput): Promise<KycSubmission> {
 }
 
 export function kycFileUrl(submissionId: number, which: "id_front" | "id_back" | "selfie"): string {
-  return `${API_BASE_URL}/api/kyc/submissions/${submissionId}/files/${which}`;
+  return `${getApiBase()}/api/kyc/submissions/${submissionId}/files/${which}`;
 }
 
 // ---------- admin ----------
