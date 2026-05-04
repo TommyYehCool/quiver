@@ -54,8 +54,8 @@ const STRINGS: Record<Locale, {
       titlePublic: "標準費率",
       descFriend: (remaining, total) =>
         `前 ${total} 名連接者享受 Friend 等級費率。目前還剩 ${remaining} 個名額。`,
-      descPublic: "Friend 名額已滿,你會以標準公開費率連接。Quiver 從你利息收入抽取 perf fee,本金永遠不抽。",
-      feeLabel: "Performance fee(只在你贖回時從利息扣)",
+      descPublic: "Friend 名額已滿,你會以標準公開費率連接。Quiver 從你利息收入抽取績效費,本金永遠不抽。",
+      feeLabel: "績效費(只從你的利息收入扣,本金不動)",
       feeNote: "本金永遠不會被扣手續費。Fee 只在你的部位獲得利息且贖回時計算,從利息總額中抽取上述比例。",
     },
     guideCard: {
@@ -96,8 +96,8 @@ const STRINGS: Record<Locale, {
       titlePublic: "Standard rate",
       descFriend: (remaining, total) =>
         `The first ${total} connectors get the Friend tier rate. ${remaining} slot${remaining === 1 ? "" : "s"} remaining.`,
-      descPublic: "All Friend slots are taken — you'll connect at the standard public rate. Quiver takes a perf fee from your interest income only; never from your principal.",
-      feeLabel: "Performance fee (charged from interest only, on redemption)",
+      descPublic: "All Friend slots are taken — you'll connect at the standard public rate. Quiver takes a performance fee from your interest income only; never from your principal.",
+      feeLabel: "Performance fee (charged from interest only — never principal)",
       feeNote: "Your principal is never charged. The fee is calculated only when your position earns interest and you redeem, taking the above percentage from gross interest.",
     },
     guideCard: {

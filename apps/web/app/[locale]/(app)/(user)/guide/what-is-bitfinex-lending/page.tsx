@@ -58,7 +58,7 @@ const STRINGS: Record<Locale, Strings> = {
         { period: "正常市場", rate: "0.02-0.04% / 日", apy: "7-15% APY" },
         { period: "Bull market / 高需求", rate: "0.05-0.15% / 日", apy: "18-50% APY" },
       ],
-      note: "Quiver 從你實際拿到的利息抽 perf fee(Friend 等級 5% / Public 15% / 訂閱 0%),本金完全不抽。",
+      note: "Quiver 從你實際拿到的利息抽績效費(Friend 等級 5% / Public 15% / 訂閱 0%),本金完全不抽。",
     },
 
     s4: {
@@ -138,7 +138,7 @@ const STRINGS: Record<Locale, Strings> = {
         { period: "Normal market", rate: "0.02-0.04% / day", apy: "7-15% APY" },
         { period: "Bull market / high demand", rate: "0.05-0.15% / day", apy: "18-50% APY" },
       ],
-      note: "Quiver takes a perf fee on the interest you actually earn (Friend tier 5% / Public 15% / subscribed 0%) — never on principal.",
+      note: "Quiver takes a performance fee on the interest you actually earn (Friend tier 5% / Public 15% / subscribed 0%) — never on principal.",
     },
 
     s4: {
@@ -218,7 +218,7 @@ const STRINGS: Record<Locale, Strings> = {
         { period: "通常市場", rate: "0.02-0.04% / 日", apy: "7-15% APY" },
         { period: "ブル市場 / 高需要", rate: "0.05-0.15% / 日", apy: "18-50% APY" },
       ],
-      note: "Quiver は実際に得た利息に対して perf fee を取ります(Friend 5% / Public 15% / サブスク 0%)— 元本に手数料はかかりません。",
+      note: "Quiver は実際に得た利息に対してパフォーマンスフィーを取ります(Friend 5% / Public 15% / サブスク 0%)— 元本に手数料はかかりません。",
     },
 
     s4: {

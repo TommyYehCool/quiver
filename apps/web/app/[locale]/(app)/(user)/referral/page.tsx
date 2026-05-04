@@ -23,7 +23,7 @@ type Locale = "zh-TW" | "en" | "ja";
 const STRINGS = {
   "zh-TW": {
     title: "推薦",
-    subtitle: "邀請朋友加入 Quiver Earn,從他們未來 6 個月的 perf fee 賺分潤。",
+    subtitle: "邀請朋友加入 Quiver Earn,從他們未來 6 個月的績效費賺分潤。",
     statBlocks: {
       directInvitees: "已邀請人數",
       directInviteesSub: "直接被你邀請的用戶",
@@ -34,10 +34,10 @@ const STRINGS = {
     },
     howItWorks: {
       title: "怎麼運作",
-      l1Pct: (pct: string) => `**直邀(L1)**:被你邀請的人每次被收 perf fee,你拿其中 **${pct}%**`,
+      l1Pct: (pct: string) => `**直邀(L1)**:被你邀請的人每次被收績效費,你拿其中 **${pct}%**`,
       l2Pct: (pct: string) => `**間接(L2)**:被邀請人邀請的下一層,你拿 **${pct}%**`,
-      window: (days: number) => `每位被邀請人的分潤窗口為 **${days} 天**,從他們第一筆 perf fee 結算當天起算。`,
-      payment: "撥款即時 — perf fee 結算當下,自動撥到你的 Quiver 主錢包,可直接提領或繼續賺利息。",
+      window: (days: number) => `每位被邀請人的分潤窗口為 **${days} 天**,從他們第一筆績效費結算當天起算。`,
+      payment: "撥款即時 — 績效費結算當下,自動撥到你的 Quiver 主錢包,可直接提領或繼續賺利息。",
     },
     code: {
       haveCodeTitle: "你的推薦碼",
@@ -60,10 +60,10 @@ const STRINGS = {
     },
     bind: {
       alreadyBoundTitle: "你已綁定推薦人",
-      alreadyBoundDesc: "你的 perf fee 結算時,會自動撥分潤給你的推薦人。",
+      alreadyBoundDesc: "你的績效費結算時,會自動撥分潤給你的推薦人。",
       windowActiveTemplate: "分潤窗口開啟中 — 至 {date} 結束。",
       windowExpired: "分潤窗口已過期。",
-      windowNotStarted: "分潤窗口尚未開始(等你產生第一筆 perf fee)。",
+      windowNotStarted: "分潤窗口尚未開始(等你產生第一筆績效費)。",
       bindTitle: "輸入別人的推薦碼",
       bindDesc: "如果是朋友邀你來的,輸入他們的碼把你綁定。一旦綁定無法變更。",
       inputLabel: "推薦碼",
@@ -80,7 +80,7 @@ const STRINGS = {
     payouts: {
       title: "撥款紀錄",
       desc: "你收到的所有 L1 + L2 分潤明細,最近 100 筆。",
-      empty: "還沒有撥款紀錄。等你的被邀請人開始產生 perf fee 才會有。",
+      empty: "還沒有撥款紀錄。等你的被邀請人開始產生績效費才會有。",
       date: "時間",
       level: "層級",
       amount: "金額 (USDT)",
@@ -90,7 +90,7 @@ const STRINGS = {
   },
   en: {
     title: "Referral",
-    subtitle: "Invite friends to Quiver Earn and earn revshare on their perf fees for 6 months.",
+    subtitle: "Invite friends to Quiver Earn and earn revshare on their performance fees for 6 months.",
     statBlocks: {
       directInvitees: "Direct invitees",
       directInviteesSub: "People you've invited directly",
@@ -101,10 +101,10 @@ const STRINGS = {
     },
     howItWorks: {
       title: "How it works",
-      l1Pct: (pct: string) => `**Direct (L1)**: every time someone you invited is charged a perf fee, you receive **${pct}%**`,
+      l1Pct: (pct: string) => `**Direct (L1)**: every time someone you invited is charged a performance fee, you receive **${pct}%**`,
       l2Pct: (pct: string) => `**Indirect (L2)**: people invited by your invitees pay **${pct}%** to you`,
-      window: (days: number) => `Each invitee's revshare window is **${days} days**, starting from the day their first perf fee settles.`,
-      payment: "Real-time — payouts credit to your Quiver wallet the moment perf fee settles. Withdraw immediately or keep earning interest.",
+      window: (days: number) => `Each invitee's revshare window is **${days} days**, starting from the day their first performance fee settles.`,
+      payment: "Real-time — payouts credit to your Quiver wallet the moment a performance fee settles. Withdraw immediately or keep earning interest.",
     },
     code: {
       haveCodeTitle: "Your referral code",
@@ -127,10 +127,10 @@ const STRINGS = {
     },
     bind: {
       alreadyBoundTitle: "You're bound to a referrer",
-      alreadyBoundDesc: "When your perf fee settles, your referrer automatically receives revshare.",
+      alreadyBoundDesc: "When your performance fee settles, your referrer automatically receives revshare.",
       windowActiveTemplate: "Revshare window active — ends {date}.",
       windowExpired: "Revshare window expired.",
-      windowNotStarted: "Revshare window hasn't started yet (waiting for your first perf fee).",
+      windowNotStarted: "Revshare window hasn't started yet (waiting for your first performance fee).",
       bindTitle: "Paste someone's referral code",
       bindDesc: "If a friend invited you, enter their code to bind. Once bound it cannot be changed.",
       inputLabel: "Code",
@@ -147,7 +147,7 @@ const STRINGS = {
     payouts: {
       title: "Payout history",
       desc: "All L1 + L2 revshare you've received, most recent 100.",
-      empty: "No payouts yet. They'll appear once your invitees start generating perf fees.",
+      empty: "No payouts yet. They'll appear once your invitees start generating performance fees.",
       date: "Date",
       level: "Level",
       amount: "Amount (USDT)",
@@ -157,7 +157,7 @@ const STRINGS = {
   },
   ja: {
     title: "リファラル",
-    subtitle: "友達を Quiver Earn に招待し、6 ヶ月間その perf fee からレベニューシェアを獲得。",
+    subtitle: "友達を Quiver Earn に招待し、6 ヶ月間そのパフォーマンスフィーからレベニューシェアを獲得。",
     statBlocks: {
       directInvitees: "直接招待数",
       directInviteesSub: "あなたが直接招待したユーザー",
@@ -168,10 +168,10 @@ const STRINGS = {
     },
     howItWorks: {
       title: "仕組み",
-      l1Pct: (pct: string) => `**直接(L1)**:あなたが招待した人が perf fee を支払うたびに **${pct}%** 受け取り`,
+      l1Pct: (pct: string) => `**直接(L1)**:あなたが招待した人がパフォーマンスフィーを支払うたびに **${pct}%** 受け取り`,
       l2Pct: (pct: string) => `**間接(L2)**:あなたの招待者が招待した次の階層から **${pct}%**`,
-      window: (days: number) => `各招待者のレベニューシェア窓口は **${days} 日間**、最初の perf fee 決済日から開始。`,
-      payment: "リアルタイム支払い — perf fee 決済時に自動で Quiver メインウォレットに振込。すぐに引き出すか利息運用を続けるか自由。",
+      window: (days: number) => `各招待者のレベニューシェア窓口は **${days} 日間**、最初のパフォーマンスフィー決済日から開始。`,
+      payment: "リアルタイム支払い —パフォーマンスフィー決済時に自動で Quiver メインウォレットに振込。すぐに引き出すか利息運用を続けるか自由。",
     },
     code: {
       haveCodeTitle: "あなたのリファラルコード",
@@ -194,10 +194,10 @@ const STRINGS = {
     },
     bind: {
       alreadyBoundTitle: "リファラーに紐付け済み",
-      alreadyBoundDesc: "あなたの perf fee 決済時、リファラーに自動でレベニューシェアが振り込まれます。",
+      alreadyBoundDesc: "あなたのパフォーマンスフィー決済時、リファラーに自動でレベニューシェアが振り込まれます。",
       windowActiveTemplate: "レベニューシェア窓口アクティブ — {date} に終了。",
       windowExpired: "レベニューシェア窓口は期限切れです。",
-      windowNotStarted: "レベニューシェア窓口はまだ開始していません(最初の perf fee を待機中)。",
+      windowNotStarted: "レベニューシェア窓口はまだ開始していません(最初のパフォーマンスフィーを待機中)。",
       bindTitle: "他人のリファラルコードを入力",
       bindDesc: "友達に招待された場合、コードを入力して紐付けてください。一度紐付けると変更不可。",
       inputLabel: "コード",
@@ -214,7 +214,7 @@ const STRINGS = {
     payouts: {
       title: "支払い履歴",
       desc: "受け取った全 L1 + L2 レベニューシェア、直近 100 件。",
-      empty: "まだ支払い記録はありません。招待者が perf fee を発生させると表示されます。",
+      empty: "まだ支払い記録はありません。招待者がパフォーマンスフィーを発生させると表示されます。",
       date: "日時",
       level: "レベル",
       amount: "金額 (USDT)",

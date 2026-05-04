@@ -75,7 +75,7 @@
       },
       "h3": {
         "title": "Free for friend tier",
-        "desc": "Invite-only friend tier pays no fees. Future commercial version will charge perf fee, but friend tier stays free forever."
+        "desc": "Invite-only friend tier pays no fees. Future commercial version will charge a performance fee, but friend tier stays free forever."
       },
       "h4": {
         "title": "Hedged across CeFi + DeFi",
@@ -121,7 +121,7 @@
       "r3Desc": "iOS + Android (Flutter). Full wallet features, Face ID, push notifications.",
       "r4Status": "Awaiting Legal",
       "r4Title": "Phase 4 — Earn Public",
-      "r4Desc": "After legal review, open public registration with auto-rebalance and perf fee."
+      "r4Desc": "After legal review, open public registration with auto-rebalance and performance fee."
     },
     "trust": {
       "title": "Why you can trust this",

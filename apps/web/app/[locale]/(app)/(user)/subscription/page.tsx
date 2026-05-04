@@ -27,18 +27,18 @@ type Locale = "zh-TW" | "en" | "ja";
 const STRINGS = {
   "zh-TW": {
     title: "Premium 訂閱",
-    subtitle: "訂閱後 perf fee 變 0%。所有未來放貸利息全部歸你。",
+    subtitle: "訂閱後績效費變 0%。所有未來放貸利息全部歸你。",
     plan: {
       title: "Premium 月費方案",
-      desc: "$9.99 USDT / 月,perf fee 全免。隨時可取消,當期結束失效。",
-      bullet1: "✓ 0% perf fee(取代 5% / 15% 級距)",
+      desc: "$9.99 USDT / 月,績效費全免。隨時可取消,當期結束失效。",
+      bullet1: "✓ 0% 績效費(取代 5% / 15% 級距)",
       bullet2: (days: number) => `✓ ${days} 天為一期,自動從你 Quiver 主錢包扣款`,
       bullet3: (days: number) => `✓ 餘額不足會 PAST_DUE 寬限 ${days} 天再失效`,
       bullet4: "✓ 取消後仍可享受到當期結束",
     },
     notSubscribed: {
       ctaTemplate: "訂閱 — ${price} USDT / 月",
-      ctaNote: "立即從你 Quiver 主錢包扣款,確認後即享 0% perf fee。",
+      ctaNote: "立即從你 Quiver 主錢包扣款,確認後即享 0% 績效費。",
     },
     activeSection: {
       titleActive: "Premium 訂閱中 ✓",
@@ -49,7 +49,7 @@ const STRINGS = {
       pastDueDesc: (graceEnd: string) =>
         `上次自動續訂扣款失敗,主錢包餘額不足。請於 ${graceEnd} 前儲值,否則訂閱會自動到期。`,
       scheduledDesc: (endDate: string) =>
-        `已排程取消 — ${endDate} 後失效,perf fee 將恢復為一般級距。要繼續訂閱?點下面復原。`,
+        `已排程取消 — ${endDate} 後失效,績效費將恢復為一般級距。要繼續訂閱?點下面復原。`,
       cancelCta: "取消訂閱(保留到期)",
       uncancelCta: "復原(繼續續訂)",
       premiumBadgePeriod: (start: string, end: string) =>
@@ -78,11 +78,11 @@ const STRINGS = {
   },
   en: {
     title: "Premium Subscription",
-    subtitle: "Subscribe to skip the perf fee. Keep 100% of your future lending interest.",
+    subtitle: "Subscribe to skip the performance fee. Keep 100% of your future lending interest.",
     plan: {
       title: "Premium monthly plan",
-      desc: "$9.99 USDT / month, 0% perf fee. Cancel anytime, benefits stay until period end.",
-      bullet1: "✓ 0% perf fee (instead of the 5% / 15% tier rate)",
+      desc: "$9.99 USDT / month, 0% performance fee. Cancel anytime, benefits stay until period end.",
+      bullet1: "✓ 0% performance fee (instead of the 5% / 15% tier rate)",
       bullet2: (days: number) =>
         `✓ ${days}-day period, auto-debited from your Quiver main wallet`,
       bullet3: (days: number) =>
@@ -91,7 +91,7 @@ const STRINGS = {
     },
     notSubscribed: {
       ctaTemplate: "Subscribe — ${price} USDT / month",
-      ctaNote: "Charged immediately from your Quiver main wallet. 0% perf fee starts on confirmation.",
+      ctaNote: "Charged immediately from your Quiver main wallet. 0% performance fee starts on confirmation.",
     },
     activeSection: {
       titleActive: "Premium active ✓",
@@ -102,7 +102,7 @@ const STRINGS = {
       pastDueDesc: (graceEnd: string) =>
         `Last renewal attempt failed (insufficient main-wallet balance). Top up before ${graceEnd} or the subscription expires.`,
       scheduledDesc: (endDate: string) =>
-        `Cancellation scheduled — expires ${endDate}, perf fee returns to your tier rate. Want to keep going? Click resume below.`,
+        `Cancellation scheduled — expires ${endDate}, performance fee returns to your tier rate. Want to keep going? Click resume below.`,
       cancelCta: "Cancel (keep until period end)",
       uncancelCta: "Resume (continue renewing)",
       premiumBadgePeriod: (start: string, end: string) =>
@@ -132,11 +132,11 @@ const STRINGS = {
   },
   ja: {
     title: "Premium サブスクリプション",
-    subtitle: "サブスク登録で perf fee は 0%。今後の貸出利息をすべて自分のものに。",
+    subtitle: "サブスク登録でパフォーマンスフィーは 0%。今後の貸出利息をすべて自分のものに。",
     plan: {
       title: "Premium 月額プラン",
-      desc: "$9.99 USDT / 月、perf fee 完全無料。いつでもキャンセル可能、特典は当期終了まで継続。",
-      bullet1: "✓ 0% perf fee(5% / 15% のティアレートを置き換え)",
+      desc: "$9.99 USDT / 月、パフォーマンスフィー 完全無料。いつでもキャンセル可能、特典は当期終了まで継続。",
+      bullet1: "✓ 0% パフォーマンスフィー(5% / 15% のティアレートを置き換え)",
       bullet2: (days: number) =>
         `✓ ${days} 日サイクル、Quiver メインウォレットから自動引落`,
       bullet3: (days: number) =>
@@ -145,7 +145,7 @@ const STRINGS = {
     },
     notSubscribed: {
       ctaTemplate: "サブスク登録 — ${price} USDT / 月",
-      ctaNote: "即時に Quiver メインウォレットから引落。確認後 0% perf fee 開始。",
+      ctaNote: "即時に Quiver メインウォレットから引落。確認後 0%パフォーマンスフィー開始。",
     },
     activeSection: {
       titleActive: "Premium 登録中 ✓",
@@ -156,7 +156,7 @@ const STRINGS = {
       pastDueDesc: (graceEnd: string) =>
         `前回の自動更新が失敗しました(残高不足)。${graceEnd} までに入金してください、それ以外はサブスクが期限切れになります。`,
       scheduledDesc: (endDate: string) =>
-        `キャンセル予約済み — ${endDate} に失効、perf fee はティアレートに戻ります。続行する場合は下の復元をクリック。`,
+        `キャンセル予約済み — ${endDate} に失効、パフォーマンスフィー はティアレートに戻ります。続行する場合は下の復元をクリック。`,
       cancelCta: "キャンセル(当期まで継続)",
       uncancelCta: "復元(自動更新継続)",
       premiumBadgePeriod: (start: string, end: string) =>

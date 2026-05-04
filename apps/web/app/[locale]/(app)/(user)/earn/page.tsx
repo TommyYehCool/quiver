@@ -68,8 +68,8 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       public: "Public 等級",
       internal: "Internal",
       premium: "Premium",
-      premiumSuffix: "· 0% perf fee",
-      feeSuffix: (pct) => `· perf fee ${pct}%`,
+      premiumSuffix: "· 0% 績效費",
+      feeSuffix: (pct) => `· 績效費 ${pct}%`,
     },
     kycGate: { title: "先完成 KYC 驗證", descPrefix: "Earn 功能需要先通過 KYC。當前狀態:", cta: "去 KYC" },
     notSetup: {
@@ -123,6 +123,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       premiumSuffix: "· 0% perf fee",
       feeSuffix: (pct) => `· perf fee ${pct}%`,
     },
+    /* en keeps "perf fee" — it's domain jargon English speakers in fintech understand. */
     kycGate: { title: "Complete KYC first", descPrefix: "Earn requires KYC approval. Current status: ", cta: "Go to KYC" },
     notSetup: {
       title: "Connect your Bitfinex account",
@@ -172,8 +173,8 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       public: "Public ティア",
       internal: "Internal",
       premium: "Premium",
-      premiumSuffix: "· 0% perf fee",
-      feeSuffix: (pct) => `· perf fee ${pct}%`,
+      premiumSuffix: "· 0% パフォーマンスフィー",
+      feeSuffix: (pct) => `· パフォーマンスフィー ${pct}%`,
     },
     kycGate: { title: "先に本人確認を完了", descPrefix: "Earn の利用には KYC 承認が必要です。現在のステータス:", cta: "本人確認へ" },
     notSetup: {
