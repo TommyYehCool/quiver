@@ -75,8 +75,14 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
 
     try:
         adapter = await BitfinexFundingAdapter.from_connection(db, conn)
-        bf_position = await adapter.get_funding_position()
-        active_offers = await adapter.list_active_offers()
+        # F-5a-3.11: query both currencies in parallel. Legacy USDT
+        # positions stay valid alongside new USD positions during the
+        # transition window. Symbols are independent on Bitfinex —
+        # offers for fUST and fUSD live in disjoint orderbooks.
+        bf_position_ust = await adapter.get_funding_position(currency="UST")
+        bf_position_usd = await adapter.get_funding_position(currency="USD")
+        active_offers_ust = await adapter.list_active_offers(symbol="fUST")
+        active_offers_usd = await adapter.list_active_offers(symbol="fUSD")
     except Exception as e:
         logger.warning(
             "earn_reconcile_bitfinex_query_failed",
@@ -86,7 +92,11 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         summary["errors"].append(f"bitfinex_query:{e}")
         return summary
 
-    active_offer_ids = {o.id for o in active_offers}
+    # Combined view for the existing logic below — we'll fan out per
+    # currency where needed but the spike detection / order-book lookup
+    # cares about both markets.
+    bf_position = bf_position_ust  # legacy variable name; USDT-side default
+    active_offer_ids = {o.id for o in active_offers_ust} | {o.id for o in active_offers_usd}
 
     # ── F-5a-4.2 spike-capture detection ──
     # Walk active credits (filled funding loans). Any credit opened SINCE the
@@ -98,7 +108,10 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     last_check = account.last_credits_check_at  # backfilled to NOW() at migration
     current_frr_apr: Decimal | None = None
     spike_credits = []
-    for credit in bf_position.active_credits:
+    # F-5a-3.11: scan both UST and USD active credits for spikes.
+    for credit in (
+        list(bf_position_ust.active_credits) + list(bf_position_usd.active_credits)
+    ):
         opened_at = datetime.fromtimestamp(
             credit.opened_at_ms / 1000, tz=timezone.utc
         )
@@ -150,7 +163,14 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     # so collisions across users are impossible. Within a single user, two
     # tranches with the same amount could in theory confuse the heuristic,
     # but in practice ladder tranches use distinct amounts.
-    active_credit_amounts: set[Decimal] = {c.amount for c in bf_position.active_credits}
+    # F-5a-3.11: union active credit amounts across both currencies.
+    # This is OK because the position's lending_currency tells us which
+    # market its money is in — we just need to know SOME credit at that
+    # amount exists somewhere on Bitfinex to conclude it matched.
+    active_credit_amounts: set[Decimal] = (
+        {c.amount for c in bf_position_ust.active_credits}
+        | {c.amount for c in bf_position_usd.active_credits}
+    )
 
     def _tranche_ids(pos: EarnPosition) -> list[int]:
         if pos.bitfinex_offer_ids:
@@ -257,9 +277,17 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     # ── 3. auto-renew: idle funds in Bitfinex → submit fresh offer ──
     if not account.auto_lend_enabled:
         return summary
-    # 用 available 不是 balance — balance 包含已 lent 出去的部分(借方還沒還的本金),
-    # 那些不能再掛 offer。available 才是真正 idle 可動用的。
-    if bf_position.funding_available < MIN_AUTO_LEND_USDT:
+    # F-5a-3.11: auto-renew picks the right currency. We may have idle
+    # funds in EITHER funding/UST (legacy USDT path leftovers) or
+    # funding/USD (mature USD credits returning principal). Prefer USD
+    # for the new pivot direction; fall back to USDT only if no USD idle.
+    if bf_position_usd.funding_available >= MIN_AUTO_LEND_USDT:
+        renew_currency = "USD"
+        amount = bf_position_usd.funding_available
+    elif bf_position_ust.funding_available >= MIN_AUTO_LEND_USDT:
+        renew_currency = "UST"
+        amount = bf_position_ust.funding_available
+    else:
         return summary
 
     # Skip if there's already an active in-flight pipeline for this account —
@@ -272,6 +300,7 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
                     EarnPositionStatus.PENDING_OUTBOUND.value,
                     EarnPositionStatus.ONCHAIN_IN_FLIGHT.value,
                     EarnPositionStatus.FUNDING_IDLE.value,
+                    EarnPositionStatus.CONVERTING_TO_USD.value,
                 ]
             ),
         ).limit(1)
@@ -279,15 +308,13 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     if in_flight_q.scalar_one_or_none() is not None:
         return summary
 
-    # F-5a-3.10: same period-aware strategy_selector used by the new-deposit
-    # path in auto_lend.py. Ensures the auto-renew (this branch) and fresh-
-    # deposit branches produce identical decisions for the same conditions.
+    # F-5a-3.10 + 3.11: currency-aware strategy_selector. Both paths share
+    # the same selection logic; only the signal source differs.
     from app.services.earn.market_signals import get_market_signals
     from app.services.earn.strategy_selector import select_strategy, to_legacy_ladder
 
-    amount = bf_position.funding_available
-    signals = await get_market_signals()
-    market = await fetch_market_frr()
+    signals = await get_market_signals(currency=renew_currency)
+    market = await fetch_market_frr(symbol=f"f{renew_currency}")
     frr_daily = market.frr_daily if market is not None else None
     decision = select_strategy(
         amount=amount,
@@ -299,6 +326,7 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         "earn_reconcile_strategy_selected",
         earn_account_id=account.id,
         amount=str(amount),
+        currency=renew_currency,
         preset=account.strategy_preset,
         frr_daily=str(frr_daily) if frr_daily else "unavailable",
         tranche_count=len(decision.tranches),
@@ -308,7 +336,9 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     )
     ladder = to_legacy_ladder(decision)
     try:
-        offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
+        offer_ids = await _submit_ladder(
+            adapter=adapter, ladder=ladder, currency=renew_currency
+        )
     except Exception as e:
         # Most common: Bitfinex's "available=0" right after our previous cancel
         # settles. Will retry on next cron run.
@@ -316,6 +346,7 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
             "earn_reconcile_renew_failed",
             earn_account_id=account.id,
             amount=str(amount),
+            currency=renew_currency,
             error=str(e),
         )
         summary["errors"].append(f"renew:{e}")
@@ -323,14 +354,14 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
 
     # Record the renewal as a new earn_position. F-5a-3.8: starts as
     # OFFER_PENDING (offer submitted, not yet matched); the next reconcile
-    # pass flips it to LENT once a matching credit appears. Pre-3.8 this
-    # was set to LENT directly which made the dashboard say "已借出, 計息中"
-    # while the offer was actually still waiting for a borrower.
+    # pass flips it to LENT once a matching credit appears.
+    # F-5a-3.11: lending_currency tracks which market this renewal joined.
     new_pos = EarnPosition(
         earn_account_id=account.id,
         status=EarnPositionStatus.OFFER_PENDING.value,
         amount=amount,
         currency="USDT-TRC20",
+        lending_currency="USD" if renew_currency == "USD" else "USDT",
         bitfinex_offer_id=offer_ids[0],
         bitfinex_offer_ids=json.dumps(offer_ids),
         bitfinex_offer_submitted_at=datetime.now(timezone.utc),
