@@ -107,6 +107,33 @@ class CancelOfferOut(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────
+# F-5a-3.11.7: redeem (USD → USDT)
+# ─────────────────────────────────────────────────────────
+
+
+class RedeemOut(BaseModel):
+    """Result of POST /api/earn/redeem.
+
+    Per F-5a-3.11.7 design (Q1 = "立即贖可拿部分,鎖的不退"):
+    user clicks Redeem → we cancel pending USD offers and convert all
+    available USD funding to USDT. Money locked in active USD credits
+    stays locked until each credit matures; user must click Redeem
+    again later when more becomes available.
+
+    For MVP, USDT lands in user's Bitfinex Funding wallet — they
+    withdraw to their Quiver-managed address via Bitfinex UI. Future
+    iteration will automate the on-chain bridge back to Quiver.
+    """
+    usd_redeemed: Decimal           # USD converted to USDT
+    usdt_received: Decimal          # USDT now in Bitfinex funding wallet
+    avg_conversion_rate: Decimal    # USDT received / USD redeemed
+    cancelled_offer_count: int      # USD offers we cancelled to free funds
+    locked_in_credits_usd: Decimal  # USD still locked, will mature later
+    next_credit_expires_at: int | None  # ms timestamp of nearest credit maturity
+    bitfinex_withdraw_destination_hint: str  # address where user should withdraw to
+
+
+# ─────────────────────────────────────────────────────────
 # F-5a-3.10d: dry-run strategy preview
 # ─────────────────────────────────────────────────────────
 

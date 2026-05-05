@@ -57,6 +57,7 @@ from app.schemas.earn_user import (
     PendingOfferOut,
     PeriodSignalOut,
     RankEntryOut,
+    RedeemOut,
     StrategyPreviewIn,
     StrategyPreviewOut,
     StrategyTrancheOut,
@@ -493,6 +494,160 @@ async def submit_custom_offer(
         period_days=payload.period_days,
     )
     return ApiResponse[SubmitOfferOut].ok(SubmitOfferOut(offer_id=offer_id))
+
+
+@router.post("/redeem", response_model=ApiResponse[RedeemOut])
+async def redeem(
+    user: CurrentUserDep,
+    db: DbDep,
+) -> ApiResponse[RedeemOut]:
+    """POST /api/earn/redeem — F-5a-3.11.7 USD-pivot redemption.
+
+    Cancels all pending USD offers and converts available USD funding
+    to USDT. Money locked in active USD credits stays locked — user
+    can click Redeem again after each credit matures (Q1 = "(c)
+    立即贖可拿部分,鎖的不退" decision).
+
+    Sequence:
+      1. List active fUSD offers; cancel each (releases USD back to funding/USD)
+      2. Brief settling delay (~2s) so Bitfinex's available balance reflects cancels
+      3. Read USD funding/available
+      4. Convert USD → USDT via _convert_usd_to_usdt_in_funding
+      5. Mark redeemed positions appropriately (LENT credits stay LENT)
+      6. Return amount + locked-in-credits + Bitfinex deposit hint
+
+    For MVP the USDT lands in user's Bitfinex funding/UST wallet. They
+    then withdraw via Bitfinex UI to their Quiver USDT address (returned
+    in `bitfinex_withdraw_destination_hint`). Future iteration will
+    automate the on-chain bridge.
+
+    Idempotency: calling Redeem twice in quick succession is safe — the
+    second call finds no pending offers + 0 USD available, returns a
+    no-op result.
+    """
+    account = await earn_repo.get_account_by_user_id(db, user.id)
+    if account is None:
+        raise HTTPException(status_code=404, detail={"code": "earn.no_account"})
+    conn = await earn_repo.get_active_bitfinex_connection(db, account.id)
+    if conn is None:
+        raise HTTPException(
+            status_code=400, detail={"code": "earn.no_bitfinex_connection"}
+        )
+
+    from app.services.earn.auto_lend import _convert_usd_to_usdt_in_funding
+    from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
+
+    adapter = await BitfinexFundingAdapter.from_connection(db, conn)
+
+    # Step 1+2: cancel pending USD offers, give Bitfinex a moment to settle.
+    cancelled = 0
+    try:
+        offers = await adapter.list_active_offers(symbol="fUSD")
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"code": "earn.bitfinex_unavailable", "reason": str(e)[:200]},
+        )
+    for o in offers:
+        try:
+            await adapter.cancel_funding_offer(o.id)
+            cancelled += 1
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "redeem_cancel_offer_failed",
+                user_id=user.id,
+                offer_id=o.id,
+                error=str(e),
+            )
+            # Continue — partial cancel is still progress.
+    if cancelled > 0:
+        # Bitfinex's available balance lags ~1-2s after a cancel. Wait so
+        # the upcoming get_funding_position sees the released funds.
+        import asyncio
+        await asyncio.sleep(2)
+
+    # Step 3: read USD funding state
+    try:
+        usd_pos = await adapter.get_funding_position(currency="USD")
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"code": "earn.bitfinex_unavailable", "reason": str(e)[:200]},
+        )
+    available_usd = usd_pos.funding_available
+    locked_in_credits = usd_pos.lent_total
+    next_expiry_ms: int | None = None
+    if usd_pos.active_credits:
+        next_expiry_ms = min(c.expires_at_ms for c in usd_pos.active_credits)
+
+    # Step 4: convert if there's enough to bother (under $1 = noise)
+    usdt_received = Decimal(0)
+    avg_rate = Decimal(0)
+    if available_usd >= Decimal("1"):
+        try:
+            usdt_received = await _convert_usd_to_usdt_in_funding(
+                adapter=adapter, usd_amount=available_usd
+            )
+            avg_rate = (
+                (usdt_received / available_usd).quantize(Decimal("0.000001"))
+                if available_usd > 0
+                else Decimal(0)
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.exception(
+                "redeem_conversion_failed",
+                user_id=user.id,
+                usd_amount=str(available_usd),
+                error=str(e),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={"code": "earn.redeem_conversion_failed", "reason": str(e)[:200]},
+            )
+
+    # Step 5: mark USD positions appropriately. OFFER_PENDING positions
+    # whose offers we just cancelled → REDEEMED (terminal). LENT positions
+    # are untouched (their credits stay locked until natural maturity).
+    if cancelled > 0:
+        from app.models.earn import EarnPosition, EarnPositionStatus
+
+        pending_q = await db.execute(
+            select(EarnPosition).where(
+                EarnPosition.earn_account_id == account.id,
+                EarnPosition.lending_currency == "USD",
+                EarnPosition.status == EarnPositionStatus.OFFER_PENDING.value,
+            )
+        )
+        for pos in pending_q.scalars().all():
+            pos.status = EarnPositionStatus.REDEEMED.value
+            pos.closed_at = datetime.now(timezone.utc)
+            pos.closed_reason = "user_redeemed"
+        await db.commit()
+
+    logger.info(
+        "earn_redeem_completed",
+        user_id=user.id,
+        usd_redeemed=str(available_usd),
+        usdt_received=str(usdt_received),
+        cancelled_offers=cancelled,
+        locked_in_credits=str(locked_in_credits),
+    )
+    # User's Quiver TRC20 address — where they should withdraw the
+    # converted USDT FROM Bitfinex's funding wallet (manual step for MVP).
+    return ApiResponse[RedeemOut].ok(
+        RedeemOut(
+            usd_redeemed=available_usd,
+            usdt_received=usdt_received,
+            avg_conversion_rate=avg_rate,
+            cancelled_offer_count=cancelled,
+            locked_in_credits_usd=locked_in_credits,
+            next_credit_expires_at=next_expiry_ms,
+            bitfinex_withdraw_destination_hint=(
+                user.tron_address
+                or "(no Quiver receive address — visit /wallet to set one up)"
+            ),
+        )
+    )
 
 
 @router.post("/strategy-preview", response_model=ApiResponse[StrategyPreviewOut])
