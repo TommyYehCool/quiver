@@ -30,7 +30,9 @@ import { FeeStatusCard } from "@/components/earn/fee-status-card";
 import { PendingOfferRow } from "@/components/earn/pending-offer-row";
 import { PerformanceCard } from "@/components/earn/performance-card";
 import { PublicStatsStrip } from "@/components/earn/public-stats-strip";
-import { StrategyPreviewCard } from "@/components/earn/strategy-preview-card";
+// F-5a-3.10.3 — StrategyPreviewCard moved to its own page at /earn/strategy-lab.
+// /earn focuses on live state (positions, credits, snapshots); the what-if
+// explorer lives separately so it doesn't compete for attention here.
 import type { EarnPositionStatus } from "@/lib/api/earn-user";
 
 function fmtUsd(s: string | null): string {
@@ -451,14 +453,6 @@ export default async function EarnPage({
           {/* F-5b-1 strategy performance card — placed right after big numbers
                so it's the first thing the user reads on a real dashboard. */}
           {perf ? <PerformanceCard locale={locale} perf={perf} /> : null}
-
-          {/* F-5a-3.10d strategy preview — dry-run the smart selector with
-               the user's current preset, no offer submitted. Visible to all
-               connected users so they can understand "why this rate" before
-               auto-renew kicks in. */}
-          {earn.strategy_preset ? (
-            <StrategyPreviewCard initialPreset={earn.strategy_preset} />
-          ) : null}
 
           {/* ═══ LIVE BITFINEX STATE — credits / offers / pipeline ═══ */}
 

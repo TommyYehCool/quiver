@@ -13,6 +13,7 @@ import {
   Menu,
   Settings,
   ShieldCheck,
+  Sparkles,
   TrendingUp,
   Trophy,
   UserCog,
@@ -74,6 +75,7 @@ export function UserChrome({
       labelKey: "navSectionEarn",
       items: [
         { href: `/${locale}/earn`, i18nKey: "earn", Icon: TrendingUp },
+        { href: `/${locale}/earn/strategy-lab`, i18nKey: "strategyLab", Icon: Sparkles },
         { href: `/${locale}/earn/bot-settings`, i18nKey: "botSettings", Icon: Bot },
         { href: `/${locale}/rank`, i18nKey: "rank", Icon: Trophy },
         { href: `/${locale}/subscription`, i18nKey: "premium", Icon: Crown },
