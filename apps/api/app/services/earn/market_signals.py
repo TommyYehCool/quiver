@@ -103,7 +103,7 @@ class MarketSignals:
 # Internal cache
 # ─────────────────────────────────────────────────────────
 
-_cache: MarketSignals | None = None
+_cache: dict[str, MarketSignals] = {}  # keyed by currency code (UST / USD)
 _cache_lock = asyncio.Lock()
 
 
@@ -121,31 +121,43 @@ def _is_cache_fresh(snap: MarketSignals | None) -> bool:
     return age_ms < CACHE_TTL_SECONDS * 1000
 
 
-async def get_market_signals(force_refresh: bool = False) -> MarketSignals:
+async def get_market_signals(
+    force_refresh: bool = False,
+    currency: str = "UST",
+) -> MarketSignals:
     """Return the latest per-period market signals, refreshing if stale.
+
+    F-5a-3.11: pass currency="USD" to get fUSD signals for the USD pivot
+    flow. Default "UST" preserves existing fUST behavior. Cache is keyed
+    by currency so the two markets stay independent.
 
     Concurrent callers within the cache window share one network round-trip
     via the asyncio.Lock. Forcing a refresh is mainly useful for tests and
     the dry-run preview endpoint where the user wants live data.
     """
     global _cache
-    if not force_refresh and _is_cache_fresh(_cache):
-        return _cache  # type: ignore[return-value]
+    cache_key = currency.upper()
+    cached = _cache.get(cache_key) if isinstance(_cache, dict) else None
+    if not force_refresh and _is_cache_fresh(cached):
+        return cached  # type: ignore[return-value]
     async with _cache_lock:
-        # Re-check after acquiring lock — another caller may have refreshed.
-        if not force_refresh and _is_cache_fresh(_cache):
-            return _cache  # type: ignore[return-value]
-        snap = await _fetch_fresh_signals()
-        _cache = snap
+        cached = _cache.get(cache_key) if isinstance(_cache, dict) else None
+        if not force_refresh and _is_cache_fresh(cached):
+            return cached  # type: ignore[return-value]
+        snap = await _fetch_fresh_signals(currency=cache_key)
+        if not isinstance(_cache, dict):
+            _cache = {}
+        _cache[cache_key] = snap
         return snap
 
 
-async def _fetch_fresh_signals() -> MarketSignals:
+async def _fetch_fresh_signals(currency: str = "UST") -> MarketSignals:
     """Pull trades + book in parallel and aggregate into per-period signals."""
+    symbol = f"f{currency.upper()}"
     # Parallel fetch — saves ~1 RTT vs serial. Both endpoints are public and
     # cost nothing extra to call together.
-    trades_task = asyncio.create_task(fetch_funding_trades(limit=200))
-    book_task = asyncio.create_task(fetch_funding_book(length=100))
+    trades_task = asyncio.create_task(fetch_funding_trades(symbol=symbol, limit=200))
+    book_task = asyncio.create_task(fetch_funding_book(symbol=symbol, length=100))
     trades, book = await asyncio.gather(trades_task, book_task)
 
     # Filter trades to the recent window. Bitfinex returns newest-first.
@@ -221,4 +233,4 @@ def _median(values: list[Decimal]) -> Decimal:
 def reset_cache_for_tests() -> None:
     """Test helper — drop the in-memory cache so the next call refetches."""
     global _cache
-    _cache = None
+    _cache = {}

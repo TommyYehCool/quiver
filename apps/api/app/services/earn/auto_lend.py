@@ -39,11 +39,14 @@ from app.models.earn import (
 from app.services import tatum
 from app.services.earn import repo as earn_repo
 from app.services.earn.bitfinex_adapter import (
+    API_BASE,
+    SYMBOL_SPOT_USDT_USD,
     BitfinexFundingAdapter,
     FundingDepositAddress,
     fetch_funding_book,
     fetch_market_frr,
 )
+import httpx
 from app.services.ledger import get_user_balance, post_earn_outbound
 from app.services.tatum import TatumError, TatumNotConfigured
 from app.services.wallet import (
@@ -306,15 +309,27 @@ async def auto_lend_dispatcher(ctx: dict[str, Any], *, user_id: int) -> str:
         if spendable < MIN_AUTO_LEND_USDT:
             return f"skipped:below_min({spendable})"
 
-        amount = spendable  # send everything spendable that's ≥ min
+        # F-5a-3.11: apply user's "保留不借出金額" — keep buffer fraction
+        # in the Quiver wallet, only bridge (1 - buffer)% to Bitfinex.
+        # The buffer never gets a ledger debit so it stays available for
+        # instant withdrawal via /wallet. Round down to keep arithmetic
+        # tidy; floor to MIN_AUTO_LEND_USDT to avoid sub-min positions.
+        buffer_pct = Decimal(account.usdt_buffer_pct or 0)
+        bridge_fraction = (Decimal(100) - buffer_pct) / Decimal(100)
+        amount = (spendable * bridge_fraction).quantize(Decimal("0.000001"))
+        if amount < MIN_AUTO_LEND_USDT:
+            return f"skipped:bridge_below_min(spendable={spendable} buffer={buffer_pct}% bridge={amount})"
 
-        # Reserve the slot: create earn_position before broadcasting,
-        # so a concurrent dispatcher invocation sees in_flight = True.
+        # F-5a-3.11: route new positions to the USD lending market by
+        # default. Legacy USDT positions stay USDT (lending_currency=NULL)
+        # and continue through their pre-pivot lifecycle until they close
+        # naturally on credit maturity.
         position = EarnPosition(
             earn_account_id=account.id,
             status=EarnPositionStatus.PENDING_OUTBOUND.value,
             amount=amount,
             currency="USDT-TRC20",
+            lending_currency="USD",
         )
         db.add(position)
         await db.flush()
@@ -364,6 +379,135 @@ async def _mark_failed(db: AsyncSession, position_id: int, reason: str) -> None:
 
 
 # ─────────────────────────────────────────────────────────
+# F-5a-3.11: USDT ↔ USD conversion via Bitfinex spot market
+# ─────────────────────────────────────────────────────────
+
+
+async def _convert_usdt_to_usd_in_funding(
+    adapter: BitfinexFundingAdapter,
+    usdt_amount: Decimal,
+) -> Decimal:
+    """Convert `usdt_amount` USDT (sitting in funding wallet) to USD,
+    leaving the result in the funding/USD wallet ready to lend.
+
+    Three Bitfinex API calls in sequence:
+      1. transfer funding/UST → exchange/UST (only exchange wallet trades)
+      2. EXCHANGE MARKET sell on tUSTUSD pair (USDT → USD)
+      3. transfer exchange/USD → funding/USD (lent from funding wallet)
+
+    Returns the USD amount received (= executed USDT × avg fill price,
+    typically 0.999x USDT × ~0.9993 = ~0.999 USD per 1 USDT). Raises if
+    any step fails — caller should _mark_failed and let admin recover
+    (orphaned funds detection lives in reconcile).
+
+    F-5a-3.11 cost model: tUSTUSD spread ~0.2 bps; market-order taker
+    fee 0.1% (or 0.02% maker for limit orders, but we use market for
+    speed). Round-trip cost ~0.2% — amortized across the position's
+    full lend lifecycle.
+    """
+    # Step 1: funding → exchange (USDT)
+    await adapter.transfer_between_wallets(
+        currency="UST",
+        amount=usdt_amount,
+        from_wallet="funding",
+        to_wallet="exchange",
+    )
+
+    # Step 2: market sell USDT for USD on tUSTUSD
+    result = await adapter.submit_market_order(
+        symbol=SYMBOL_SPOT_USDT_USD,
+        side="sell",
+        amount=usdt_amount,
+    )
+    executed_usdt = Decimal(str(result.get("executed_amount") or 0))
+    avg_price = Decimal(str(result.get("avg_price") or 0))
+    if executed_usdt <= 0 or avg_price <= 0:
+        raise ValueError(
+            f"market sell incomplete: executed={executed_usdt} avg_price={avg_price}"
+        )
+    usd_received = (executed_usdt * avg_price).quantize(Decimal("0.000001"))
+
+    # Step 3: exchange → funding (USD)
+    await adapter.transfer_between_wallets(
+        currency="USD",
+        amount=usd_received,
+        from_wallet="exchange",
+        to_wallet="funding",
+    )
+
+    logger.info(
+        "auto_lend_converted_usdt_to_usd",
+        usdt_in=str(usdt_amount),
+        usd_out=str(usd_received),
+        avg_price=str(avg_price),
+        order_id=result.get("order_id"),
+    )
+    return usd_received
+
+
+async def _convert_usd_to_usdt_in_funding(
+    adapter: BitfinexFundingAdapter,
+    usd_amount: Decimal,
+) -> Decimal:
+    """Reverse direction — used by the redeem endpoint (F-5a-3.11.7).
+
+    Same 3-step pattern but currencies flipped: funding/USD →
+    exchange/USD → buy USDT on tUSTUSD → exchange/UST → funding/UST.
+    Returns USDT received.
+    """
+    # Step 1: funding → exchange (USD)
+    await adapter.transfer_between_wallets(
+        currency="USD",
+        amount=usd_amount,
+        from_wallet="funding",
+        to_wallet="exchange",
+    )
+
+    # Step 2: market buy USDT with USD on tUSTUSD
+    # For market buy on a pair, the `amount` field is in BASE currency
+    # (USDT here). We don't know the exact USDT we'll get without first
+    # querying the order book — for MVP, query the ticker to estimate
+    # USDT we can buy with our USD.
+    ticker_url = f"{API_BASE}/v2/ticker/{SYMBOL_SPOT_USDT_USD}"
+    async with httpx.AsyncClient() as client:
+        ticker_resp = await client.get(ticker_url, timeout=10.0)
+        ticker_resp.raise_for_status()
+        ticker = ticker_resp.json()
+    ask_price = Decimal(str(ticker[2]))  # ASK = price to buy USDT
+    estimated_usdt = (usd_amount / ask_price).quantize(Decimal("0.000001"))
+    # Reserve a small buffer (0.5%) so we don't try to buy more than we
+    # can afford if the price ticks up between query and submit.
+    target_usdt = (estimated_usdt * Decimal("0.995")).quantize(Decimal("0.000001"))
+
+    result = await adapter.submit_market_order(
+        symbol=SYMBOL_SPOT_USDT_USD,
+        side="buy",
+        amount=target_usdt,
+    )
+    executed_usdt = Decimal(str(result.get("executed_amount") or 0))
+    avg_price = Decimal(str(result.get("avg_price") or 0))
+    if executed_usdt <= 0:
+        raise ValueError(f"market buy got no fill: result={result}")
+
+    # Step 3: exchange → funding (USDT)
+    await adapter.transfer_between_wallets(
+        currency="UST",
+        amount=executed_usdt,
+        from_wallet="exchange",
+        to_wallet="funding",
+    )
+
+    logger.info(
+        "redeem_converted_usd_to_usdt",
+        usd_in=str(usd_amount),
+        usdt_out=str(executed_usdt),
+        avg_price=str(avg_price),
+        order_id=result.get("order_id"),
+    )
+    return executed_usdt
+
+
+# ─────────────────────────────────────────────────────────
 # Pipeline: finalizer
 # ─────────────────────────────────────────────────────────
 
@@ -401,10 +545,16 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         retry_count = pos.retry_count
         strategy_preset = account.strategy_preset
         user_id = account.user_id  # for F-5a-4.1 telegram notification
+        # F-5a-3.11: route based on lending_currency. NULL → legacy USDT.
+        lending_currency = (pos.lending_currency or "USDT").upper()
+        is_usd_path = lending_currency == "USD"
 
     # ─── outside DB: hit Bitfinex ───
     try:
-        bf_position = await adapter.get_funding_position()
+        # USDT credit comes into funding/UST regardless of which lending
+        # market the position will end up in — we need to verify the bridge
+        # arrived before we can convert / lend.
+        bf_position = await adapter.get_funding_position(currency="UST")
     except Exception as e:
         logger.warning(
             "auto_lend_finalizer_bf_query_failed",
@@ -428,19 +578,52 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         pos.bitfinex_credited_at = datetime.now(timezone.utc)
         await db.commit()
 
-    # F-5a-3.10: replace the F-5a-3.7 "FRR market for base + FRR× multipliers
-    # for spike tranches" with a period-aware strategy_selector. Inputs are
-    # per-period market signals (median fill rate, 30-min volume) plus current
-    # FRR; output is a StrategyDecision with per-tranche reasoning that's
-    # also surfaced via the dry-run endpoint for transparency.
+    # F-5a-3.11 USD-pivot leg: if this position is USD-routed, convert
+    # USDT → USD via spot market before submitting the funding offer.
+    # The position's `amount` becomes USD post-conversion (slightly less
+    # than original USDT due to spread + fee, ~0.999×).
+    offer_amount = position_amount  # USDT amount by default
+    offer_currency = "UST"
+    if is_usd_path:
+        async with AsyncSessionLocal() as db:
+            pos = (await db.execute(select(EarnPosition).where(EarnPosition.id == position_id))).scalar_one()
+            pos.status = EarnPositionStatus.CONVERTING_TO_USD.value
+            await db.commit()
+        try:
+            usd_received = await _convert_usdt_to_usd_in_funding(
+                adapter=adapter, usdt_amount=position_amount
+            )
+        except Exception as e:
+            logger.exception(
+                "auto_lend_conversion_failed",
+                position_id=position_id,
+                usdt_amount=str(position_amount),
+                error=str(e),
+            )
+            # Conversion failure is hard to auto-recover (funds may be
+            # stuck in exchange wallet). Mark FAILED + alert; admin tools
+            # / reconcile orphan-detection will recover.
+            async with AsyncSessionLocal() as db:
+                await _mark_failed(db, position_id, f"convert_usdt_to_usd:{e}"[:200])
+            return f"failed:convert:{e}"
+        # Update position to USD amount + record the conversion outcome.
+        async with AsyncSessionLocal() as db:
+            pos = (await db.execute(select(EarnPosition).where(EarnPosition.id == position_id))).scalar_one()
+            pos.amount = usd_received  # now denominated in USD
+            await db.commit()
+        offer_amount = usd_received
+        offer_currency = "USD"
+
+    # F-5a-3.10 + 3.11: per-period market signals + strategy_selector,
+    # now currency-aware (fUSD signals when offer_currency=USD).
     from app.services.earn.market_signals import get_market_signals
     from app.services.earn.strategy_selector import select_strategy, to_legacy_ladder
 
-    signals = await get_market_signals()
-    market = await fetch_market_frr()
+    signals = await get_market_signals(currency=offer_currency)
+    market = await fetch_market_frr(symbol=f"f{offer_currency}")
     frr_daily = market.frr_daily if market is not None else None
     decision = select_strategy(
-        amount=position_amount,
+        amount=offer_amount,
         preset=strategy_preset,
         signals=signals,
         frr_daily=frr_daily,
@@ -458,7 +641,11 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
     )
     ladder = to_legacy_ladder(decision)
     try:
-        offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
+        offer_ids = await _submit_ladder(
+            adapter=adapter,
+            ladder=ladder,
+            currency=offer_currency,
+        )
     except Exception as e:
         logger.exception(
             "auto_lend_submit_offer_failed",
@@ -598,9 +785,14 @@ async def _submit_ladder(
     *,
     adapter: BitfinexFundingAdapter,
     ladder: list[tuple[Decimal, Decimal | None, int]],
+    currency: str = "UST",
 ) -> list[int]:
     """Submit each tranche as a separate Bitfinex offer. Returns list of
     offer IDs in submission order (first = primary tranche).
+
+    F-5a-3.11: `currency` selects the funding pair — "UST" → fUST (legacy),
+    "USD" → fUSD. Existing callers default to UST so legacy paths are
+    unchanged.
 
     Period is now per-tranche (F-5a-3.4 dynamic days) — each tuple carries
     its own period_days from the ladder builder.
@@ -613,18 +805,24 @@ async def _submit_ladder(
     ones become orphans we'd need to manually clean up — for MVP we accept
     this risk; future hardening will add rollback).
     """
+    from app.services.earn.bitfinex_adapter import funding_symbol
+
+    symbol = funding_symbol(currency)
     offer_ids: list[int] = []
     for i, (chunk_amount, chunk_rate, chunk_period) in enumerate(ladder):
         offer_id = await adapter.submit_funding_offer(
             amount=chunk_amount,
             period_days=chunk_period,
             rate=chunk_rate,
+            symbol=symbol,
         )
         offer_ids.append(offer_id)
         logger.info(
             "auto_lend_ladder_tranche_submitted",
             tranche_idx=i,
             tranche_count=len(ladder),
+            currency=currency,
+            symbol=symbol,
             amount=str(chunk_amount),
             rate_daily=str(chunk_rate) if chunk_rate is not None else "FRR",
             apr_pct=(
