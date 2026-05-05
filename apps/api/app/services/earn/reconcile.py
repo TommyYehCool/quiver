@@ -132,7 +132,73 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     # Always advance the watermark so we don't re-evaluate the same credits.
     account.last_credits_check_at = now_ts
 
-    # ── 1. close lent positions whose offers no longer exist on Bitfinex ──
+    # ── 1. state-machine transitions driven by Bitfinex live state ──
+    # F-5a-3.8 split the legacy "LENT" bucket into:
+    #   OFFER_PENDING — offer submitted, NOT yet matched (in active_offers)
+    #   LENT          — offer matched into a credit (in active_credits)
+    # Transitions to detect each cycle:
+    #   OFFER_PENDING → LENT             when at least one tranche disappears
+    #                                    from offers AND a matching credit exists
+    #   OFFER_PENDING → CLOSED_EXTERNAL  when ALL tranches disappear with no
+    #                                    matching credit (cancelled / expired
+    #                                    unmatched)
+    #   LENT          → CLOSED_EXTERNAL  when no credit remains (period ended,
+    #                                    money returned to funding wallet)
+    #
+    # Bitfinex doesn't link credit→offer_id, so we use AMOUNT as a heuristic
+    # proxy. This is per-user-scoped (each adapter wraps one user's API key)
+    # so collisions across users are impossible. Within a single user, two
+    # tranches with the same amount could in theory confuse the heuristic,
+    # but in practice ladder tranches use distinct amounts.
+    active_credit_amounts: set[Decimal] = {c.amount for c in bf_position.active_credits}
+
+    def _tranche_ids(pos: EarnPosition) -> list[int]:
+        if pos.bitfinex_offer_ids:
+            try:
+                return json.loads(pos.bitfinex_offer_ids)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return [pos.bitfinex_offer_id] if pos.bitfinex_offer_id else []
+
+    # 1a. OFFER_PENDING — match detection
+    pending_q = await db.execute(
+        select(EarnPosition).where(
+            EarnPosition.earn_account_id == account.id,
+            EarnPosition.status == EarnPositionStatus.OFFER_PENDING.value,
+        )
+    )
+    for pos in pending_q.scalars().all():
+        tranche_ids = _tranche_ids(pos)
+        if not tranche_ids:
+            continue
+        still_pending = any(tid in active_offer_ids for tid in tranche_ids)
+        if still_pending:
+            continue  # at least one tranche is still in the offer book
+        # All tranches left the book — matched or cancelled?
+        if pos.amount in active_credit_amounts:
+            # Borrower picked up our offer — we're now earning interest
+            pos.status = EarnPositionStatus.LENT.value
+            logger.info(
+                "earn_reconcile_offer_matched",
+                earn_account_id=account.id,
+                position_id=pos.id,
+                primary_offer_id=pos.bitfinex_offer_id,
+                amount=str(pos.amount),
+            )
+        else:
+            # No matching credit — offer cancelled or expired without filling
+            pos.status = EarnPositionStatus.CLOSED_EXTERNAL.value
+            pos.closed_at = datetime.now(timezone.utc)
+            pos.closed_reason = "offer_cancelled_or_expired_unmatched"
+            summary["lent_closed"] += 1
+            logger.info(
+                "earn_reconcile_offer_cancelled_unmatched",
+                earn_account_id=account.id,
+                position_id=pos.id,
+                primary_offer_id=pos.bitfinex_offer_id,
+            )
+
+    # 1b. LENT — credit-period-expired detection
     lent_positions_q = await db.execute(
         select(EarnPosition).where(
             EarnPosition.earn_account_id == account.id,
@@ -140,40 +206,23 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         )
     )
     for pos in lent_positions_q.scalars().all():
-        # F-5a-3.3: positions may have multiple tranches (ladder mode).
-        # Use bitfinex_offer_ids JSON if present, else fall back to single
-        # bitfinex_offer_id for legacy / single-offer positions.
-        if pos.bitfinex_offer_ids:
-            try:
-                tranche_ids: list[int] = json.loads(pos.bitfinex_offer_ids)
-            except (json.JSONDecodeError, TypeError):
-                tranche_ids = (
-                    [pos.bitfinex_offer_id] if pos.bitfinex_offer_id else []
-                )
-        elif pos.bitfinex_offer_id is not None:
-            tranche_ids = [pos.bitfinex_offer_id]
-        else:
-            continue
-
-        still_active = [oid for oid in tranche_ids if oid in active_offer_ids]
-        if still_active:
-            # At least one tranche is still in the offer book — position
-            # remains LENT (the closed tranches matured into credits, but
-            # the active ones haven't filled yet).
-            continue
-
-        # All tranches have left the offer book — either matured, cancelled,
-        # or currently lent out (in credits not offers). For MVP just mark
-        # closed_external; F-3 future could distinguish via /funding/credits.
+        if pos.amount in active_credit_amounts:
+            continue  # still earning
+        # No credit with matching amount — period ended, funds back in wallet.
+        # Note: this is ALSO the path legacy LENT positions take (pre-F-5a-3.8
+        # they could have been "submitted but unmatched" — for those, the
+        # pre-deploy backfill should have flipped to OFFER_PENDING; if not,
+        # this branch will close them when their now-stale offer drops off
+        # the book, same outcome as before.)
         pos.status = EarnPositionStatus.CLOSED_EXTERNAL.value
         pos.closed_at = datetime.now(timezone.utc)
-        pos.closed_reason = "offer_no_longer_active"
+        pos.closed_reason = "credit_period_expired"
         summary["lent_closed"] += 1
         logger.info(
             "earn_reconcile_position_closed",
             earn_account_id=account.id,
             position_id=pos.id,
-            tranche_count=len(tranche_ids),
+            tranche_count=len(_tranche_ids(pos)),
             primary_offer_id=pos.bitfinex_offer_id,
         )
 
@@ -251,13 +300,14 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         summary["errors"].append(f"renew:{e}")
         return summary
 
-    # Record the renewal as a new earn_position (status=lent), so the user
-    # dashboard shows it. We don't track ledger here — the funds were already
-    # debited at the original auto-lend, this is just the next lending cycle
-    # with the same money.
+    # Record the renewal as a new earn_position. F-5a-3.8: starts as
+    # OFFER_PENDING (offer submitted, not yet matched); the next reconcile
+    # pass flips it to LENT once a matching credit appears. Pre-3.8 this
+    # was set to LENT directly which made the dashboard say "已借出, 計息中"
+    # while the offer was actually still waiting for a borrower.
     new_pos = EarnPosition(
         earn_account_id=account.id,
-        status=EarnPositionStatus.LENT.value,
+        status=EarnPositionStatus.OFFER_PENDING.value,
         amount=amount,
         currency="USDT-TRC20",
         bitfinex_offer_id=offer_ids[0],

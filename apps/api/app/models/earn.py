@@ -104,15 +104,23 @@ class EarnPositionStatus(str, enum.Enum):
     pending_outbound  → 已決定要 auto-lend,還沒 broadcast
     onchain_in_flight → 已從 HOT broadcast 到 user.bitfinex_funding,等 Bitfinex credit
     funding_idle      → Bitfinex 已 credit 到 funding wallet,還沒掛 offer
-    lent              → 已 submit funding offer,等借出/已借出
+    offer_pending     → 已 submit funding offer,等借方撮合(資金鎖在 offer 裡)
+    lent              → offer 已被撮合,正在計息中
     closing           → user / 系統觸發 cancel offer,等 funds idle
     closed_external   → user 自己在 Bitfinex 提走 / cancel,Quiver sync 偵測為 closed
     failed            → pipeline 中途錯誤,需 admin 排查(audit log + alert)
+
+    Note (history): pre-F-5a-3.8 the LENT bucket conflated "submitted but
+    not matched" and "matched, earning". OFFER_PENDING was added to make
+    the UI honest — the user sees "掛單中" while waiting for a borrower
+    instead of "已借出, 計息中". reconcile flips OFFER_PENDING → LENT
+    once the offer becomes an active funding credit on Bitfinex.
     """
 
     PENDING_OUTBOUND = "pending_outbound"
     ONCHAIN_IN_FLIGHT = "onchain_in_flight"
     FUNDING_IDLE = "funding_idle"
+    OFFER_PENDING = "offer_pending"
     LENT = "lent"
     CLOSING = "closing"
     CLOSED_EXTERNAL = "closed_external"

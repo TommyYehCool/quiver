@@ -14,6 +14,7 @@ export type EarnPositionStatus =
   | "pending_outbound"
   | "onchain_in_flight"
   | "funding_idle"
+  | "offer_pending"
   | "lent"
   | "closing"
   | "closed_external"

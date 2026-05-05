@@ -252,6 +252,7 @@ async def _outstanding_at_bitfinex(db: AsyncSession, earn_account_id: int) -> De
         EarnPositionStatus.PENDING_OUTBOUND.value,
         EarnPositionStatus.ONCHAIN_IN_FLIGHT.value,
         EarnPositionStatus.FUNDING_IDLE.value,
+        EarnPositionStatus.OFFER_PENDING.value,
         EarnPositionStatus.LENT.value,
         EarnPositionStatus.CLOSING.value,
     )
@@ -463,7 +464,12 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
 
     async with AsyncSessionLocal() as db:
         pos = (await db.execute(select(EarnPosition).where(EarnPosition.id == position_id))).scalar_one()
-        pos.status = EarnPositionStatus.LENT.value
+        # F-5a-3.8: status starts as OFFER_PENDING (offer submitted, not yet
+        # matched). reconcile flips this to LENT once Bitfinex shows an active
+        # funding credit for this position. This makes the UI honest — the
+        # user sees "掛單中" until a borrower actually picks up the offer,
+        # not "已借出, 計息中" while still waiting.
+        pos.status = EarnPositionStatus.OFFER_PENDING.value
         # Primary tranche (largest, lowest rate) for backward compat
         pos.bitfinex_offer_id = offer_ids[0]
         # Full ladder list as JSON for reconcile to track all tranches

@@ -95,6 +95,7 @@ async def _list_active_positions(db, earn_account_id: int) -> list[EarnPosition]
         EarnPositionStatus.PENDING_OUTBOUND.value,
         EarnPositionStatus.ONCHAIN_IN_FLIGHT.value,
         EarnPositionStatus.FUNDING_IDLE.value,
+        EarnPositionStatus.OFFER_PENDING.value,
         EarnPositionStatus.LENT.value,
         EarnPositionStatus.CLOSING.value,
     )
