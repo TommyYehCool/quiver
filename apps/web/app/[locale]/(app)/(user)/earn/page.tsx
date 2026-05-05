@@ -35,7 +35,18 @@ function fmtUsd(s: string | null): string {
   if (s === null) return "—";
   const n = Number(s);
   if (Number.isNaN(n)) return s;
-  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // Adaptive precision — match Bitfinex display:
+  //   $0          → "$0.00"
+  //   $0.00873361 → "$0.00873361" (sub-cent, up to 8 decimals)
+  //   $0.0087     → "$0.0087"     (sub-dollar, up to 4 decimals)
+  //   $200.00     → "$200.00"     (dollar+, fixed 2 decimals)
+  const abs = Math.abs(n);
+  let min: number, max: number;
+  if (abs === 0) { min = 2; max = 2; }
+  else if (abs < 0.01) { min = 2; max = 8; }
+  else if (abs < 1) { min = 2; max = 4; }
+  else { min = 2; max = 2; }
+  return `$${n.toLocaleString(undefined, { minimumFractionDigits: min, maximumFractionDigits: max })}`;
 }
 
 type Locale = "zh-TW" | "en" | "ja";
@@ -97,7 +108,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     bigNumbers: {
       lent: { label: "已借出 (賺息中)", sub: "由 margin trader 接走,每日結算" },
       funding: { label: "等待掛單 (Funding idle)", sub: "Bitfinex Funding wallet 待掛 offer" },
-      earned: { label: "當日累計賺到", sub: "最新 snapshot 估算" },
+      earned: { label: "當日預估收益", sub: "最新 snapshot 估算（非已入帳）" },
     },
     activeLoans: {
       title: "目前借出",
@@ -154,7 +165,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     bigNumbers: {
       lent: { label: "Lent (earning)", sub: "Borrowed by margin traders, settled daily" },
       funding: { label: "Waiting in Funding (idle)", sub: "In Bitfinex Funding wallet, not yet offered" },
-      earned: { label: "Earned today", sub: "From latest snapshot estimate" },
+      earned: { label: "Estimated earnings today", sub: "Latest snapshot estimate (not yet credited)" },
     },
     activeLoans: {
       title: "Active loans",
@@ -210,7 +221,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     bigNumbers: {
       lent: { label: "貸出中(利息収入中)", sub: "margin トレーダーに貸付、毎日結算" },
       funding: { label: "待機中(Funding idle)", sub: "Bitfinex Funding ウォレットで offer 待ち" },
-      earned: { label: "本日の収益", sub: "最新スナップショット推定" },
+      earned: { label: "本日の予想収益", sub: "最新スナップショット推定（未着金）" },
     },
     activeLoans: {
       title: "現在の貸出",
