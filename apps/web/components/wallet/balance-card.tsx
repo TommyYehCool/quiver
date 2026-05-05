@@ -165,7 +165,14 @@ export function BalanceCard() {
         {/* SECONDARY:breakdown chips(只在有需要時顯示) */}
         {hasAnyBreakdown ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <BalanceChip label={t("available")} value={available} tone="neutral" />
+            {/* Quiver wallet is always USDT — TRC20 deposits, no on-Quiver
+                spot trading. Label is unambiguous. */}
+            <BalanceChip
+              label={t("available")}
+              value={available}
+              tone="neutral"
+              currencyLabel="USDT"
+            />
             {showEarn ? (
               <BalanceChip
                 label={es.earnLabel}
@@ -173,6 +180,18 @@ export function BalanceCard() {
                 tone="success"
                 href={`/${locale}/earn`}
                 icon={<TrendingUp className="h-3 w-3" />}
+                /* F-5a-3.11.11 — currency picker:
+                     - both USDT + USD → MIX (defer to per-credit list)
+                     - only USDT → "USDT"
+                     - only USD → "USD"
+                     - neither (rare with showEarn=true) → "USDT" default */
+                currencyLabel={
+                  earnLentUsdt + earnIdleUsdt > 0 && earnLentUsd + earnIdleUsd > 0
+                    ? "USDT + USD"
+                    : earnLentUsd + earnIdleUsd > 0
+                      ? "USD"
+                      : "USDT"
+                }
                 subtitle={
                   earnLent > 0
                     ? es.earnLent(fmt(earnLent))
@@ -188,6 +207,7 @@ export function BalanceCard() {
                 value={pending}
                 tone="warning"
                 icon={<Clock className="h-3 w-3" />}
+                currencyLabel="USDT"
               />
             ) : null}
           </div>
@@ -255,9 +275,13 @@ interface BalanceChipProps {
   href?: string;
   icon?: React.ReactNode;
   subtitle?: string;
+  /** F-5a-3.11.11 — small currency suffix next to the value
+   * (e.g. "200.02 USDT"). Omit when display is mixed-currency
+   * and the suffix would be misleading. */
+  currencyLabel?: string;
 }
 
-function BalanceChip({ label, value, tone, href, icon, subtitle }: BalanceChipProps) {
+function BalanceChip({ label, value, tone, href, icon, subtitle, currencyLabel }: BalanceChipProps) {
   const toneClasses: Record<typeof tone, string> = {
     neutral:
       "border-cream-edge/60 bg-paper/40 text-slate-700 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300",
@@ -278,7 +302,12 @@ function BalanceChip({ label, value, tone, href, icon, subtitle }: BalanceChipPr
         </div>
         {href ? <ArrowUpRight className="h-3 w-3 opacity-60" /> : null}
       </div>
-      <p className="mt-1 text-xl font-semibold tabular-nums">{fmt(value)}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums">
+        {fmt(value)}
+        {currencyLabel ? (
+          <span className="ml-1 text-xs font-normal opacity-70">{currencyLabel}</span>
+        ) : null}
+      </p>
       {subtitle ? <p className="mt-0.5 text-xs opacity-70">{subtitle}</p> : null}
     </div>
   );
