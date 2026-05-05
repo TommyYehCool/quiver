@@ -106,6 +106,76 @@ class CancelOfferOut(BaseModel):
     cancelled: bool
 
 
+# ─────────────────────────────────────────────────────────
+# F-5a-3.10d: dry-run strategy preview
+# ─────────────────────────────────────────────────────────
+
+
+class StrategyPreviewIn(BaseModel):
+    """Body for POST /api/earn/strategy-preview.
+
+    Lets the user see what the F-5a-3.10 strategy_selector WOULD do under
+    the current market signals + their preset, without actually submitting
+    an offer. UI calls this on demand (button or auto-refresh) to surface
+    the strategy + reasoning.
+
+    All fields optional — defaults read from the user's account:
+      preset = user's current strategy_preset
+      amount = current funding_available + sum(pending_offers) (= total
+               capital that would be deployed if reconcile fired now)
+    """
+    preset: str | None = Field(
+        None,
+        description="Override preset (conservative/balanced/aggressive). "
+                    "Null = use user's current preset.",
+    )
+    amount: Decimal | None = Field(
+        None,
+        gt=0,
+        description="Override amount in USDT. Null = use user's actual "
+                    "deployable capital.",
+    )
+
+    @field_validator("preset")
+    @classmethod
+    def _validate_preset(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        valid = {"conservative", "balanced", "aggressive"}
+        if v not in valid:
+            raise ValueError(f"preset must be one of {valid}")
+        return v
+
+
+class PeriodSignalOut(BaseModel):
+    """Per-period market signal exposed to UI for transparency."""
+    period_days: int
+    has_signal: bool
+    median_apr_pct: Decimal
+    volume_30min_usdt: Decimal
+    trade_count_30min: int
+
+
+class StrategyTrancheOut(BaseModel):
+    amount: Decimal
+    rate_daily: Decimal | None    # null = FRR market order
+    period_days: int
+    apr_pct: Decimal | None       # rate_daily annualised, null when FRR
+    reasoning: str
+
+
+class StrategyPreviewOut(BaseModel):
+    """What select_strategy() would produce + provenance for the UI."""
+    preset: str
+    amount: Decimal
+    frr_apr_pct: Decimal | None
+    tranches: list[StrategyTrancheOut]
+    avg_apr_pct: Decimal           # weighted-avg expected APR
+    fallback_used: bool
+    notes: list[str]
+    signals: list[PeriodSignalOut]
+
+
 class PendingOfferOut(BaseModel):
     """Live snapshot of one pending funding offer (= money waiting to be matched).
 

@@ -265,9 +265,11 @@ export async function connectBitfinex(
   });
 }
 
-/** Cancel a pending Bitfinex funding offer. F-5a-3.9. */
+/** Cancel a pending Bitfinex funding offer. F-5a-3.9.
+ * Path is flat (no /me/ prefix) to match the codebase convention used by
+ * /settings, /connect, /performance — all user-scoped but not nested. */
 export async function cancelPendingOffer(offerId: number): Promise<{ offer_id: number; cancelled: boolean }> {
-  return apiFetch<{ offer_id: number; cancelled: boolean }>("/api/earn/me/cancel-offer", {
+  return apiFetch<{ offer_id: number; cancelled: boolean }>("/api/earn/cancel-offer", {
     method: "POST",
     body: JSON.stringify({ offer_id: offerId }),
   });
@@ -281,7 +283,47 @@ export async function submitCustomOffer(
     period_days: number;     // 2-30
   },
 ): Promise<{ offer_id: number }> {
-  return apiFetch<{ offer_id: number }>("/api/earn/me/submit-offer", {
+  return apiFetch<{ offer_id: number }>("/api/earn/submit-offer", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ──── F-5a-3.10d strategy preview ────
+
+export interface PeriodSignalOut {
+  period_days: number;
+  has_signal: boolean;
+  median_apr_pct: string;
+  volume_30min_usdt: string;
+  trade_count_30min: number;
+}
+
+export interface StrategyTrancheOut {
+  amount: string;
+  rate_daily: string | null;
+  period_days: number;
+  apr_pct: string | null;
+  reasoning: string;
+}
+
+export interface StrategyPreviewOut {
+  preset: string;
+  amount: string;
+  frr_apr_pct: string | null;
+  tranches: StrategyTrancheOut[];
+  avg_apr_pct: string;
+  fallback_used: boolean;
+  notes: string[];
+  signals: PeriodSignalOut[];
+}
+
+/** Dry-run the strategy selector. F-5a-3.10d. Defaults: preset=user's
+ * current, amount=actual deployable. Override either to explore. */
+export async function previewStrategy(
+  payload: { preset?: string; amount?: string } = {},
+): Promise<StrategyPreviewOut> {
+  return apiFetch<StrategyPreviewOut>("/api/earn/strategy-preview", {
     method: "POST",
     body: JSON.stringify(payload),
   });

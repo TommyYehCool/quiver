@@ -55,7 +55,11 @@ from app.schemas.earn_user import (
     EarnSnapshotUserOut,
     FeeAccrualRow,
     PendingOfferOut,
+    PeriodSignalOut,
     RankEntryOut,
+    StrategyPreviewIn,
+    StrategyPreviewOut,
+    StrategyTrancheOut,
     SubmitOfferIn,
     SubmitOfferOut,
 )
@@ -368,7 +372,12 @@ async def cancel_pending_offer(
     user: CurrentUserDep,
     db: DbDep,
 ) -> ApiResponse[CancelOfferOut]:
-    """Cancel a single pending Bitfinex funding offer owned by this user.
+    """POST /api/earn/cancel-offer — cancel one pending Bitfinex funding offer
+    owned by the current user.
+
+    Path is flat (no /me/ prefix) to match the existing convention used by
+    /settings, /connect, /performance — all user-scoped via CurrentUserDep
+    but not nested under /me.
 
     F-5a-3.9: lets the user reclaim funds locked in a pending offer (e.g. to
     re-post at a different rate, or just to stop offering). Bitfinex enforces
@@ -424,7 +433,9 @@ async def submit_custom_offer(
     user: CurrentUserDep,
     db: DbDep,
 ) -> ApiResponse[SubmitOfferOut]:
-    """Submit a custom funding offer (user-specified amount/rate/period).
+    """POST /api/earn/submit-offer — submit a custom funding offer
+    (user-specified amount/rate/period). Same flat-path convention as
+    /cancel-offer.
 
     F-5a-3.9: lets the user post offers outside the auto-lend strategy —
     custom rate (or FRR market via rate_daily=null), custom period, custom
@@ -482,6 +493,126 @@ async def submit_custom_offer(
         period_days=payload.period_days,
     )
     return ApiResponse[SubmitOfferOut].ok(SubmitOfferOut(offer_id=offer_id))
+
+
+@router.post("/strategy-preview", response_model=ApiResponse[StrategyPreviewOut])
+async def strategy_preview(
+    payload: StrategyPreviewIn,
+    user: CurrentUserDep,
+    db: DbDep,
+) -> ApiResponse[StrategyPreviewOut]:
+    """POST /api/earn/strategy-preview — dry-run the F-5a-3.10 strategy
+    selector for the current user under live market signals.
+
+    Returns the StrategyDecision the auto-lend dispatcher WOULD produce
+    right now, plus the per-period signals that drove it. No state
+    mutation, no offer submitted — pure read-side preview for the UI's
+    "策略預覽" card.
+
+    Inputs (both optional):
+      preset — override the user's current strategy_preset
+      amount — override the auto-detected deployable capital
+
+    The amount default is `funding_available + sum(pending_offers)` —
+    everything that would be re-deployed if the user cancelled all pending
+    offers and reconcile fired now.
+    """
+    account = await earn_repo.get_account_by_user_id(db, user.id)
+    if account is None:
+        raise HTTPException(status_code=404, detail={"code": "earn.no_account"})
+
+    preset = payload.preset or account.strategy_preset
+
+    # Determine deployable amount.
+    if payload.amount is not None:
+        amount = payload.amount
+    else:
+        # Pull live state to estimate "what would deploy now"
+        conn = await earn_repo.get_active_bitfinex_connection(db, account.id)
+        if conn is None:
+            raise HTTPException(
+                status_code=400, detail={"code": "earn.no_bitfinex_connection"}
+            )
+        from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
+
+        adapter = await BitfinexFundingAdapter.from_connection(db, conn)
+        try:
+            position = await adapter.get_funding_position()
+            offers = await adapter.list_active_offers()
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={"code": "earn.bitfinex_unavailable", "reason": str(e)[:200]},
+            )
+        # If user has no idle capital and no pending offers, use a sentinel
+        # amount so the preview still tells them SOMETHING (e.g. min offer).
+        amount = (
+            position.funding_available
+            + sum((o.amount for o in offers), Decimal(0))
+        )
+        if amount < Decimal("50"):
+            amount = Decimal("200")  # sensible demo default
+
+    # Run the selector
+    from app.services.earn.market_signals import (
+        CANONICAL_PERIODS,
+        get_market_signals,
+    )
+    from app.services.earn.bitfinex_adapter import fetch_market_frr
+    from app.services.earn.strategy_selector import select_strategy
+
+    signals = await get_market_signals(force_refresh=True)
+    market = await fetch_market_frr()
+    frr_daily = market.frr_daily if market is not None else None
+    decision = select_strategy(
+        amount=amount,
+        preset=preset,
+        signals=signals,
+        frr_daily=frr_daily,
+    )
+
+    # Project to API shape
+    tranches = [
+        StrategyTrancheOut(
+            amount=t.amount,
+            rate_daily=t.rate_daily,
+            period_days=t.period_days,
+            apr_pct=(
+                (t.rate_daily * Decimal(365) * Decimal(100)).quantize(Decimal("0.01"))
+                if t.rate_daily is not None
+                else None
+            ),
+            reasoning=t.reasoning,
+        )
+        for t in decision.tranches
+    ]
+    signal_rows = [
+        PeriodSignalOut(
+            period_days=p,
+            has_signal=signals.by_period[p].has_signal,
+            median_apr_pct=signals.by_period[p].median_apr_pct.quantize(Decimal("0.01")),
+            volume_30min_usdt=signals.by_period[p].volume_30min_usdt.quantize(Decimal("1")),
+            trade_count_30min=signals.by_period[p].trade_count_30min,
+        )
+        for p in CANONICAL_PERIODS
+    ]
+    frr_apr = (
+        (frr_daily * Decimal(365) * Decimal(100)).quantize(Decimal("0.01"))
+        if frr_daily is not None
+        else None
+    )
+    return ApiResponse[StrategyPreviewOut].ok(
+        StrategyPreviewOut(
+            preset=preset,
+            amount=amount,
+            frr_apr_pct=frr_apr,
+            tranches=tranches,
+            avg_apr_pct=decision.total_apr_estimate_pct,
+            fallback_used=decision.fallback_used,
+            notes=list(decision.notes),
+            signals=signal_rows,
+        )
+    )
 
 
 @router.post("/connect", response_model=ApiResponse[EarnConnectOut])
