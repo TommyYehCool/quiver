@@ -251,7 +251,13 @@ export function UserChrome({
               </button>
               <Link href={`/${locale}/dashboard`} className="flex items-center gap-2">
                 <QuiverLogo size={28} />
-                <span className="font-display text-base font-bold tracking-tight">Quiver</span>
+                {/* F-5b-X.5 — wordmark hidden on narrow phones to leave
+                    room for the right-side utility row (settings + bell +
+                    locale switcher + logout). The Q logo alone reads as
+                    Quiver from sm: up. */}
+                <span className="hidden font-display text-base font-bold tracking-tight sm:inline">
+                  Quiver
+                </span>
               </Link>
             </div>
 
