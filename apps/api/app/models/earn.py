@@ -101,14 +101,25 @@ class EarnStrategyPreset(str, enum.Enum):
 class EarnPositionStatus(str, enum.Enum):
     """earn_positions.status — Path A auto-lend pipeline state machine.
 
-    pending_outbound  → 已決定要 auto-lend,還沒 broadcast
-    onchain_in_flight → 已從 HOT broadcast 到 user.bitfinex_funding,等 Bitfinex credit
-    funding_idle      → Bitfinex 已 credit 到 funding wallet,還沒掛 offer
-    offer_pending     → 已 submit funding offer,等借方撮合(資金鎖在 offer 裡)
-    lent              → offer 已被撮合,正在計息中
-    closing           → user / 系統觸發 cancel offer,等 funds idle
-    closed_external   → user 自己在 Bitfinex 提走 / cancel,Quiver sync 偵測為 closed
-    failed            → pipeline 中途錯誤,需 admin 排查(audit log + alert)
+    Original USDT-only flow (pre-F-5a-3.11):
+      pending_outbound  → 已決定要 auto-lend,還沒 broadcast
+      onchain_in_flight → 已從 HOT broadcast 到 user.bitfinex_funding,等 Bitfinex credit
+      funding_idle      → Bitfinex 已 credit 到 funding wallet,還沒掛 offer
+      offer_pending     → 已 submit funding offer,等借方撮合(資金鎖在 offer 裡)
+      lent              → offer 已被撮合,正在計息中
+      closing           → user / 系統觸發 cancel offer,等 funds idle
+      closed_external   → user 自己在 Bitfinex 提走 / cancel,Quiver sync 偵測為 closed
+      failed            → pipeline 中途錯誤,需 admin 排查(audit log + alert)
+
+    F-5a-3.11 USD-pivot adds 3 states for the conversion + redemption legs:
+      converting_to_usd → USDT→USD spot trade in flight (rare — usually <5s)
+      redeeming         → user clicked Redeem, USD→USDT trade + bridge in flight
+      redeemed          → funds back in Quiver wallet, terminal state
+
+    The position's `currency` column tells you which path it took. New
+    F-5a-3.11 positions start currency="USD"; legacy USDT positions stay
+    currency="USDT" and continue through the original states until they
+    naturally close on credit maturity.
 
     Note (history): pre-F-5a-3.8 the LENT bucket conflated "submitted but
     not matched" and "matched, earning". OFFER_PENDING was added to make
@@ -120,11 +131,26 @@ class EarnPositionStatus(str, enum.Enum):
     PENDING_OUTBOUND = "pending_outbound"
     ONCHAIN_IN_FLIGHT = "onchain_in_flight"
     FUNDING_IDLE = "funding_idle"
+    CONVERTING_TO_USD = "converting_to_usd"
     OFFER_PENDING = "offer_pending"
     LENT = "lent"
     CLOSING = "closing"
+    REDEEMING = "redeeming"
+    REDEEMED = "redeemed"
     CLOSED_EXTERNAL = "closed_external"
     FAILED = "failed"
+
+
+class EarnPositionCurrency(str, enum.Enum):
+    """F-5a-3.11 — which lending market a position is in.
+
+    USDT positions are the legacy path (pre-F-5a-3.11); USD positions are
+    the new default. Reconcile + dispatcher fan out to currency-specific
+    code paths based on this column.
+    """
+
+    USDT = "USDT"
+    USD = "USD"
 
 
 # ─────────────────────────────────────────────────────────
@@ -171,6 +197,14 @@ class EarnAccount(Base):
     )
     # F-5a-3.5: risk dial. EarnStrategyPreset.CONSERVATIVE / BALANCED / AGGRESSIVE.
     # Drives ladder slicing + period selection in services/earn/auto_lend.py.
+    usdt_buffer_pct: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0"
+    )
+    # F-5a-3.11 — "保留不借出金額" — what fraction of NEW deposits stays in
+    # the user's Quiver wallet (never bridged to Bitfinex) for instant
+    # redemption. 0..100 (% of each deposit). Default 0 = full deployment
+    # for max yield. Only applied to deposits that arrive AFTER the value
+    # is set; existing capital at Bitfinex is unaffected by changes.
     dunning_pause_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false"
     )
@@ -433,6 +467,13 @@ class EarnPosition(Base):
     currency: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default="USDT-TRC20"
     )
+    # F-5a-3.11: which lending market the position lives in on Bitfinex.
+    # Distinct from the `currency` column above, which describes the deposit
+    # asset/network ("USDT-TRC20"). lending_currency is "USDT" or "USD".
+    # NULL = legacy positions created before F-5a-3.11 — treat as "USDT" by
+    # default. New positions explicitly set "USD" so the dispatcher knows
+    # to take the conversion code path.
+    lending_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
 
     # onchain broadcast(HOT → user.bitfinex_funding_address)
     onchain_tx_hash: Mapped[str | None] = mapped_column(String(128), index=True)
