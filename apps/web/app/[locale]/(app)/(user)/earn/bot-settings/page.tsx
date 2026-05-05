@@ -20,6 +20,7 @@ import { AutoLendToggle } from "@/components/earn/auto-lend-toggle";
 import { StrategyPresetCard } from "@/components/earn/strategy-preset-card";
 import { BitfinexPermissionsMirror } from "@/components/earn/bitfinex-permissions-mirror";
 import { TelegramConnectCard } from "@/components/earn/telegram-connect-card";
+import { RedeemButton } from "@/components/earn/redeem-button";
 import { CheckCircle2 } from "lucide-react";
 
 type Locale = "zh-TW" | "en" | "ja";
@@ -311,6 +312,14 @@ export default async function EarnConnectPage({
                     <p className="rounded-md border border-sky-200/60 bg-sky-50/40 px-3 py-2 text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300">
                       {s.bufferTip}
                     </p>
+                  </CardContent>
+                ) : null}
+                {/* F-5a-3.11.7: Redeem button surfaces only when auto-lend
+                    is OFF — showing it while ON would be confusing because
+                    the next reconcile cron would just re-deploy the funds. */}
+                {!earn.auto_lend_enabled ? (
+                  <CardContent className="pt-0">
+                    <RedeemButton />
                   </CardContent>
                 ) : null}
               </Card>
