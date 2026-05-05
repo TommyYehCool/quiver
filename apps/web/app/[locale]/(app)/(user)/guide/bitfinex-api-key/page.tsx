@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { BitfinexPermissionsMirror } from "@/components/earn/bitfinex-permissions-mirror";
 
 /**
  * Earn setup guide — static page, content in 3 languages.
@@ -359,32 +360,11 @@ export default function SetupGuidePage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{s.step2.title}</CardTitle>
-          <CardDescription>{s.step2.desc}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div>
-            <div className="mb-1 font-medium text-emerald-700 dark:text-emerald-400">
-              {s.step2.yesHeader}
-            </div>
-            <ul className="ml-4 list-disc space-y-0.5 text-slate-700 dark:text-slate-300">
-              {s.step2.yes.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <div className="mb-1 font-medium text-red-700 dark:text-red-400">{s.step2.noHeader}</div>
-            <ul className="ml-4 list-disc space-y-0.5 text-slate-700 dark:text-slate-300">
-              {s.step2.no.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+      {/* F-5a-3.11.9 — replace the previous yes/no list with the same
+          visual mirror used on /earn/bot-settings. Keeping the two pages
+          UI-identical makes it impossible for them to drift on which
+          permissions are required (which they did during the USD pivot). */}
+      <BitfinexPermissionsMirror locale={locale} />
 
       <Card>
         <CardHeader>

@@ -74,6 +74,10 @@ export interface EarnMeOut {
   auto_lend_enabled: boolean;
   /** F-5a-3.5: risk dial. null only when has_earn_account is false. */
   strategy_preset: EarnStrategyPreset | null;
+  /** F-5a-3.11: 「保留不借出金額」 percentage (0..100). null only when
+   * has_earn_account is false. Applied to NEW deposits only — changing
+   * this doesn't auto-rebalance existing capital at Bitfinex. */
+  usdt_buffer_pct: number | null;
   /** F-5b-2: true iff Quiver auto-paused auto-lend due to ≥4 unpaid weeks. */
   dunning_pause_active: boolean;
   /** F-5a-4.1: telegram bot binding state. */
@@ -115,6 +119,7 @@ export interface EarnSettingsOut {
   auto_lend_enabled: boolean;
   strategy_preset: EarnStrategyPreset;
   show_on_leaderboard: boolean;
+  usdt_buffer_pct: number;
 }
 
 export interface EarnConnectOut {
@@ -243,6 +248,8 @@ export async function updateEarnSettings(
     auto_lend_enabled?: boolean;
     strategy_preset?: EarnStrategyPreset;
     show_on_leaderboard?: boolean;
+    /** F-5a-3.11 「保留不借出金額」 % (0..100). */
+    usdt_buffer_pct?: number;
   },
 ): Promise<EarnSettingsOut> {
   return apiFetch<EarnSettingsOut>("/api/earn/settings", {

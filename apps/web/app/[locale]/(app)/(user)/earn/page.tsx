@@ -414,12 +414,18 @@ export default async function EarnPage({
           {/* ═══ LIVE STATUS — big numbers ═══ */}
           {/* 4-card grid (lent / pending / funding / earned). 2 cols on small,
               4 cols on md+. Pending card always rendered for consistency
-              even when 0 — UX feedback that the row exists. */}
+              even when 0 — UX feedback that the row exists.
+              F-5a-3.11: each amount carries a currency suffix. Backend /me
+              currently returns fUST data only; USD positions show in the
+              new "USD positions" card below (added in a follow-up). */}
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>{s.bigNumbers.lent.label}</CardDescription>
-                <CardTitle className="font-mono text-2xl">{fmtUsd(earn.lent_usdt)}</CardTitle>
+                <CardTitle className="font-mono text-2xl">
+                  {fmtUsd(earn.lent_usdt)}
+                  <span className="ml-1 text-sm text-slate-500">USDT</span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-slate-500">{s.bigNumbers.lent.sub}</CardContent>
             </Card>
@@ -428,6 +434,7 @@ export default async function EarnPage({
                 <CardDescription>{s.bigNumbers.pending.label}</CardDescription>
                 <CardTitle className="font-mono text-2xl text-amber-600 dark:text-amber-400">
                   {fmtUsd(earn.pending_offers_total_usdt)}
+                  <span className="ml-1 text-sm text-amber-700/70 dark:text-amber-400/70">USDT</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-slate-500">{s.bigNumbers.pending.sub}</CardContent>
@@ -435,7 +442,10 @@ export default async function EarnPage({
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>{s.bigNumbers.funding.label}</CardDescription>
-                <CardTitle className="font-mono text-2xl">{fmtUsd(earn.funding_idle_usdt)}</CardTitle>
+                <CardTitle className="font-mono text-2xl">
+                  {fmtUsd(earn.funding_idle_usdt)}
+                  <span className="ml-1 text-sm text-slate-500">USDT</span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-slate-500">{s.bigNumbers.funding.sub}</CardContent>
             </Card>
@@ -444,6 +454,7 @@ export default async function EarnPage({
                 <CardDescription>{s.bigNumbers.earned.label}</CardDescription>
                 <CardTitle className="font-mono text-2xl text-emerald-600">
                   {fmtUsd(earn.daily_earned_usdt)}
+                  <span className="ml-1 text-sm text-emerald-700/70 dark:text-emerald-500/70">USDT</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-slate-500">{s.bigNumbers.earned.sub}</CardContent>

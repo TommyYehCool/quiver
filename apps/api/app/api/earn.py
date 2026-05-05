@@ -136,6 +136,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 has_earn_account=False,
                 auto_lend_enabled=False,
                 strategy_preset=None,
+                usdt_buffer_pct=None,
                 dunning_pause_active=False,
                 telegram_bound=user.telegram_chat_id is not None,
                 telegram_bot_username=telegram_service.get_bot_username(),
@@ -232,6 +233,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             has_earn_account=True,
             auto_lend_enabled=account.auto_lend_enabled,
             strategy_preset=account.strategy_preset,
+            usdt_buffer_pct=account.usdt_buffer_pct,
             dunning_pause_active=account.dunning_pause_active,
             telegram_bound=user.telegram_chat_id is not None,
             telegram_bot_username=telegram_service.get_bot_username(),
@@ -347,6 +349,21 @@ async def update_earn_settings(
             await funnel.track_once(
                 db, user.id, funnel.LEADERBOARD_OPTIN_ENABLED,
             )
+    if payload.usdt_buffer_pct is not None:
+        # F-5a-3.11 「保留不借出金額」 — bounded 0..100 by Pydantic Field.
+        # Only affects FUTURE deposits (no auto-rebalance on existing
+        # capital, per Q4 design). Logged so we can audit if a user
+        # complains "I changed buffer to 30% and nothing happened".
+        prev = account.usdt_buffer_pct
+        account.usdt_buffer_pct = payload.usdt_buffer_pct
+        changed = True
+        logger.info(
+            "earn_usdt_buffer_pct_changed",
+            user_id=user.id,
+            earn_account_id=account.id,
+            old=prev,
+            new=payload.usdt_buffer_pct,
+        )
     if changed:
         await db.commit()
         # Re-resolve user.show_on_leaderboard for the response (we may have
@@ -363,6 +380,7 @@ async def update_earn_settings(
             auto_lend_enabled=account.auto_lend_enabled,
             strategy_preset=account.strategy_preset,
             show_on_leaderboard=leaderboard_state,
+            usdt_buffer_pct=account.usdt_buffer_pct,
         )
     )
 
@@ -716,8 +734,12 @@ async def strategy_preview(
     from app.services.earn.bitfinex_adapter import fetch_market_frr
     from app.services.earn.strategy_selector import select_strategy
 
-    signals = await get_market_signals(force_refresh=True)
-    market = await fetch_market_frr()
+    # F-5a-3.11: strategy lab now reflects the USD pivot — show fUSD
+    # signals because that's the market new positions will land in.
+    # Once we have a UI toggle for "preview against USDT (legacy)" we
+    # can flip via payload, but for MVP all dry-runs use USD.
+    signals = await get_market_signals(force_refresh=True, currency="USD")
+    market = await fetch_market_frr(symbol="fUSD")
     frr_daily = market.frr_daily if market is not None else None
     decision = select_strategy(
         amount=amount,

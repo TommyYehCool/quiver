@@ -21,6 +21,7 @@ import { StrategyPresetCard } from "@/components/earn/strategy-preset-card";
 import { BitfinexPermissionsMirror } from "@/components/earn/bitfinex-permissions-mirror";
 import { TelegramConnectCard } from "@/components/earn/telegram-connect-card";
 import { RedeemButton } from "@/components/earn/redeem-button";
+import { BufferSlider } from "@/components/earn/buffer-slider";
 import { CheckCircle2 } from "lucide-react";
 
 type Locale = "zh-TW" | "en" | "ja";
@@ -314,11 +315,17 @@ export default async function EarnConnectPage({
                     </p>
                   </CardContent>
                 ) : null}
+                {/* F-5a-3.11 「保留不借出金額」 control. Always visible
+                    so users can prep their preferred buffer before
+                    enabling auto-lend, not gated on toggle state. */}
+                <CardContent className="border-t border-cream-edge/60 pt-4 dark:border-slate-800">
+                  <BufferSlider initialPct={earn.usdt_buffer_pct ?? 0} />
+                </CardContent>
                 {/* F-5a-3.11.7: Redeem button surfaces only when auto-lend
                     is OFF — showing it while ON would be confusing because
                     the next reconcile cron would just re-deploy the funds. */}
                 {!earn.auto_lend_enabled ? (
-                  <CardContent className="pt-0">
+                  <CardContent className="border-t border-cream-edge/60 pt-4 dark:border-slate-800">
                     <RedeemButton />
                   </CardContent>
                 ) : null}

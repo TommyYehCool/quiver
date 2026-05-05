@@ -52,11 +52,11 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
   "zh-TW": {
     title: "對照 Bitfinex 權限頁面設定",
     subtitle:
-      "Bitfinex「Create New Key」頁面的開關長這樣 — 跟著下面打開 / 關掉就對了。藍色 = 開,灰色 = 關。",
+      "Bitfinex「Create New Key」頁面的開關長這樣 — 跟著下面打開 / 關掉就對了。藍色 = 開,灰色 = 關。F-5a-3.11 USD pivot 後新增了 3 個必要權限(用 ⚡ 標示)。",
     legendOn: "= 開",
     legendOff: "= 關",
     criticalLabel: "← Quiver 自動放貸必要",
-    dangerLabel: "← 絕對不要開,被偷錢的最大入口",
+    dangerLabel: "← ⚠ 開啟需配合 IP 限制 + Bitfinex 提款白名單",
     ipLabel: "📌 IP 位址限制",
     ipHint: "強烈建議勾「Restrict access to specific IPs」並只填我們的 IP:",
     sections: [
@@ -75,7 +75,7 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
         label: "訂單",
         items: [
           { name: "查閱訂單及訂單狀態", on: true },
-          { name: "新增及取消訂單", on: false },
+          { name: "新增及取消訂單", on: true, critical: true },
         ],
       },
       {
@@ -96,12 +96,12 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
         label: "錢包",
         items: [
           { name: "查閱錢包餘額及地址", on: true },
-          { name: "於錢包間轉移資金", on: false },
+          { name: "於錢包間轉移資金", on: true, critical: true },
         ],
       },
       {
         label: "提款",
-        items: [{ name: "建立提款請求", on: false, danger: true }],
+        items: [{ name: "建立提款請求", on: true, critical: true, danger: true }],
       },
       {
         label: "Settings",
@@ -115,11 +115,11 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
   en: {
     title: "Mirror this when creating your Bitfinex API key",
     subtitle:
-      "Bitfinex's «Create New Key» page looks like this — just match each toggle below. Blue = on, grey = off.",
+      "Bitfinex's «Create New Key» page looks like this — just match each toggle below. Blue = on, grey = off. F-5a-3.11 USD pivot adds 3 newly-required permissions (marked ⚡).",
     legendOn: "= On",
     legendOff: "= Off",
     criticalLabel: "← Required for Quiver auto-lend",
-    dangerLabel: "← Never enable — the #1 way funds get stolen",
+    dangerLabel: "← ⚠ Enable + lock down with IP allowlist + Bitfinex withdrawal whitelist",
     ipLabel: "📌 IP allowlist",
     ipHint:
       "Strongly recommended: tick «Restrict access to specific IPs» and only allow our IP:",
@@ -139,7 +139,7 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
         label: "Orders",
         items: [
           { name: "Get orders and order status", on: true },
-          { name: "Create and cancel orders", on: false },
+          { name: "Create and cancel orders", on: true, critical: true },
         ],
       },
       {
@@ -160,12 +160,12 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
         label: "Wallets",
         items: [
           { name: "Get wallet balances and addresses", on: true },
-          { name: "Transfer between your wallets", on: false },
+          { name: "Transfer between your wallets", on: true, critical: true },
         ],
       },
       {
         label: "Withdraw",
-        items: [{ name: "Create a new withdrawal", on: false, danger: true }],
+        items: [{ name: "Create a new withdrawal", on: true, critical: true, danger: true }],
       },
       {
         label: "Settings",
@@ -179,11 +179,11 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
   ja: {
     title: "Bitfinex API キー作成時はこの通りに",
     subtitle:
-      "Bitfinex の「Create New Key」ページの権限はこの形 — 下のトグルに合わせて オン/オフ してください。青 = オン、グレー = オフ。",
+      "Bitfinex の「Create New Key」ページの権限はこの形 — 下のトグルに合わせて オン/オフ してください。青 = オン、グレー = オフ。F-5a-3.11 USD pivot で 3 つの権限が新たに必須化(⚡ で表示)。",
     legendOn: "= オン",
     legendOff: "= オフ",
     criticalLabel: "← Quiver 自動貸付に必須",
-    dangerLabel: "← 絶対オンにしない — 資金窃取の最大入口",
+    dangerLabel: "← ⚠ オンにする場合は IP 制限 + Bitfinex 出金ホワイトリストで保護",
     ipLabel: "📌 IP アドレス制限",
     ipHint:
       "「Restrict access to specific IPs」を有効にして、Quiver の IP のみ許可することを強く推奨:",
@@ -203,7 +203,7 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
         label: "注文",
         items: [
           { name: "注文と注文ステータスの閲覧", on: true },
-          { name: "注文の作成とキャンセル", on: false },
+          { name: "注文の作成とキャンセル", on: true, critical: true },
         ],
       },
       {
@@ -228,13 +228,13 @@ const DATA: Record<"zh-TW" | "en" | "ja", LocaleData> = {
         label: "ウォレット",
         items: [
           { name: "ウォレット残高とアドレスの閲覧", on: true },
-          { name: "ウォレット間の資金移動", on: false },
+          { name: "ウォレット間の資金移動", on: true, critical: true },
         ],
       },
       {
         label: "出金",
         items: [
-          { name: "出金リクエストの作成", on: false, danger: true },
+          { name: "出金リクエストの作成", on: true, critical: true, danger: true },
         ],
       },
       {

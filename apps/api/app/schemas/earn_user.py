@@ -247,6 +247,10 @@ class EarnMeOut(BaseModel):
     # F-5a-3.5: risk dial. "conservative" | "balanced" | "aggressive".
     # null when has_earn_account=false (no row yet); defaults "balanced" otherwise.
     strategy_preset: str | None
+    # F-5a-3.11: 「保留不借出金額」 % — what fraction of new deposits
+    # stays in user's Quiver wallet (instant redeem, no Bitfinex bridge).
+    # 0..100. Null only when has_earn_account=false (no account row).
+    usdt_buffer_pct: int | None
     # F-5b-2: true iff Quiver auto-paused this account due to ≥4 weeks of
     # unpaid perf fee accruals. Distinguishes "Quiver paused" from "user
     # toggled off". When true, the bot-settings page shows a paused banner
@@ -309,6 +313,9 @@ class EarnSettingsUpdateIn(BaseModel):
     strategy_preset: str | None = None
     # F-5a-4.3: opt-in for /rank leaderboard (stored on User, not EarnAccount).
     show_on_leaderboard: bool | None = None
+    # F-5a-3.11: 「保留不借出金額」 — % of new deposits to keep in
+    # Quiver wallet (instant redemption, no bridge to Bitfinex). 0..100.
+    usdt_buffer_pct: int | None = Field(None, ge=0, le=100)
 
     @field_validator("strategy_preset")
     @classmethod
@@ -327,6 +334,7 @@ class EarnSettingsOut(BaseModel):
     auto_lend_enabled: bool
     strategy_preset: str
     show_on_leaderboard: bool
+    usdt_buffer_pct: int
 
 
 # ─────────────────────────────────────────────────────────
