@@ -511,3 +511,65 @@ async def fetch_funding_book(
     # Sort ascending by rate so caller can iterate from cheapest to most aggressive
     offers.sort(key=lambda o: o.rate_daily)
     return offers
+
+
+@dataclass(frozen=True)
+class FundingTrade:
+    """One executed funding trade on the public tape (= one offer/bid match).
+
+    F-5a-3.10: lets us measure the actual market clearing rate per period
+    bucket, which can diverge sharply from FRR. FRR is a weighted avg
+    across ALL periods; for a borrower wanting 2-day funding, the relevant
+    signal is "what rate did the last 30 minutes of 2-day matches close at".
+    """
+
+    timestamp_ms: int
+    rate_daily: Decimal
+    period_days: int
+    amount: Decimal           # always positive (taker amount)
+
+
+async def fetch_funding_trades(
+    symbol: str = SYMBOL_PUBLIC, limit: int = 100
+) -> list[FundingTrade]:
+    """Fetch recent matched funding trades — public, no auth.
+
+    Bitfinex `/v2/trades/{symbol}/hist` row format for funding pairs:
+        [ID, MTS, AMOUNT, RATE, PERIOD]
+    AMOUNT is signed: positive = taker bought (= borrower took out funding),
+    negative = taker sold (rare for funding, treat as |amount|). Sorted
+    newest-first.
+
+    Rate-limit considerations are the same as fetch_funding_book — this is
+    1-2 calls per F-5a-3.10 cycle, well under the 90/min budget. Cached at
+    the market_signals layer for 60 s.
+    """
+    url = f"{API_BASE}/v2/trades/{symbol}/hist"
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, params={"limit": limit}, timeout=10.0)
+            r.raise_for_status()
+            rows = r.json()
+    except Exception as e:
+        logger.warning(
+            "bitfinex_trades_fetch_failed", symbol=symbol, error=str(e)
+        )
+        return []
+
+    trades: list[FundingTrade] = []
+    for row in rows:
+        if not row or len(row) < 5:
+            continue
+        try:
+            trades.append(
+                FundingTrade(
+                    timestamp_ms=int(row[1]),
+                    rate_daily=Decimal(str(row[3])),
+                    period_days=int(row[4]),
+                    amount=abs(Decimal(str(row[2]))),
+                )
+            )
+        except (ValueError, TypeError):
+            continue
+    # Already newest-first; preserve.
+    return trades
