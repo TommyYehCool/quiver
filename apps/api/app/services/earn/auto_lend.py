@@ -428,28 +428,35 @@ async def auto_lend_finalizer(ctx: dict[str, Any], *, position_id: int) -> str:
         pos.bitfinex_credited_at = datetime.now(timezone.utc)
         await db.commit()
 
-    # F-5a-3.7: anchor the ladder on the live FRR ticker rather than a
-    # depth-walk of the order book. The base tranche (or single-offer
-    # fallback) submits with rate=None and gets matched by Bitfinex's FRR
-    # engine — no more undercutting cheap top-of-book offers. The FRR value
-    # is still used to (a) compute fixed rates for higher tranches
-    # (1.2× / 1.5× / 2× / 4×), and (b) pick lock-up period via the rate
-    # threshold table.
+    # F-5a-3.10: replace the F-5a-3.7 "FRR market for base + FRR× multipliers
+    # for spike tranches" with a period-aware strategy_selector. Inputs are
+    # per-period market signals (median fill rate, 30-min volume) plus current
+    # FRR; output is a StrategyDecision with per-tranche reasoning that's
+    # also surfaced via the dry-run endpoint for transparency.
+    from app.services.earn.market_signals import get_market_signals
+    from app.services.earn.strategy_selector import select_strategy, to_legacy_ladder
+
+    signals = await get_market_signals()
     market = await fetch_market_frr()
-    competitive_rate = (
-        market.last_daily if market and market.last_daily > 0 else None
+    frr_daily = market.frr_daily if market is not None else None
+    decision = select_strategy(
+        amount=position_amount,
+        preset=strategy_preset,
+        signals=signals,
+        frr_daily=frr_daily,
     )
     logger.info(
-        "auto_lend_frr_anchor",
+        "auto_lend_strategy_selected",
         position_id=position_id,
         amount=str(position_amount),
-        frr_daily=str(competitive_rate) if competitive_rate is not None else "FRR_market_unavailable",
+        preset=strategy_preset,
+        frr_daily=str(frr_daily) if frr_daily else "unavailable",
+        tranche_count=len(decision.tranches),
+        fallback_used=decision.fallback_used,
+        avg_apr=str(decision.total_apr_estimate_pct),
+        notes=list(decision.notes),
     )
-
-    # F-5a-3.3: build ladder if amount qualifies, else single-offer fallback.
-    # F-5a-3.4: ladder builder embeds per-tranche period (high rates lock long).
-    # F-5a-3.5: ladder slicing + period selection driven by user's preset.
-    ladder = _build_ladder(position_amount, competitive_rate, strategy_preset)
+    ladder = to_legacy_ladder(decision)
     try:
         offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
     except Exception as e:

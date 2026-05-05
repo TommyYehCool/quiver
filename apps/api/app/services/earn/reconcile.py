@@ -40,8 +40,8 @@ from app.services.earn import notifications as earn_notifications
 from app.services.earn import repo as earn_repo
 from app.services.earn.auto_lend import (
     MIN_AUTO_LEND_USDT,
-    _build_ladder,
-    _compute_competitive_rate,
+    # F-5a-3.10 routes through strategy_selector instead of these legacy
+    # helpers (kept exported in auto_lend for backward compat / debugging).
     _submit_ladder,
 )
 from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter, fetch_market_frr
@@ -279,13 +279,34 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
     if in_flight_q.scalar_one_or_none() is not None:
         return summary
 
-    # Submit fresh offer(s) for the idle funds (use available, not balance).
-    # F-5a-3.2: depth-aware base rate. F-5a-3.3: laddered tranches if amount
-    # qualifies (≥ 750 USDT). F-5a-3.5: ladder shape + period table driven
-    # by the user's strategy_preset.
+    # F-5a-3.10: same period-aware strategy_selector used by the new-deposit
+    # path in auto_lend.py. Ensures the auto-renew (this branch) and fresh-
+    # deposit branches produce identical decisions for the same conditions.
+    from app.services.earn.market_signals import get_market_signals
+    from app.services.earn.strategy_selector import select_strategy, to_legacy_ladder
+
     amount = bf_position.funding_available
-    base_rate = await _compute_competitive_rate(amount)
-    ladder = _build_ladder(amount, base_rate, account.strategy_preset)
+    signals = await get_market_signals()
+    market = await fetch_market_frr()
+    frr_daily = market.frr_daily if market is not None else None
+    decision = select_strategy(
+        amount=amount,
+        preset=account.strategy_preset,
+        signals=signals,
+        frr_daily=frr_daily,
+    )
+    logger.info(
+        "earn_reconcile_strategy_selected",
+        earn_account_id=account.id,
+        amount=str(amount),
+        preset=account.strategy_preset,
+        frr_daily=str(frr_daily) if frr_daily else "unavailable",
+        tranche_count=len(decision.tranches),
+        fallback_used=decision.fallback_used,
+        avg_apr=str(decision.total_apr_estimate_pct),
+        notes=list(decision.notes),
+    )
+    ladder = to_legacy_ladder(decision)
     try:
         offer_ids = await _submit_ladder(adapter=adapter, ladder=ladder)
     except Exception as e:
@@ -333,7 +354,7 @@ async def reconcile_account(db: AsyncSession, account: EarnAccount) -> dict[str,
         "earn_reconcile_renewed",
         earn_account_id=account.id,
         amount=str(amount),
-        rate_daily=str(base_rate) if base_rate else "FRR",
+        avg_apr=str(decision.total_apr_estimate_pct),
         tranche_count=len(offer_ids),
         new_position_id=new_pos.id,
         primary_offer_id=offer_ids[0],
