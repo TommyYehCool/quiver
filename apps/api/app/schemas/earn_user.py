@@ -52,6 +52,60 @@ class ActiveCreditOut(BaseModel):
     expected_interest_at_expiry: Decimal
 
 
+class CancelOfferIn(BaseModel):
+    """Body for POST /api/earn/me/cancel-offer.
+
+    Cancels a single Bitfinex funding offer by id. Caller's API key must own
+    the offer (Bitfinex enforces this — wrong-account cancel returns ERROR).
+    """
+    offer_id: int = Field(..., description="Bitfinex offer id to cancel")
+
+
+class SubmitOfferIn(BaseModel):
+    """Body for POST /api/earn/me/submit-offer.
+
+    Submits a fresh funding offer at user-specified parameters. When rate_daily
+    is null, posts as an FRR market order (auto-tracks FRR until matched).
+    Otherwise posts as a fixed-rate offer.
+
+    Validation mirrors Bitfinex platform limits:
+      amount     ≥ 50 USDT (Bitfinex minimum funding offer)
+      rate_daily 0 < rate ≤ 0.05 (= up to ~1825% APR, let users be silly)
+      period     2-30 days (Bitfinex platform range)
+    """
+    amount: Decimal = Field(..., gt=0, description="Offer amount in USDT")
+    rate_daily: Decimal | None = Field(
+        None,
+        description="Daily rate (0.0001 = 0.01%/d ≈ 3.65% APR). Null = FRR market.",
+    )
+    period_days: int = Field(..., ge=2, le=30, description="Lock period (days)")
+
+    @field_validator("amount")
+    @classmethod
+    def _validate_amount(cls, v: Decimal) -> Decimal:
+        if v < Decimal("50"):
+            raise ValueError("amount must be ≥ 50 USDT (Bitfinex minimum)")
+        return v
+
+    @field_validator("rate_daily")
+    @classmethod
+    def _validate_rate(cls, v: Decimal | None) -> Decimal | None:
+        if v is None:
+            return v
+        if v <= 0 or v > Decimal("0.05"):
+            raise ValueError("rate_daily must be in (0, 0.05] when specified")
+        return v
+
+
+class SubmitOfferOut(BaseModel):
+    offer_id: int
+
+
+class CancelOfferOut(BaseModel):
+    offer_id: int
+    cancelled: bool
+
+
 class PendingOfferOut(BaseModel):
     """Live snapshot of one pending funding offer (= money waiting to be matched).
 

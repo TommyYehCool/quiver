@@ -38,6 +38,8 @@ from app.models.user import User
 from app.schemas.api import ApiResponse
 from app.schemas.earn_user import (
     ActiveCreditOut,
+    CancelOfferIn,
+    CancelOfferOut,
     DailyEarning,
     EarnConnectIn,
     EarnConnectOut,
@@ -54,6 +56,8 @@ from app.schemas.earn_user import (
     FeeAccrualRow,
     PendingOfferOut,
     RankEntryOut,
+    SubmitOfferIn,
+    SubmitOfferOut,
 )
 from app.services import ledger as ledger_service
 from app.models.referral import ReferralBindingSource
@@ -356,6 +360,128 @@ async def update_earn_settings(
             show_on_leaderboard=leaderboard_state,
         )
     )
+
+
+@router.post("/cancel-offer", response_model=ApiResponse[CancelOfferOut])
+async def cancel_pending_offer(
+    payload: CancelOfferIn,
+    user: CurrentUserDep,
+    db: DbDep,
+) -> ApiResponse[CancelOfferOut]:
+    """Cancel a single pending Bitfinex funding offer owned by this user.
+
+    F-5a-3.9: lets the user reclaim funds locked in a pending offer (e.g. to
+    re-post at a different rate, or just to stop offering). Bitfinex enforces
+    ownership server-side via the API key, so a wrong offer_id returns ERROR.
+
+    Auto-lend interaction: this endpoint does NOT pause auto-lend. If the
+    user wants their cancellation to stick (e.g. they're switching strategy),
+    they should toggle off auto-lend in /earn/bot-settings first — otherwise
+    the next reconcile cron (~every 1-2 min) may post a fresh offer using
+    the default strategy.
+    """
+    # Resolve the user's Bitfinex connection
+    account = await earn_repo.get_account_by_user_id(db, user.id)
+    if account is None:
+        raise HTTPException(status_code=404, detail={"code": "earn.no_account"})
+    conn = await earn_repo.get_active_bitfinex_connection(db, account.id)
+    if conn is None:
+        raise HTTPException(status_code=400, detail={"code": "earn.no_bitfinex_connection"})
+
+    from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
+
+    adapter = await BitfinexFundingAdapter.from_connection(db, conn)
+    try:
+        await adapter.cancel_funding_offer(payload.offer_id)
+    except Exception as e:  # noqa: BLE001
+        # Most common: offer already matched/expired between user clicking and
+        # request landing. Surface as 409 so UI can refresh and show the new
+        # state.
+        logger.warning(
+            "earn_cancel_offer_failed",
+            user_id=user.id,
+            offer_id=payload.offer_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "earn.cancel_failed", "reason": str(e)[:200]},
+        )
+
+    logger.info(
+        "earn_cancel_offer_succeeded",
+        user_id=user.id,
+        offer_id=payload.offer_id,
+    )
+    return ApiResponse[CancelOfferOut].ok(
+        CancelOfferOut(offer_id=payload.offer_id, cancelled=True)
+    )
+
+
+@router.post("/submit-offer", response_model=ApiResponse[SubmitOfferOut])
+async def submit_custom_offer(
+    payload: SubmitOfferIn,
+    user: CurrentUserDep,
+    db: DbDep,
+) -> ApiResponse[SubmitOfferOut]:
+    """Submit a custom funding offer (user-specified amount/rate/period).
+
+    F-5a-3.9: lets the user post offers outside the auto-lend strategy —
+    custom rate (or FRR market via rate_daily=null), custom period, custom
+    size. Common pattern: cancel pending → submit at a different rate.
+
+    Auto-lend interaction: same caveat as /cancel-offer — auto-lend's next
+    cron pass may cancel + re-post if it sees idle wallet funds. Toggle off
+    auto-lend in bot-settings to keep the manual offer in place.
+
+    No EarnPosition row is created here — this is a "raw passthrough" to
+    Bitfinex. The reconcile cron will pick up the new offer (visible via
+    list_active_offers) and surface it in the pending_offers UI; once
+    matched into a credit, it'll show up under "目前借出" without needing
+    a corresponding EarnPosition row.
+    """
+    account = await earn_repo.get_account_by_user_id(db, user.id)
+    if account is None:
+        raise HTTPException(status_code=404, detail={"code": "earn.no_account"})
+    conn = await earn_repo.get_active_bitfinex_connection(db, account.id)
+    if conn is None:
+        raise HTTPException(status_code=400, detail={"code": "earn.no_bitfinex_connection"})
+
+    from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
+
+    adapter = await BitfinexFundingAdapter.from_connection(db, conn)
+    try:
+        offer_id = await adapter.submit_funding_offer(
+            amount=payload.amount,
+            period_days=payload.period_days,
+            rate=payload.rate_daily,
+        )
+    except Exception as e:  # noqa: BLE001
+        # Common: insufficient funding_available (Bitfinex needs ~1-2 min to
+        # release funds after a cancel). Caller should retry after a short
+        # delay or surface "wait a moment" to the user.
+        logger.warning(
+            "earn_submit_offer_failed",
+            user_id=user.id,
+            amount=str(payload.amount),
+            rate=str(payload.rate_daily) if payload.rate_daily else "FRR",
+            period_days=payload.period_days,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "earn.submit_failed", "reason": str(e)[:200]},
+        )
+
+    logger.info(
+        "earn_submit_offer_succeeded",
+        user_id=user.id,
+        offer_id=offer_id,
+        amount=str(payload.amount),
+        rate=str(payload.rate_daily) if payload.rate_daily else "FRR",
+        period_days=payload.period_days,
+    )
+    return ApiResponse[SubmitOfferOut].ok(SubmitOfferOut(offer_id=offer_id))
 
 
 @router.post("/connect", response_model=ApiResponse[EarnConnectOut])

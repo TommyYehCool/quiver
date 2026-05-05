@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { ActiveCreditRow } from "@/components/earn/active-credit-row";
 import { BufferEmptyBanner } from "@/components/earn/buffer-empty-banner";
 import { FeeStatusCard } from "@/components/earn/fee-status-card";
+import { PendingOfferRow } from "@/components/earn/pending-offer-row";
 import { PerformanceCard } from "@/components/earn/performance-card";
 import { PublicStatsStrip } from "@/components/earn/public-stats-strip";
 import type { EarnPositionStatus } from "@/lib/api/earn-user";
@@ -469,9 +470,9 @@ export default async function EarnPage({
             </Card>
           )}
 
-          {/* Pending offers (submitted, not matched yet). Detail row per offer
-              showing amount + rate type + period. Cancel / amend buttons land
-              in a follow-up commit (Phase 3 / 4). */}
+          {/* Pending offers (submitted, not matched yet). Each row gets
+              Cancel + Edit buttons via the client-side PendingOfferRow
+              component (F-5a-3.9). */}
           {earn.pending_offers.length > 0 && (
             <Card>
               <CardHeader>
@@ -480,29 +481,9 @@ export default async function EarnPage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {earn.pending_offers.map((o) => {
-                    const rateLabel = o.is_frr
-                      ? s.pendingOffers.rateFrr
-                      : `${s.pendingOffers.rateFixed} ${(Number(o.rate_daily) * 100).toFixed(4)}%/d`;
-                    return (
-                      <div
-                        key={o.id}
-                        className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Coins className="h-4 w-4 text-amber-500" />
-                          <span className="font-mono">{fmtUsd(o.amount)}</span>
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                            {rateLabel}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {s.pendingOffers.periodDays(o.period_days)}
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-500">offer #{o.id}</div>
-                      </div>
-                    );
-                  })}
+                  {earn.pending_offers.map((o) => (
+                    <PendingOfferRow key={o.id} offer={o} />
+                  ))}
                 </div>
               </CardContent>
             </Card>

@@ -264,3 +264,25 @@ export async function connectBitfinex(
     body: JSON.stringify(payload),
   });
 }
+
+/** Cancel a pending Bitfinex funding offer. F-5a-3.9. */
+export async function cancelPendingOffer(offerId: number): Promise<{ offer_id: number; cancelled: boolean }> {
+  return apiFetch<{ offer_id: number; cancelled: boolean }>("/api/earn/me/cancel-offer", {
+    method: "POST",
+    body: JSON.stringify({ offer_id: offerId }),
+  });
+}
+
+/** Submit a custom funding offer. rate_daily=null means FRR market order. F-5a-3.9. */
+export async function submitCustomOffer(
+  payload: {
+    amount: string;          // decimal as string (e.g. "200.00")
+    rate_daily: string | null; // "0.0001" = 0.01%/d, or null for FRR market
+    period_days: number;     // 2-30
+  },
+): Promise<{ offer_id: number }> {
+  return apiFetch<{ offer_id: number }>("/api/earn/me/submit-offer", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
