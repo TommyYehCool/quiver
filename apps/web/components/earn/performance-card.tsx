@@ -40,6 +40,11 @@ interface PerfStrings {
   trendLabel: string;
   trendEmpty: string;
   noDataYet: string;
+  // F-5b-X.4 realized APR
+  realized30dLabel: string;
+  realized7dLabel: string;
+  realizedNotReady: string;
+  realizedHint: string;
 }
 
 const STRINGS: Record<Locale, PerfStrings> = {
@@ -64,6 +69,10 @@ const STRINGS: Record<Locale, PerfStrings> = {
     trendEmpty: "等待第一筆每日資料(每天 03:00 排程產生)",
     noDataYet:
       "你的部位剛建立,Quiver 還在收第一批資料。掛單後 1-2 天會看到第一筆每日結算,再過 7-10 天走勢圖才有意思。",
+    realized30dLabel: "已實現年化(30 天)",
+    realized7dLabel: "已實現年化(7 天)",
+    realizedNotReady: "資料天數不足",
+    realizedHint: "回看實際成交利率(已扣 Bitfinex 手續費),抓到 spike 時這個數字會跳很高",
   },
   en: {
     title: "Strategy performance",
@@ -86,6 +95,10 @@ const STRINGS: Record<Locale, PerfStrings> = {
     trendEmpty: "Waiting for first snapshot (daily cron)",
     noDataYet:
       "Your position was just set up. Quiver is still collecting the first batch of data — you'll see the first daily settlement 1-2 days after offers go live, and the sparkline becomes meaningful after 7-10 days.",
+    realized30dLabel: "Realized APR (30d)",
+    realized7dLabel: "Realized APR (7d)",
+    realizedNotReady: "Building data",
+    realizedHint: "What you actually earned, annualized (Bitfinex fees deducted). Jumps high when you catch spikes.",
   },
   ja: {
     title: "戦略パフォーマンス",
@@ -108,6 +121,10 @@ const STRINGS: Record<Locale, PerfStrings> = {
     trendEmpty: "初回スナップショット待ち(毎日 03:00 の定期処理で生成)",
     noDataYet:
       "ポジションが設定されたばかりです。Quiver は最初のデータバッチを収集中 — オファーが有効になってから 1-2 日後に最初の日次結算が表示され、7-10 日後にスパークラインが意味を持ち始めます。",
+    realized30dLabel: "実現 APR (30 日)",
+    realized7dLabel: "実現 APR (7 日)",
+    realizedNotReady: "データ収集中",
+    realizedHint: "実際の約定金利を年率換算(Bitfinex 手数料控除済)。spike を捕獲すると数値が跳ねます。",
   },
 };
 
@@ -220,6 +237,46 @@ export function PerformanceCard({
             </div>
           ) : null}
         </div>
+
+        {/* F-5b-X.4: realized APR — backward-looking, includes any spike
+            events captured in the window. Sits below the live weighted-
+            avg APR so users see the contrast: weighted = "what's
+            currently posted", realized = "what actually settled". */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+            <div className="text-xs text-slate-600 dark:text-slate-400">
+              {s.realized30dLabel}
+            </div>
+            <div className="mt-0.5 font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+              {perf.realized_apr_30d_pct !== null
+                ? `${fmtPct(perf.realized_apr_30d_pct, 2)}%`
+                : "—"}
+            </div>
+            {perf.realized_apr_30d_pct === null ? (
+              <div className="mt-0.5 text-[11px] text-slate-500">
+                {s.realizedNotReady}
+              </div>
+            ) : null}
+          </div>
+          <div className="rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+            <div className="text-xs text-slate-600 dark:text-slate-400">
+              {s.realized7dLabel}
+            </div>
+            <div className="mt-0.5 font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+              {perf.realized_apr_7d_pct !== null
+                ? `${fmtPct(perf.realized_apr_7d_pct, 2)}%`
+                : "—"}
+            </div>
+            {perf.realized_apr_7d_pct === null ? (
+              <div className="mt-0.5 text-[11px] text-slate-500">
+                {s.realizedNotReady}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <p className="-mt-1 text-[11px] italic text-slate-500 dark:text-slate-400">
+          {s.realizedHint}
+        </p>
 
         {/* KPI grid: interest 30d / spike count / best APR */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

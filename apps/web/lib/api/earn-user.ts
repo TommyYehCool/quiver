@@ -166,6 +166,10 @@ export interface EarnPerformanceOut {
   total_interest_30d_usdt: string | null;
   days_with_data: number;
   daily_earnings: DailyEarning[];
+  /** F-5b-X.4 realized APR (backward-looking, "what you actually earned").
+   * Null until ≥ 7 snapshot days for 30d, ≥ 3 for 7d. */
+  realized_apr_30d_pct: string | null;
+  realized_apr_7d_pct: string | null;
   spike_credits_count: number;
   spike_credits_total_usdt: string;
   best_active_apr_pct: string | null;

@@ -448,6 +448,13 @@ class EarnPerformanceOut(BaseModel):
     total_interest_30d_usdt: Decimal | None  # sum of bitfinex_daily_earned over last 30d
     days_with_data: int  # count of snapshot days where daily_earned was non-null
     daily_earnings: list[DailyEarning]  # for sparkline; ordered by date asc
+    # ── realized APR (F-5b-X.4): backward-looking ──
+    # Same calc as the public leaderboard's apr_30d_pct so personal vs
+    # leaderboard numbers always reconcile. realized = sum(daily_earned) /
+    # sum(lent_usdt as days) × 365 × 100. null until ≥ 7 snapshot days
+    # so we don't display a one-day blip as a yearly rate.
+    realized_apr_30d_pct: Decimal | None
+    realized_apr_7d_pct: Decimal | None
 
     # ── spike capture (live from active credits) ──
     spike_credits_count: int  # active credits with APR >= SPIKE_THRESHOLD_APY (12%)

@@ -1106,6 +1106,8 @@ def _empty_performance() -> EarnPerformanceOut:
         total_interest_30d_usdt=None,
         days_with_data=0,
         daily_earnings=[],
+        realized_apr_30d_pct=None,
+        realized_apr_7d_pct=None,
         spike_credits_count=0,
         spike_credits_total_usdt=Decimal("0"),
         best_active_apr_pct=None,
@@ -1186,6 +1188,46 @@ async def get_earn_performance(
     ]
     total_30d = sum((d.usdt for d in daily_rows), Decimal(0)) if daily_rows else None
 
+    # F-5b-X.4 realized APR — same formula as the public leaderboard's
+    # apr_30d_pct (so the user's "realized 30d" number on /earn matches
+    # what they'd see on /rank if they qualify). Requires ≥ 7 snapshot
+    # days so a single-day blip doesn't get annualized into a misleading
+    # ~365× number on day 1.
+    MIN_DAYS_FOR_REALIZED_APR = 7
+
+    def _compute_realized_apr(
+        rows: list, days_floor: int = MIN_DAYS_FOR_REALIZED_APR
+    ) -> Decimal | None:
+        """rows = list of EarnPositionSnapshot — already filtered to a
+        window. Returns annualized APR % or None if too sparse."""
+        valid = [
+            s for s in rows
+            if s.bitfinex_daily_earned is not None
+            and s.bitfinex_lent_usdt is not None
+            and s.bitfinex_lent_usdt > 0
+        ]
+        if len(valid) < days_floor:
+            return None
+        total_earned = sum(
+            (s.bitfinex_daily_earned for s in valid), Decimal(0)
+        )
+        total_lent_days = sum(
+            (s.bitfinex_lent_usdt for s in valid), Decimal(0)
+        )
+        if total_lent_days <= 0:
+            return None
+        return (
+            total_earned / total_lent_days * Decimal(365) * Decimal(100)
+        ).quantize(Decimal("0.01"))
+
+    realized_30d = _compute_realized_apr(snapshots)
+    cutoff_7d = date.today() - timedelta(days=7)
+    snapshots_7d = [s for s in snapshots if s.snapshot_date >= cutoff_7d]
+    realized_7d = _compute_realized_apr(snapshots_7d, days_floor=3)
+    # 7d is more permissive (≥3 days) since "trailing 7d" is the most
+    # actionable window for users adjusting strategy + we want SOMETHING
+    # to show after the first few days.
+
     return ApiResponse[EarnPerformanceOut].ok(
         EarnPerformanceOut(
             current_frr_apr_pct=current_frr_apr,
@@ -1194,6 +1236,8 @@ async def get_earn_performance(
             total_interest_30d_usdt=total_30d,
             days_with_data=len(daily_rows),
             daily_earnings=daily_rows,
+            realized_apr_30d_pct=realized_30d,
+            realized_apr_7d_pct=realized_7d,
             spike_credits_count=len(spike_credits),
             spike_credits_total_usdt=spike_total,
             best_active_apr_pct=best_apr,
