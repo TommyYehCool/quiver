@@ -66,10 +66,12 @@ interface PageStrings {
   notSetup: { title: string; desc: string; cta: string; viewGuide: string };
   bigNumbers: {
     lent: { label: string; sub: string };
+    pending: { label: string; sub: string };
     funding: { label: string; sub: string };
     earned: { label: string; sub: string };
   };
   activeLoans: { title: string; desc: string };
+  pendingOffers: { title: string; desc: string; rateFrr: string; rateFixed: string; periodDays: (n: number) => string };
   autoLend: {
     title: string;
     desc: string;
@@ -107,12 +109,20 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     },
     bigNumbers: {
       lent: { label: "已借出 (賺息中)", sub: "由 margin trader 接走,每日結算" },
+      pending: { label: "掛單中 (Pending)", sub: "已提交 offer,等借方撮合" },
       funding: { label: "等待掛單 (Funding idle)", sub: "Bitfinex Funding wallet 待掛 offer" },
       earned: { label: "當日預估收益", sub: "最新 snapshot 估算（非已入帳）" },
     },
     activeLoans: {
       title: "目前借出",
       desc: "Bitfinex 上正在計息的 funding loans。每筆借期到期後自動回 funding wallet,系統會 auto-renew 重新掛單。",
+    },
+    pendingOffers: {
+      title: "掛單中明細",
+      desc: "已掛 funding offer、等待借方撮合。撮合後會自動轉成「目前借出」開始計息。",
+      rateFrr: "FRR 市場單",
+      rateFixed: "固定利率",
+      periodDays: (n) => `${n} 天`,
     },
     autoLend: {
       title: "Auto-lend 自動放貸",
@@ -164,12 +174,20 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     },
     bigNumbers: {
       lent: { label: "Lent (earning)", sub: "Borrowed by margin traders, settled daily" },
+      pending: { label: "Pending offer", sub: "Submitted, waiting to be matched" },
       funding: { label: "Waiting in Funding (idle)", sub: "In Bitfinex Funding wallet, not yet offered" },
       earned: { label: "Estimated earnings today", sub: "Latest snapshot estimate (not yet credited)" },
     },
     activeLoans: {
       title: "Active loans",
       desc: "Funding loans currently earning interest on Bitfinex. After each term, funds return to the Funding wallet and the system auto-renews with a fresh offer.",
+    },
+    pendingOffers: {
+      title: "Pending offers",
+      desc: "Funding offers submitted to Bitfinex, waiting for a borrower match. Once matched they become active loans and start earning interest.",
+      rateFrr: "FRR market order",
+      rateFixed: "Fixed rate",
+      periodDays: (n) => `${n} days`,
     },
     autoLend: {
       title: "Auto-lend",
@@ -220,12 +238,20 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     },
     bigNumbers: {
       lent: { label: "貸出中(利息収入中)", sub: "margin トレーダーに貸付、毎日結算" },
+      pending: { label: "発注中 (Pending)", sub: "offer 送信済み、貸付待ち" },
       funding: { label: "待機中(Funding idle)", sub: "Bitfinex Funding ウォレットで offer 待ち" },
       earned: { label: "本日の予想収益", sub: "最新スナップショット推定（未着金）" },
     },
     activeLoans: {
       title: "現在の貸出",
       desc: "Bitfinex 上で利息収入中の funding loans。各期間終了後は自動的に funding wallet に戻り、システムが自動更新で再掲します。",
+    },
+    pendingOffers: {
+      title: "発注中の offer",
+      desc: "Bitfinex に送信済み、貸付者のマッチング待ち。マッチング後は「現在の貸出」に移行し利息収入が始まります。",
+      rateFrr: "FRR マーケット注文",
+      rateFixed: "固定利率",
+      periodDays: (n) => `${n} 日`,
     },
     autoLend: {
       title: "Auto-lend 自動貸出",
@@ -378,14 +404,26 @@ export default async function EarnPage({
             />
           ) : null}
 
-          {/* Big numbers */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          {/* ═══ LIVE STATUS — big numbers ═══ */}
+          {/* 4-card grid (lent / pending / funding / earned). 2 cols on small,
+              4 cols on md+. Pending card always rendered for consistency
+              even when 0 — UX feedback that the row exists. */}
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>{s.bigNumbers.lent.label}</CardDescription>
                 <CardTitle className="font-mono text-2xl">{fmtUsd(earn.lent_usdt)}</CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-slate-500">{s.bigNumbers.lent.sub}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>{s.bigNumbers.pending.label}</CardDescription>
+                <CardTitle className="font-mono text-2xl text-amber-600 dark:text-amber-400">
+                  {fmtUsd(earn.pending_offers_total_usdt)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs text-slate-500">{s.bigNumbers.pending.sub}</CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
@@ -409,12 +447,9 @@ export default async function EarnPage({
                so it's the first thing the user reads on a real dashboard. */}
           {perf ? <PerformanceCard locale={locale} perf={perf} /> : null}
 
-          {/* F-5b-2 perf fee status card — visibility into accruals + buffer
-               warnings. Card itself decides whether to show full table (Public
-               tier) or compact exempt pill (Friend / Premium). */}
-          {fees ? <FeeStatusCard locale={locale} fees={fees} /> : null}
+          {/* ═══ LIVE BITFINEX STATE — credits / offers / pipeline ═══ */}
 
-          {/* Active loans */}
+          {/* Active loans (matched, earning) */}
           {earn.active_credits.length > 0 && (
             <Card>
               <CardHeader>
@@ -431,37 +466,46 @@ export default async function EarnPage({
             </Card>
           )}
 
-          {/* Auto-lend toggle moved to /earn/bot-settings (F-5a-1.1).
-              Show a small status badge here with a link, instead of duplicating
-              the toggle. Keeps this page focused on read-only stats. */}
-          <Card className="bg-cream-warm/40 dark:bg-slate-900/40">
-            <CardHeader className="flex-row items-start justify-between gap-4">
-              <div className="flex-1">
-                <CardTitle className="text-base">{s.autoLend.title}</CardTitle>
-                <CardDescription>
-                  <span
-                    className={
-                      earn.auto_lend_enabled
-                        ? "font-medium text-emerald-700 dark:text-emerald-400"
-                        : "font-medium text-slate-600 dark:text-slate-400"
-                    }
-                  >
-                    {earn.auto_lend_enabled ? s.autoLend.statusOn : s.autoLend.statusOff}
-                  </span>
-                  <span className="ml-2 text-xs text-slate-500">
-                    {s.autoLend.movedNote}
-                  </span>
-                </CardDescription>
-              </div>
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/${locale}/earn/bot-settings`}>
-                  {s.autoLend.manageCta} <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </CardHeader>
-          </Card>
+          {/* Pending offers (submitted, not matched yet). Detail row per offer
+              showing amount + rate type + period. Cancel / amend buttons land
+              in a follow-up commit (Phase 3 / 4). */}
+          {earn.pending_offers.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{s.pendingOffers.title}</CardTitle>
+                <CardDescription>{s.pendingOffers.desc}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {earn.pending_offers.map((o) => {
+                    const rateLabel = o.is_frr
+                      ? s.pendingOffers.rateFrr
+                      : `${s.pendingOffers.rateFixed} ${(Number(o.rate_daily) * 100).toFixed(4)}%/d`;
+                    return (
+                      <div
+                        key={o.id}
+                        className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Coins className="h-4 w-4 text-amber-500" />
+                          <span className="font-mono">{fmtUsd(o.amount)}</span>
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                            {rateLabel}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {s.pendingOffers.periodDays(o.period_days)}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500">offer #{o.id}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Pipeline status */}
+          {/* Pipeline status (deposit → onchain → funding → offer → matched) */}
           {earn.active_positions.length > 0 && (
             <Card>
               <CardHeader>
@@ -499,6 +543,8 @@ export default async function EarnPage({
             </Card>
           )}
 
+          {/* ═══ HISTORY ═══ */}
+
           {/* Recent snapshots */}
           {earn.recent_snapshots.length > 0 && (
             <Card>
@@ -534,6 +580,46 @@ export default async function EarnPage({
               </CardContent>
             </Card>
           )}
+
+          {/* ═══ SETTINGS / META ═══ */}
+          {/* Less directly tied to "what's happening with my money RIGHT NOW",
+              so they live below the live state + history. Reordered as part
+              of the pending-offer-card drop. */}
+
+          {/* F-5b-2 perf fee status card — visibility into accruals + buffer
+               warnings. Card itself decides whether to show full table (Public
+               tier) or compact exempt pill (Friend / Premium). */}
+          {fees ? <FeeStatusCard locale={locale} fees={fees} /> : null}
+
+          {/* Auto-lend toggle moved to /earn/bot-settings (F-5a-1.1).
+              Show a small status badge here with a link, instead of duplicating
+              the toggle. Keeps this page focused on read-only stats. */}
+          <Card className="bg-cream-warm/40 dark:bg-slate-900/40">
+            <CardHeader className="flex-row items-start justify-between gap-4">
+              <div className="flex-1">
+                <CardTitle className="text-base">{s.autoLend.title}</CardTitle>
+                <CardDescription>
+                  <span
+                    className={
+                      earn.auto_lend_enabled
+                        ? "font-medium text-emerald-700 dark:text-emerald-400"
+                        : "font-medium text-slate-600 dark:text-slate-400"
+                    }
+                  >
+                    {earn.auto_lend_enabled ? s.autoLend.statusOn : s.autoLend.statusOff}
+                  </span>
+                  <span className="ml-2 text-xs text-slate-500">
+                    {s.autoLend.movedNote}
+                  </span>
+                </CardDescription>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/${locale}/earn/bot-settings`}>
+                  {s.autoLend.manageCta} <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </CardHeader>
+          </Card>
 
           {/* Bitfinex connected info footer */}
           <Card className="bg-cream-warm/40 dark:bg-slate-900/40">

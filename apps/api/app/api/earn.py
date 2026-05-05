@@ -52,6 +52,7 @@ from app.schemas.earn_user import (
     EarnSettingsUpdateIn,
     EarnSnapshotUserOut,
     FeeAccrualRow,
+    PendingOfferOut,
     RankEntryOut,
 )
 from app.services import ledger as ledger_service
@@ -141,6 +142,8 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 total_at_bitfinex=None,
                 active_positions=[],
                 active_credits=[],
+                pending_offers=[],
+                pending_offers_total_usdt=Decimal(0),
                 recent_snapshots=[],
             )
         )
@@ -155,6 +158,7 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
     # but worth it for transparency. Fail open — if Bitfinex hiccups we still
     # render the page with snapshot data.
     active_credits: list[ActiveCreditOut] = []
+    pending_offers: list[PendingOfferOut] = []
     funding_idle: Decimal | None = latest.bitfinex_funding_usdt if latest else None
     lent: Decimal | None = latest.bitfinex_lent_usdt if latest else None
     daily_earned: Decimal | None = latest.bitfinex_daily_earned if latest else None
@@ -180,6 +184,28 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 )
                 for c in live_position.active_credits
             ]
+            # Pending offers — submitted but not yet matched. Separate API call
+            # since get_funding_position only includes credits + wallet, not
+            # offers. Fail-open if this errors (page still renders without
+            # the pending card).
+            try:
+                offers = await adapter.list_active_offers()
+                pending_offers = [
+                    PendingOfferOut(
+                        id=o.id,
+                        amount=o.amount,
+                        rate_daily=o.rate,
+                        is_frr=(o.rate == 0),
+                        period_days=o.period,
+                    )
+                    for o in offers
+                ]
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "earn_me_pending_offers_fetch_failed",
+                    user_id=user.id,
+                    error=str(e),
+                )
         except Exception as e:  # noqa: BLE001
             logger.warning("earn_me_live_fetch_failed", user_id=user.id, error=str(e))
 
@@ -226,6 +252,10 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 for p in active_positions
             ],
             active_credits=active_credits,
+            pending_offers=pending_offers,
+            pending_offers_total_usdt=sum(
+                (o.amount for o in pending_offers), Decimal(0)
+            ),
             recent_snapshots=[
                 EarnSnapshotUserOut(
                     snapshot_date=s.snapshot_date,

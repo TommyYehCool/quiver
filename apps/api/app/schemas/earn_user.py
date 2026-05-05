@@ -52,6 +52,24 @@ class ActiveCreditOut(BaseModel):
     expected_interest_at_expiry: Decimal
 
 
+class PendingOfferOut(BaseModel):
+    """Live snapshot of one pending funding offer (= money waiting to be matched).
+
+    Distinguished from ActiveCreditOut: an offer is submitted but not yet matched
+    by a borrower. Funds are reserved in the funding wallet (so wallet.available
+    drops) but no interest accrues yet.
+
+    rate_daily=0 indicates an FRR market order (rate=None at submit time);
+    Bitfinex stores rate type as FRR and the actual fill rate is determined at
+    match time.
+    """
+    id: int                          # offer id (for cancel / amend)
+    amount: Decimal                  # remaining unmatched amount (USDT)
+    rate_daily: Decimal              # 0 = FRR market order; >0 = fixed-rate offer
+    is_frr: bool                     # True if FRR market order (rate=0 sentinel)
+    period_days: int
+
+
 class EarnMeOut(BaseModel):
     """Everything the user needs on /earn:KYC gate, account state, positions."""
 
@@ -101,6 +119,16 @@ class EarnMeOut(BaseModel):
 
     # Live active loans at Bitfinex (each with rate + expiry)
     active_credits: list[ActiveCreditOut]
+
+    # Live pending offers at Bitfinex (submitted but not yet matched).
+    # When non-empty, wallet.available is depleted by the sum of these amounts
+    # (Bitfinex reserves funds for unmatched offers). UI surfaces these in a
+    # dedicated card so users see "submitted but not earning yet" capital.
+    pending_offers: list[PendingOfferOut]
+
+    # Sum of pending_offers.amount — convenience for the big-number card.
+    # 0 (not None) when no pending offers, so UI never renders "—" here.
+    pending_offers_total_usdt: Decimal
 
     # Trend (last N days)
     recent_snapshots: list[EarnSnapshotUserOut]

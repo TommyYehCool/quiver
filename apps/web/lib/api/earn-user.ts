@@ -50,6 +50,18 @@ export interface ActiveCreditOut {
   expected_interest_at_expiry: string;
 }
 
+/** Pending funding offer — submitted to Bitfinex, not yet matched by a borrower.
+ * Funds are reserved (wallet.available drops) but no interest accrues yet. */
+export interface PendingOfferOut {
+  id: number;
+  amount: string;
+  /** Daily rate. "0" indicates an FRR market order (rate=None at submit). */
+  rate_daily: string;
+  /** True iff this is an FRR market order (rate_daily = "0"). */
+  is_frr: boolean;
+  period_days: number;
+}
+
 export type EarnTier = "none" | "internal" | "friend" | "public" | "commercial";
 
 export type EarnStrategyPreset = "conservative" | "balanced" | "aggressive";
@@ -83,6 +95,9 @@ export interface EarnMeOut {
   total_at_bitfinex: string | null;
   active_positions: EarnPositionUserOut[];
   active_credits: ActiveCreditOut[];
+  pending_offers: PendingOfferOut[];
+  /** Sum of pending_offers.amount as a string (always present, "0" if empty). */
+  pending_offers_total_usdt: string;
   recent_snapshots: EarnSnapshotUserOut[];
 }
 
