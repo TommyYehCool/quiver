@@ -161,7 +161,11 @@ class StrategyTrancheOut(BaseModel):
     rate_daily: Decimal | None    # null = FRR market order
     period_days: int
     apr_pct: Decimal | None       # rate_daily annualised, null when FRR
-    reasoning: str
+    reasoning: str                # English; backend log + frontend fallback
+    # F-5a-3.10.2 structured fields — frontend prefers these for i18n.
+    kind: str                     # "single" | "base" | "spike" | "fallback"
+    multiplier: Decimal | None    # spike-only: rate multiplier on base
+    capped: bool                  # spike-only: True iff hit FRR × ceiling
 
 
 class StrategyPreviewOut(BaseModel):

@@ -77,12 +77,23 @@ FALLBACK_PERIOD_DAYS = 2
 
 @dataclass(frozen=True)
 class StrategyTranche:
-    """One offer to submit. rate_daily=None → FRR market order."""
+    """One offer to submit. rate_daily=None → FRR market order.
+
+    F-5a-3.10.2: `kind` + `multiplier` + `capped` are structured siblings of
+    `reasoning` (which stays English) so the frontend can build localized
+    explanations. Frontend prefers the structured fields and falls back to
+    `reasoning` if the locale isn't covered. `reasoning` also remains the
+    one source of truth for backend logs (worker/api log JSON).
+    """
 
     amount: Decimal
     rate_daily: Decimal | None
     period_days: int
-    reasoning: str  # human-readable explanation for the dry-run UI
+    reasoning: str               # English; logged + frontend fallback
+    # ──── F-5a-3.10.2 structured fields ────
+    kind: str                    # "single" | "base" | "spike" | "fallback"
+    multiplier: Decimal | None   # spike-only: rate multiplier on base; null otherwise
+    capped: bool                 # spike-only: True iff hit AGGRESSIVE_RATE_CEILING_MULT
 
 
 @dataclass(frozen=True)
@@ -314,6 +325,9 @@ def select_strategy(
                     rate_daily=None,
                     period_days=FALLBACK_PERIOD_DAYS,
                     reasoning="fallback: no market signal available, using FRR market order",
+                    kind="fallback",
+                    multiplier=None,
+                    capped=False,
                 ),
             ),
             notes=tuple(notes),
@@ -339,6 +353,9 @@ def select_strategy(
                     rate_daily=None,
                     period_days=primary_period,
                     reasoning=f"fallback: period {primary_period}d signal degraded",
+                    kind="fallback",
+                    multiplier=None,
+                    capped=False,
                 ),
             ),
             notes=tuple(notes),
@@ -364,6 +381,9 @@ def select_strategy(
                         f"single tranche at {primary_period}d, rate {rate_apr:.2f}% APR "
                         f"(median {median_apr:.2f}% × 1.01 premium)"
                     ),
+                    kind="single",
+                    multiplier=None,
+                    capped=False,
                 ),
             ),
             notes=tuple(notes),
@@ -399,6 +419,9 @@ def select_strategy(
                     rate_daily=base.rate_daily,
                     period_days=base.period_days,
                     reasoning=base.reasoning + f" (+${chunk} merged from sub-min tranche {i})",
+                    kind=base.kind,
+                    multiplier=base.multiplier,
+                    capped=base.capped,
                 )
             continue
 
@@ -409,6 +432,9 @@ def select_strategy(
                 f"base tranche at {period}d, rate {apr:.2f}% APR "
                 f"(market median × 1.01 premium)"
             )
+            tranche_kind = "base"
+            tranche_mult: Decimal | None = None
+            tranche_capped = False
         else:
             # Spike-capture tranche: anchored on market_clearing × multiplier,
             # capped per preset rules.
@@ -417,12 +443,15 @@ def select_strategy(
             reasoning = (
                 f"spike tranche at {period}d, {mult}× base = {apr:.2f}% APR"
             )
-            if (
+            tranche_capped = (
                 preset == EarnStrategyPreset.AGGRESSIVE.value
                 and frr_daily is not None
                 and rate == frr_daily * AGGRESSIVE_RATE_CEILING_MULT
-            ):
+            )
+            if tranche_capped:
                 reasoning += f" (capped at FRR × {AGGRESSIVE_RATE_CEILING_MULT})"
+            tranche_kind = "spike"
+            tranche_mult = mult
 
         tranches.append(
             StrategyTranche(
@@ -430,6 +459,9 @@ def select_strategy(
                 rate_daily=rate,
                 period_days=period,
                 reasoning=reasoning,
+                kind=tranche_kind,
+                multiplier=tranche_mult,
+                capped=tranche_capped,
             )
         )
 
@@ -450,23 +482,35 @@ def _assign_periods_to_tranches(
     """Map each tranche slot to a period.
 
     Strategy:
-      - Base tranche (slot 0) at primary period (most liquid)
-      - Spike tranches at progressively LONGER periods to lock in elevated
-        rates if they fill (high-rate spike at 30d > high-rate spike at 2d
-        in dollar terms)
-      - Walk through viable_periods in ascending order from primary, wrapping
-        if needed
+      - Base tranche (slot 0) at primary period (most liquid, has signal)
+      - Spike tranches walk through ALL canonical periods (2/7/14/30) in
+        ascending order from primary, regardless of per-period signal
+      - Spikes don't need a signal because they're betting on rare events,
+        not anchoring on current clearing rate — putting them at longer
+        periods locks the elevated rate (if it fills) for the full term
+
+    F-5a-3.10.3 fix: previously this used `viable_periods` (signal-only)
+    which collapsed all spikes onto 2d when only 2d had recent trades.
+    Result: a 6-tranche Aggressive ladder posted six 2d offers instead
+    of spreading 7d/14d/30d spike captures. Now uses CANONICAL_PERIODS.
     """
-    # Start at primary period for base; for spikes, walk to longer periods
-    # in viable list. If primary is already 30d, repeat 30d for all spikes.
-    sorted_viable = sorted(set(viable_periods))
-    primary_idx = sorted_viable.index(primary_period)
+    canonical_sorted = sorted(CANONICAL_PERIODS)  # [2, 7, 14, 30]
+    # Defensive: if primary is somehow not canonical, fall back to nearest
+    primary_idx = (
+        canonical_sorted.index(primary_period)
+        if primary_period in canonical_sorted
+        else 0
+    )
     out: list[int] = [primary_period]
     for slot in range(1, n_tranches):
-        # Next slot goes to the next-longer viable period, capped at the
-        # longest viable
-        target_idx = min(primary_idx + slot, len(sorted_viable) - 1)
-        out.append(sorted_viable[target_idx])
+        # Walk to the next-longer period; multiple slots beyond 30d all
+        # land at 30d (Bitfinex platform max), giving multiple distinct
+        # offers at 30d with different rates.
+        target_idx = min(primary_idx + slot, len(canonical_sorted) - 1)
+        out.append(canonical_sorted[target_idx])
+    # `viable_periods` retained in signature for backward compat with
+    # callers that pre-3.10.3 expected the spike-restriction behaviour.
+    del viable_periods
     return out
 
 

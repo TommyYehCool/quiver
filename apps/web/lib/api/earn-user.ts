@@ -304,7 +304,15 @@ export interface StrategyTrancheOut {
   rate_daily: string | null;
   period_days: number;
   apr_pct: string | null;
+  /** English explanation; backend log + frontend fallback (used when locale
+   * doesn't have a template for `kind`). F-5a-3.10.2 added structured fields. */
   reasoning: string;
+  /** "single" | "base" | "spike" | "fallback" — frontend i18n switches on this. */
+  kind: string;
+  /** spike-only: rate multiplier on base. Null for single/base/fallback. */
+  multiplier: string | null;
+  /** spike-only: True iff hit FRR × ceiling cap (relevant for Aggressive preset). */
+  capped: boolean;
 }
 
 export interface StrategyPreviewOut {

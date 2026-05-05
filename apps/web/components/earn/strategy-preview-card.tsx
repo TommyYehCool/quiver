@@ -21,7 +21,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { previewStrategy, type StrategyPreviewOut } from "@/lib/api/earn-user";
+import {
+  previewStrategy,
+  type StrategyPreviewOut,
+  type StrategyTrancheOut,
+} from "@/lib/api/earn-user";
 
 type Locale = "zh-TW" | "en" | "ja";
 
@@ -49,6 +53,13 @@ interface CardStrings {
   rateFrr: string;
   notes: string;
   empty: string;
+  // F-5a-3.10.2 i18n templates for tranche reasoning
+  reasonSingle: (period: number, apr: string) => string;
+  reasonBase: (period: number, apr: string) => string;
+  reasonSpike: (period: number, mult: string, apr: string) => string;
+  reasonSpikeCapped: (period: number, mult: string, apr: string) => string;
+  reasonFallbackNoSignal: (period: number) => string;
+  reasonFallbackDegraded: (period: number) => string;
 }
 
 const STRINGS: Record<Locale, CardStrings> = {
@@ -76,6 +87,18 @@ const STRINGS: Record<Locale, CardStrings> = {
     rateFrr: "FRR 市場單",
     notes: "備註",
     empty: "尚無資料",
+    reasonSingle: (p, apr) =>
+      `單一 tranche · ${p} 天 · 利率 ${apr}% APR (市場中位數 × 1.01 premium)`,
+    reasonBase: (p, apr) =>
+      `基礎 tranche · ${p} 天 · 利率 ${apr}% APR (市場中位數 × 1.01 premium)`,
+    reasonSpike: (p, mult, apr) =>
+      `Spike tranche · ${p} 天 · ${mult}× base = ${apr}% APR`,
+    reasonSpikeCapped: (p, mult, apr) =>
+      `Spike tranche · ${p} 天 · ${mult}× base = ${apr}% APR (受 FRR × 5 上限)`,
+    reasonFallbackNoSignal: (p) =>
+      `Fallback:無市場信號,改用 FRR 市場單 · ${p} 天`,
+    reasonFallbackDegraded: (p) =>
+      `Fallback:${p} 天區段信號不足,改用 FRR 市場單`,
   },
   en: {
     title: "Strategy preview",
@@ -101,6 +124,18 @@ const STRINGS: Record<Locale, CardStrings> = {
     rateFrr: "FRR market",
     notes: "Notes",
     empty: "No data",
+    reasonSingle: (p, apr) =>
+      `Single tranche · ${p}d · rate ${apr}% APR (market median × 1.01 premium)`,
+    reasonBase: (p, apr) =>
+      `Base tranche · ${p}d · rate ${apr}% APR (market median × 1.01 premium)`,
+    reasonSpike: (p, mult, apr) =>
+      `Spike tranche · ${p}d · ${mult}× base = ${apr}% APR`,
+    reasonSpikeCapped: (p, mult, apr) =>
+      `Spike tranche · ${p}d · ${mult}× base = ${apr}% APR (capped at FRR × 5)`,
+    reasonFallbackNoSignal: (p) =>
+      `Fallback: no market signal, using FRR market order · ${p}d`,
+    reasonFallbackDegraded: (p) =>
+      `Fallback: ${p}d signal insufficient, using FRR market order`,
   },
   ja: {
     title: "戦略プレビュー",
@@ -126,8 +161,47 @@ const STRINGS: Record<Locale, CardStrings> = {
     rateFrr: "FRR マーケット",
     notes: "備考",
     empty: "データなし",
+    reasonSingle: (p, apr) =>
+      `単一トランシェ · ${p}日 · 利率 ${apr}% APR (市場中央値 × 1.01 premium)`,
+    reasonBase: (p, apr) =>
+      `ベーストランシェ · ${p}日 · 利率 ${apr}% APR (市場中央値 × 1.01 premium)`,
+    reasonSpike: (p, mult, apr) =>
+      `スパイクトランシェ · ${p}日 · ${mult}× base = ${apr}% APR`,
+    reasonSpikeCapped: (p, mult, apr) =>
+      `スパイクトランシェ · ${p}日 · ${mult}× base = ${apr}% APR (FRR × 5 上限適用)`,
+    reasonFallbackNoSignal: (p) =>
+      `フォールバック:市場シグナルなし、FRR マーケット注文 · ${p}日`,
+    reasonFallbackDegraded: (p) =>
+      `フォールバック:${p}日のシグナル不足、FRR マーケット注文`,
   },
 };
+
+/** Build localized reasoning string from structured tranche fields.
+ * Falls back to backend's English `reasoning` if kind is unrecognized. */
+function buildReasoning(t: StrategyTrancheOut, s: CardStrings): string {
+  const apr = t.apr_pct ?? "—";
+  switch (t.kind) {
+    case "single":
+      return s.reasonSingle(t.period_days, apr);
+    case "base":
+      return s.reasonBase(t.period_days, apr);
+    case "spike": {
+      const mult = t.multiplier ?? "?";
+      return t.capped
+        ? s.reasonSpikeCapped(t.period_days, mult, apr)
+        : s.reasonSpike(t.period_days, mult, apr);
+    }
+    case "fallback":
+      // Distinguish "no signal at all" vs "primary period degraded" by which
+      // fallback period we landed on. Default-period (2d) = no-signal path;
+      // other periods = degraded path.
+      return t.period_days === 2
+        ? s.reasonFallbackNoSignal(t.period_days)
+        : s.reasonFallbackDegraded(t.period_days);
+    default:
+      return t.reasoning;
+  }
+}
 
 function pickLocale(l: string): Locale {
   if (l === "en" || l === "ja") return l;
@@ -305,7 +379,7 @@ export function StrategyPreviewCard({ initialPreset }: { initialPreset: string }
                       {t.period_days} {s.daysUnit}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{t.reasoning}</p>
+                  <p className="mt-1 text-xs text-slate-500">{buildReasoning(t, s)}</p>
                 </div>
               ))}
             </div>

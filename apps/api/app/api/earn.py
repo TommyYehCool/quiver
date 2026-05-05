@@ -583,6 +583,9 @@ async def strategy_preview(
                 else None
             ),
             reasoning=t.reasoning,
+            kind=t.kind,
+            multiplier=t.multiplier,
+            capped=t.capped,
         )
         for t in decision.tranches
     ]
