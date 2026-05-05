@@ -4,6 +4,7 @@ import { Gift, TrendingUp, Users } from "lucide-react";
 
 import { fetchMeServer } from "@/lib/auth";
 import {
+  fetchReferralInviteesServer,
   fetchReferralMeServer,
   fetchReferralPayoutsServer,
 } from "@/lib/api/referral-server";
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { CodeSection } from "@/components/referral/code-section";
 import { BindSection } from "@/components/referral/bind-section";
+import { InviteesList } from "@/components/referral/invitees-list";
 import { PayoutsTable } from "@/components/referral/payouts-table";
 
 type Locale = "zh-TW" | "en" | "ja";
@@ -261,6 +263,8 @@ export default async function ReferralPage({
 
   const me = await fetchReferralMeServer(cookieHeader);
   const payouts = await fetchReferralPayoutsServer(cookieHeader);
+  // F-5b-X: per-invitee progress + commission breakdown.
+  const invitees = await fetchReferralInviteesServer(cookieHeader);
   const s = STRINGS[pickLocale(locale)];
 
   if (!me) {
@@ -356,6 +360,17 @@ export default async function ReferralPage({
       <Card>
         <CardContent className="py-6">
           <BindSection initialReferrer={me.referrer} strings={s.bind} />
+        </CardContent>
+      </Card>
+
+      {/* F-5b-X: per-invitee progress + commission breakdown */}
+      <Card>
+        <CardContent className="py-6">
+          <InviteesList
+            invitees={invitees?.invitees ?? []}
+            totalCommissionUsdt={invitees?.total_commission_l1_usdt ?? "0"}
+            locale={locale}
+          />
         </CardContent>
       </Card>
 

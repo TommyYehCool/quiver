@@ -20,6 +20,8 @@ from app.schemas.api import ApiResponse
 from app.schemas.referral import (
     BindIn,
     BindOut,
+    InviteeOut,
+    InviteesOut,
     PayoutOut,
     PayoutsOut,
     ReferralMeOut,
@@ -158,4 +160,61 @@ async def list_my_payouts(
             ],
             total_earned=total,
         )
+    )
+
+
+def _mask_email(email: str) -> str:
+    """Privacy guard: keep first 1-2 local-part chars + 4 stars + domain.
+    F-5b-X. Examples:
+      "robertyehn@gmail.com" → "ro****@gmail.com"
+      "x@gmail.com"          → "x****@gmail.com"
+      "" or no @             → "****"
+    """
+    if "@" not in email:
+        return "****"
+    local, domain = email.split("@", 1)
+    if not local:
+        return f"****@{domain}"
+    keep = min(2, max(1, len(local) - 1)) if len(local) > 1 else 1
+    return f"{local[:keep]}****@{domain}"
+
+
+@router.get("/invitees", response_model=ApiResponse[InviteesOut])
+async def list_my_invitees(
+    user: CurrentUserDep, db: DbDep
+) -> ApiResponse[InviteesOut]:
+    """F-5b-X — overview of users this caller invited.
+
+    Each row carries:
+      - masked email (privacy)
+      - earn tier (so the inviter sees which invitees are revshare-
+        eligible; Friend / Premium tiers don't accrue perf fees)
+      - last funnel event (UI translates to a stage label)
+      - revshare window state
+      - L1 commission accrued from this specific invitee
+
+    No pagination yet — typical inviter has < 50 referees, fits on one
+    page. Add cursor-based paging when someone hits 100+ invitees.
+    """
+    rows = await repo.list_referees_with_progress(db, user.id)
+    invitees = [
+        InviteeOut(
+            invitee_user_id=r["invitee_user_id"],
+            masked_email=_mask_email(r["email"]),
+            earn_tier=r["earn_tier"],
+            invited_at=r["invited_at"],
+            last_event_name=r["last_event_name"],
+            revshare_started_at=r["revshare_started_at"],
+            revshare_expires_at=r["revshare_expires_at"],
+            commission_l1_usdt=r["commission_l1_usdt"],
+            # Revshare only generates events on the standard "public" tier
+            # (default 15% perf fee). Friend (0% fee forever) and Premium
+            # (0% fee while subscribed) never generate L1/L2 payouts.
+            is_revshare_eligible=(r["earn_tier"] == "public"),
+        )
+        for r in rows
+    ]
+    total = sum((i.commission_l1_usdt for i in invitees), Decimal(0))
+    return ApiResponse[InviteesOut].ok(
+        InviteesOut(invitees=invitees, total_commission_l1_usdt=total)
     )

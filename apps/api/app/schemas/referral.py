@@ -13,6 +13,31 @@ from pydantic import BaseModel, Field
 # ─────────────────────────────────────────────────────────
 
 
+class InviteeOut(BaseModel):
+    """F-5b-X — per-invitee progress row for the inviter's overview.
+
+    Privacy: email is masked at the API boundary ("ro****@gmail.com")
+    so the inviter sees a stable identifier without exposing the full
+    address. Earn tier is shown so the inviter understands which
+    invitees are eligible to generate revshare (Friend tier and
+    Premium subscribers don't accrue performance fees → 0 commission).
+    """
+    invitee_user_id: int
+    masked_email: str            # "ro****@gmail.com"
+    earn_tier: str | None        # "public" / "friend" / "premium" / null
+    invited_at: datetime
+    last_event_name: str | None  # raw funnel event code; UI translates
+    revshare_started_at: datetime | None
+    revshare_expires_at: datetime | None
+    commission_l1_usdt: Decimal  # sum of L1 payouts FROM this invitee
+    is_revshare_eligible: bool   # True only when public tier (would pay perf fee)
+
+
+class InviteesOut(BaseModel):
+    invitees: list[InviteeOut]
+    total_commission_l1_usdt: Decimal
+
+
 class ReferrerInfo(BaseModel):
     """Who I'm bound to as referee, if anyone."""
     referrer_user_id: int

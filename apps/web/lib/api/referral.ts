@@ -43,6 +43,27 @@ export interface PayoutsOut {
   total_earned: string;
 }
 
+/** F-5b-X — per-invitee progress row for the inviter's overview list. */
+export interface InviteeOut {
+  invitee_user_id: number;
+  /** Backend masks the email for privacy ("ro****@gmail.com"). */
+  masked_email: string;
+  earn_tier: string | null;
+  invited_at: string;
+  /** Raw funnel event code; UI translates to a stage label. */
+  last_event_name: string | null;
+  revshare_started_at: string | null;
+  revshare_expires_at: string | null;
+  commission_l1_usdt: string;
+  /** True only on standard "public" tier (Friend / Premium = no perf fee). */
+  is_revshare_eligible: boolean;
+}
+
+export interface InviteesOut {
+  invitees: InviteeOut[];
+  total_commission_l1_usdt: string;
+}
+
 // ──── client ────
 
 export async function fetchReferralMe(): Promise<ReferralMeOut> {
@@ -71,4 +92,8 @@ export async function bindReferralCode(
 
 export async function fetchReferralPayouts(): Promise<PayoutsOut> {
   return apiFetch<PayoutsOut>("/api/referral/payouts");
+}
+
+export async function fetchReferralInvitees(): Promise<InviteesOut> {
+  return apiFetch<InviteesOut>("/api/referral/invitees");
 }

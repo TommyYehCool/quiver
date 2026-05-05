@@ -2,7 +2,7 @@
  * Server-side fetcher for Referral — RSC 用,直接打 docker compose 內部 api。
  */
 
-import type { PayoutsOut, ReferralMeOut } from "@/lib/api/referral";
+import type { InviteesOut, PayoutsOut, ReferralMeOut } from "@/lib/api/referral";
 
 const SERVER_API_BASE_URL = process.env.SERVER_API_BASE_URL ?? "http://api:8000";
 
@@ -26,4 +26,10 @@ export async function fetchReferralPayoutsServer(
   cookieHeader: string,
 ): Promise<PayoutsOut | null> {
   return get<PayoutsOut>("/api/referral/payouts", cookieHeader);
+}
+
+export async function fetchReferralInviteesServer(
+  cookieHeader: string,
+): Promise<InviteesOut | null> {
+  return get<InviteesOut>("/api/referral/invitees", cookieHeader);
 }
