@@ -45,6 +45,44 @@ function fmtMinutes(m: number | null): string {
   return `${days}d ${hours}h`;
 }
 
+/**
+ * Map funnel event codes (services/funnel.py constants) to admin-friendly
+ * Chinese labels. Unknown codes fall through unchanged so we don't
+ * silently drop new events when funnel.py adds them — admin sees the
+ * raw code as a hint to add a label here.
+ */
+const EVENT_LABEL_ZH: Record<string, string> = {
+  // Onboarding
+  signup_completed: "註冊完成",
+  tos_accepted: "同意服務條款",
+  // KYC
+  kyc_form_opened: "打開 KYC 頁",
+  kyc_submitted: "送出 KYC",
+  kyc_approved: "KYC 通過",
+  kyc_rejected: "KYC 退回",
+  // Earn / Bitfinex setup
+  bot_settings_opened: "打開放貸機器人設定",
+  bitfinex_connect_attempted: "嘗試連接 Bitfinex",
+  bitfinex_connect_failed: "Bitfinex 連接失敗",
+  bitfinex_connect_succeeded: "Bitfinex 連接成功",
+  // Money flow
+  first_deposit_received: "首次入金到帳",
+  first_lent_succeeded: "首次借出成功",
+  // Engagement
+  telegram_bound: "綁定 Telegram",
+  leaderboard_optin_enabled: "啟用排行榜",
+  strategy_preset_changed: "修改策略 preset",
+  auto_lend_disabled: "關閉自動放貸",
+  // Compliance / billing
+  dunning_paused: "Quiver 暫停(欠費過久)",
+  dunning_resumed: "Quiver 自動恢復",
+};
+
+function fmtEvent(code: string | null): string {
+  if (!code) return "—";
+  return EVENT_LABEL_ZH[code] ?? code;
+}
+
 function fmtDateTime(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("zh-TW", {
@@ -212,7 +250,7 @@ export default async function AdminFunnelPage({
                   </span>
                 </div>
                 <div className="mt-1.5 text-[10px] text-slate-500">
-                  Last: <span className="font-mono">{u.last_event_name ?? "—"}</span>
+                  最近事件:<span>{fmtEvent(u.last_event_name)}</span>
                   {u.last_event_at ? (
                     <span className="ml-1 text-slate-400">@ {fmtDateTime(u.last_event_at)}</span>
                   ) : null}
@@ -231,9 +269,9 @@ export default async function AdminFunnelPage({
                   <th className="py-2 px-2">KYC</th>
                   <th className="py-2 px-2">Bitfinex</th>
                   <th className="py-2 px-2">TG</th>
-                  <th className="py-2 px-2">Last event</th>
-                  <th className="py-2 px-2 text-right">When</th>
-                  <th className="py-2 pl-2 text-right">Stalled</th>
+                  <th className="py-2 px-2">最近事件</th>
+                  <th className="py-2 px-2 text-right">時間</th>
+                  <th className="py-2 pl-2 text-right">停滯</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,8 +303,8 @@ export default async function AdminFunnelPage({
                         <Send className="h-3.5 w-3.5 text-slate-300" />
                       )}
                     </td>
-                    <td className="py-2 px-2 font-mono text-[10px]">
-                      {u.last_event_name ?? "—"}
+                    <td className="py-2 px-2 text-[11px]" title={u.last_event_name ?? ""}>
+                      {fmtEvent(u.last_event_name)}
                     </td>
                     <td className="py-2 px-2 text-right font-mono text-[10px] text-slate-500">
                       {fmtDateTime(u.last_event_at)}
