@@ -44,6 +44,23 @@ API_BASE = "https://api.bitfinex.com"
 SYMBOL_AUTH = "fUST"
 SYMBOL_PUBLIC = "fUST"  # public ticker
 
+# F-5a-3.11 — USD pivot. The funding endpoints accept currency-coded symbols
+# of the form "f<CURRENCY>" (fUST = USDT, fUSD = USD). Spot trading uses
+# pair-coded symbols of the form "t<BASE><QUOTE>" — for USDT↔USD conversion
+# we use tUSTUSD.
+SYMBOL_FUNDING_USD = "fUSD"
+SYMBOL_SPOT_USDT_USD = "tUSTUSD"
+
+
+def funding_symbol(currency: str) -> str:
+    """Map a currency code ("UST" / "USD") → Bitfinex funding-pair symbol.
+
+    Currencies are uppercase; the f-prefix marks funding pairs. No
+    validation here — Bitfinex returns an error if the symbol doesn't
+    exist, which surfaces clearly to callers.
+    """
+    return f"f{currency.upper()}"
+
 
 # ─────────────────────────────────────────────────────────
 # Data classes
@@ -220,21 +237,28 @@ class BitfinexFundingAdapter:
 
     # ──── read methods ────
 
-    async def get_funding_position(self) -> BitfinexPosition:
+    async def get_funding_position(self, currency: str = "UST") -> BitfinexPosition:
         """讀 funding wallet 餘額 + 已借出總額。
+
+        F-5a-3.11: `currency` defaults to "UST" for backward compat — pass
+        "USD" to query the fUSD funding pair instead. Wallet balances and
+        credits/loans are filtered to the requested currency. Each call
+        only looks at one currency; callers needing both must call twice.
 
         Bitfinex 的 funding 部位實際會出現在 `/funding/credits/` 或 `/funding/loans/`,
         看 Bitfinex 內部分類(我們無法控制)。為了求穩,兩個都查,把 SIDE=1 (lender side)
         的 amount 全部加總當作 lent_total。
         Row format(兩個 endpoint 同):[ID, SYMBOL, SIDE, MTS_CREATE, MTS_UPDATE, AMOUNT, ...]
         """
+        symbol = funding_symbol(currency)
+        wallet_currency = currency.upper()
         async with httpx.AsyncClient() as client:
             wallets = await self._auth_post(client, "v2/auth/r/wallets")
             credits = await self._auth_post(
-                client, f"v2/auth/r/funding/credits/{SYMBOL_AUTH}"
+                client, f"v2/auth/r/funding/credits/{symbol}"
             )
             loans = await self._auth_post(
-                client, f"v2/auth/r/funding/loans/{SYMBOL_AUTH}"
+                client, f"v2/auth/r/funding/loans/{symbol}"
             )
 
         funding_balance = Decimal(0)
@@ -242,7 +266,7 @@ class BitfinexFundingAdapter:
         for w in wallets or []:
             if len(w) < 5:
                 continue
-            if w[0] == "funding" and w[1] == "UST":
+            if w[0] == "funding" and w[1] == wallet_currency:
                 funding_balance = Decimal(str(w[2] or 0))
                 funding_available = Decimal(str(w[4] or 0))
                 break
@@ -415,15 +439,209 @@ class BitfinexFundingAdapter:
                 continue
         return out
 
+    # ──── F-5a-3.11 spot trading (USDT ↔ USD conversion) ────
+
+    async def submit_market_order(
+        self,
+        symbol: str,
+        side: str,
+        amount: Decimal,
+    ) -> dict[str, Decimal | int | str]:
+        """Submit an EXCHANGE MARKET order on a spot pair.
+
+        F-5a-3.11: used to convert USDT ↔ USD via the tUSTUSD pair before
+        funding-offer submission and after redemption. Market orders fill
+        immediately at the best available price; the spread on tUSTUSD is
+        ~0.2 bps so slippage is minimal for retail-sized amounts.
+
+        side="buy"  → +amount (taker buys base) → tUSTUSD: USDT bought, USD spent
+        side="sell" → -amount (taker sells base) → tUSTUSD: USDT sold, USD received
+
+        Permission required: "Orders → Create and cancel orders".
+
+        Returns dict with order id + executed amount + avg price (for cost
+        accounting). Raises ValueError on Bitfinex error.
+
+        Endpoint response shape (auth/w/order/submit):
+          [MTS, TYPE, MSG_ID, null, [ORDER_DATA], CODE, STATUS, TEXT]
+        Where ORDER_DATA is a single nested order row (the trade just
+        submitted), with positions including ID(0), AMOUNT(7),
+        AMOUNT_ORIG(8), STATUS(13), PRICE(16), PRICE_AVG(17).
+        """
+        if amount <= 0:
+            raise ValueError(f"amount must be positive, got {amount}")
+        if side not in ("buy", "sell"):
+            raise ValueError(f"side must be 'buy' or 'sell', got {side!r}")
+        signed = amount if side == "buy" else -amount
+        body = {
+            "type": "EXCHANGE MARKET",
+            "symbol": symbol,
+            "amount": str(signed),
+        }
+        async with httpx.AsyncClient() as client:
+            resp = await self._auth_post(client, "v2/auth/w/order/submit", body)
+        if not isinstance(resp, list) or len(resp) < 7:
+            raise ValueError(f"unexpected order/submit response shape: {resp!r}")
+        if resp[6] != "SUCCESS":
+            raise ValueError(
+                f"order/submit failed: status={resp[6]} "
+                f"text={resp[7] if len(resp) > 7 else None}"
+            )
+        order_data = resp[4]
+        # Bitfinex sometimes returns a list of orders, sometimes a single order
+        # nested as the only element. Normalize to a single row.
+        if (
+            isinstance(order_data, list)
+            and order_data
+            and isinstance(order_data[0], list)
+        ):
+            row = order_data[0]
+        else:
+            row = order_data
+        if not isinstance(row, list) or len(row) < 18:
+            raise ValueError(f"order/submit missing ORDER_DATA fields: {resp!r}")
+        try:
+            order_id = int(row[0])
+            executed_amount = Decimal(str(row[7] or 0)).copy_abs()
+            amount_orig = Decimal(str(row[8] or 0)).copy_abs()
+            status = str(row[13] or "")
+            price_avg = Decimal(str(row[17] or 0))
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"order/submit response parse failed: {e}") from e
+        return {
+            "order_id": order_id,
+            "executed_amount": executed_amount,
+            "original_amount": amount_orig,
+            "avg_price": price_avg,
+            "status": status,
+        }
+
+    async def get_wallet_balance(
+        self,
+        currency: str,
+        wallet_type: str = "exchange",
+    ) -> tuple[Decimal, Decimal]:
+        """Return (balance, available) for the given (wallet_type, currency).
+
+        F-5a-3.11: spot trading lives in the "exchange" wallet, funding lives
+        in the "funding" wallet, margin in "margin". Conversion flow uses
+        exchange wallet briefly then transfers to funding for lending.
+
+        Bitfinex API requires explicit wallet transfers between wallet types
+        (no auto-routing). Returns Decimal(0) for both if currency/type
+        not found in the wallets list.
+        """
+        async with httpx.AsyncClient() as client:
+            wallets = await self._auth_post(client, "v2/auth/r/wallets")
+        currency_uc = currency.upper()
+        for w in wallets or []:
+            if len(w) < 5:
+                continue
+            if w[0] == wallet_type and w[1] == currency_uc:
+                return (
+                    Decimal(str(w[2] or 0)),  # balance (total)
+                    Decimal(str(w[4] or 0)),  # available
+                )
+        return Decimal(0), Decimal(0)
+
+    async def transfer_between_wallets(
+        self,
+        currency: str,
+        amount: Decimal,
+        from_wallet: str,
+        to_wallet: str,
+    ) -> None:
+        """Move funds between wallet types (exchange ↔ funding ↔ margin).
+
+        F-5a-3.11: after USDT→USD spot trade, USD lands in `exchange` wallet
+        but funding offers must be submitted from `funding` wallet — so we
+        transfer. Same in reverse for the redemption path.
+
+        Permission required: "Wallets → Allow withdrawals" (yes, internal
+        wallet transfers count as withdrawals to Bitfinex's permission
+        model — verify_api_key_permissions detects this).
+
+        Raises ValueError if Bitfinex rejects (insufficient balance, etc.).
+        """
+        if amount <= 0:
+            raise ValueError(f"amount must be positive, got {amount}")
+        body = {
+            "from": from_wallet,
+            "to": to_wallet,
+            "currency": currency.upper(),
+            "amount": str(amount),
+        }
+        async with httpx.AsyncClient() as client:
+            resp = await self._auth_post(client, "v2/auth/w/transfer", body)
+        if not isinstance(resp, list) or len(resp) < 7:
+            raise ValueError(f"unexpected transfer response shape: {resp!r}")
+        if resp[6] != "SUCCESS":
+            raise ValueError(
+                f"transfer failed: status={resp[6]} "
+                f"text={resp[7] if len(resp) > 7 else None}"
+            )
+
+    # ──── F-5a-3.11 permission introspection ────
+
+    async def verify_api_key_permissions(self) -> dict[str, bool]:
+        """Read the permission scopes granted to this API key.
+
+        F-5a-3.11: USD pivot needs spot trading + wallet-transfer scopes
+        beyond the funding scope already required. We probe before letting
+        a user start the USD flow so onboarding can prompt for re-issue
+        with the right scopes (rather than failing at the trade step).
+
+        Bitfinex returns an array of [SCOPE, READ, WRITE] triples. We
+        synthesize a flat dict keyed by what the rest of the codebase
+        actually checks for:
+
+          funding_read  / funding_write  — list / submit / cancel funding offers
+          orders_read   / orders_write   — list / submit / cancel spot orders
+          wallets_read  / wallets_write  — list balances, transfer between wallets
+          withdraw      — required for transfer_between_wallets per Bitfinex
+        """
+        async with httpx.AsyncClient() as client:
+            resp = await self._auth_post(client, "v2/auth/r/permissions")
+        out: dict[str, bool] = {
+            "funding_read": False,
+            "funding_write": False,
+            "orders_read": False,
+            "orders_write": False,
+            "wallets_read": False,
+            "wallets_write": False,
+            "withdraw": False,
+        }
+        if not isinstance(resp, list):
+            return out
+        for row in resp:
+            if not isinstance(row, list) or len(row) < 3:
+                continue
+            scope = str(row[0])
+            read = bool(row[1])
+            write = bool(row[2])
+            if scope == "funding":
+                out["funding_read"] = read
+                out["funding_write"] = write
+            elif scope == "orders":
+                out["orders_read"] = read
+                out["orders_write"] = write
+            elif scope == "wallets":
+                out["wallets_read"] = read
+                out["wallets_write"] = write
+            elif scope == "withdraw":
+                out["withdraw"] = bool(read or write)
+        return out
+
 
 # ─────────────────────────────────────────────────────────
 # Public market data(no auth)
 # ─────────────────────────────────────────────────────────
 
 
-async def fetch_market_frr() -> BitfinexMarket | None:
-    """讀公開 fUST ticker,所有 friend 共用一份。"""
-    url = f"{API_BASE}/v2/ticker/{SYMBOL_PUBLIC}"
+async def fetch_market_frr(symbol: str = SYMBOL_PUBLIC) -> BitfinexMarket | None:
+    """讀公開 funding ticker。F-5a-3.11: pass `symbol="fUSD"` for the USD
+    funding pair; default stays "fUST" for backward compat."""
+    url = f"{API_BASE}/v2/ticker/{symbol}"
     try:
         async with httpx.AsyncClient() as client:
             r = await client.get(url, timeout=10.0)
