@@ -41,11 +41,17 @@ interface CardStrings {
   presetConservative: string;
   presetBalanced: string;
   presetAggressive: string;
-  avgApr: string;
+  // F-5a-3.10.5 — split headline into realistic vs theoretical-max
+  expectedApr: string;
+  expectedAprHint: string;
+  theoreticalMax: string;
+  theoreticalMaxHint: string;
+  avgFillProbability: string;
   frrNow: string;
   vsFrr: (delta: string) => string;
   fallbackBadge: string;
   tranchesTitle: string;
+  fillProbBadge: (pct: string) => string;
   signalsTitle: string;
   signalNoData: string;
   amountUnit: string;
@@ -75,11 +81,16 @@ const STRINGS: Record<Locale, CardStrings> = {
     presetConservative: "保守 (Conservative)",
     presetBalanced: "平衡 (Balanced)",
     presetAggressive: "積極 (Aggressive)",
-    avgApr: "預估加權 APR",
+    expectedApr: "預估實際 APR",
+    expectedAprHint: "依各 tranche 撮合機率加權",
+    theoreticalMax: "理論最高",
+    theoreticalMaxHint: "若全部 tranche 都成交",
+    avgFillProbability: "平均撮合機率",
     frrNow: "當前 FRR",
     vsFrr: (delta) => `vs FRR ${delta}`,
     fallbackBadge: "⚠ fallback (信號不足)",
     tranchesTitle: "策略拆解",
+    fillProbBadge: (pct) => `撮合 ${pct}%`,
     signalsTitle: "各期間市場信號 (近 30 分鐘)",
     signalNoData: "—",
     amountUnit: "USDT",
@@ -112,11 +123,16 @@ const STRINGS: Record<Locale, CardStrings> = {
     presetConservative: "Conservative",
     presetBalanced: "Balanced",
     presetAggressive: "Aggressive",
-    avgApr: "Estimated weighted APR",
+    expectedApr: "Expected APR",
+    expectedAprHint: "Probability-weighted across tranches",
+    theoreticalMax: "Theoretical max",
+    theoreticalMaxHint: "If every tranche fills",
+    avgFillProbability: "Avg fill probability",
     frrNow: "Current FRR",
     vsFrr: (delta) => `vs FRR ${delta}`,
     fallbackBadge: "⚠ fallback (insufficient signal)",
     tranchesTitle: "Strategy breakdown",
+    fillProbBadge: (pct) => `${pct}% fill`,
     signalsTitle: "Per-period signals (last 30 min)",
     signalNoData: "—",
     amountUnit: "USDT",
@@ -149,11 +165,16 @@ const STRINGS: Record<Locale, CardStrings> = {
     presetConservative: "保守 (Conservative)",
     presetBalanced: "バランス (Balanced)",
     presetAggressive: "積極 (Aggressive)",
-    avgApr: "予想加重 APR",
+    expectedApr: "予想実質 APR",
+    expectedAprHint: "各 tranche の約定確率で加重",
+    theoreticalMax: "理論最大",
+    theoreticalMaxHint: "全 tranche が約定した場合",
+    avgFillProbability: "平均約定確率",
     frrNow: "現在の FRR",
     vsFrr: (delta) => `FRR 比 ${delta}`,
     fallbackBadge: "⚠ フォールバック (シグナル不足)",
     tranchesTitle: "戦略の内訳",
+    fillProbBadge: (pct) => `約定 ${pct}%`,
     signalsTitle: "期間別シグナル (過去 30 分)",
     signalNoData: "—",
     amountUnit: "USDT",
@@ -254,7 +275,9 @@ export function StrategyPreviewCard({ initialPreset }: { initialPreset: string }
 
   const aprDelta = React.useMemo(() => {
     if (!data?.frr_apr_pct) return null;
-    const delta = Number(data.avg_apr_pct) - Number(data.frr_apr_pct);
+    // F-5a-3.10.5 — vs-FRR delta now uses EXPECTED APR (not theoretical max)
+    // since that's what the user actually expects to earn.
+    const delta = Number(data.expected_apr_pct) - Number(data.frr_apr_pct);
     const sign = delta >= 0 ? "+" : "";
     return `${sign}${delta.toFixed(2)}%`;
   }, [data]);
@@ -334,18 +357,30 @@ export function StrategyPreviewCard({ initialPreset }: { initialPreset: string }
           </div>
         )}
 
-        {/* Headline numbers */}
+        {/* Headline numbers — F-5a-3.10.5: 3-card row showing realistic
+            expected APR (primary) + theoretical max (context) + FRR. */}
         {data && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {/* Primary: probability-weighted expected */}
             <div className="rounded-lg border border-cream-edge bg-paper p-3 dark:border-slate-700 dark:bg-slate-900">
-              <div className="text-xs text-slate-500">{s.avgApr}</div>
+              <div className="text-xs text-slate-500">{s.expectedApr}</div>
               <div className="font-mono text-2xl text-emerald-600">
-                {data.avg_apr_pct}%
+                {data.expected_apr_pct}%
                 {aprDelta && (
                   <span className="ml-2 text-sm text-slate-500">{s.vsFrr(aprDelta)}</span>
                 )}
               </div>
+              <div className="mt-1 text-xs text-slate-500">
+                {s.expectedAprHint} · {s.avgFillProbability} {data.avg_fill_probability_pct}%
+              </div>
             </div>
+            {/* Context: theoretical max */}
+            <div className="rounded-lg border border-cream-edge bg-paper p-3 dark:border-slate-700 dark:bg-slate-900">
+              <div className="text-xs text-slate-500">{s.theoreticalMax}</div>
+              <div className="font-mono text-2xl text-slate-500">{data.avg_apr_pct}%</div>
+              <div className="mt-1 text-xs text-slate-500">{s.theoreticalMaxHint}</div>
+            </div>
+            {/* Context: current FRR */}
             <div className="rounded-lg border border-cream-edge bg-paper p-3 dark:border-slate-700 dark:bg-slate-900">
               <div className="text-xs text-slate-500">{s.frrNow}</div>
               <div className="font-mono text-2xl">
@@ -363,25 +398,39 @@ export function StrategyPreviewCard({ initialPreset }: { initialPreset: string }
               {s.tranchesTitle}
             </div>
             <div className="space-y-2">
-              {data.tranches.map((t, i) => (
-                <div
-                  key={i}
-                  className="rounded-md border border-cream-edge bg-paper p-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-                >
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="font-mono">{fmtUsd(t.amount)}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800">
-                      {t.rate_daily === null
-                        ? s.rateFrr
-                        : `${t.apr_pct}% APR`}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {t.period_days} {s.daysUnit}
-                    </span>
+              {data.tranches.map((t, i) => {
+                const fillPct = Math.round(Number(t.fill_probability) * 100);
+                // Tone the fill-probability badge so users instantly see
+                // which tranches are realistic vs spike-only.
+                const fillBadgeTone =
+                  fillPct >= 70
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                    : fillPct >= 30
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400";
+                return (
+                  <div
+                    key={i}
+                    className="rounded-md border border-cream-edge bg-paper p-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-mono">{fmtUsd(t.amount)}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs dark:bg-slate-800">
+                        {t.rate_daily === null
+                          ? s.rateFrr
+                          : `${t.apr_pct}% APR`}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {t.period_days} {s.daysUnit}
+                      </span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${fillBadgeTone}`}>
+                        📊 {s.fillProbBadge(String(fillPct))}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">{buildReasoning(t, s)}</p>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{buildReasoning(t, s)}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

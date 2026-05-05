@@ -166,6 +166,10 @@ class StrategyTrancheOut(BaseModel):
     kind: str                     # "single" | "base" | "spike" | "fallback"
     multiplier: Decimal | None    # spike-only: rate multiplier on base
     capped: bool                  # spike-only: True iff hit FRR × ceiling
+    # F-5a-3.10.5 — heuristic fill probability (0..1). Frontend renders
+    # this as a per-tranche badge so users see "this slice probably won't
+    # fill outside spike events" without doing the math themselves.
+    fill_probability: Decimal
 
 
 class StrategyPreviewOut(BaseModel):
@@ -174,7 +178,12 @@ class StrategyPreviewOut(BaseModel):
     amount: Decimal
     frr_apr_pct: Decimal | None
     tranches: list[StrategyTrancheOut]
-    avg_apr_pct: Decimal           # weighted-avg expected APR
+    # F-5a-3.10.5 split: avg_apr_pct = theoretical max (all fill);
+    #                    expected_apr_pct = probability-weighted realistic.
+    # UI shows expected_apr_pct prominently with avg_apr_pct as context.
+    avg_apr_pct: Decimal           # theoretical max, weighted-avg APR if all fill
+    expected_apr_pct: Decimal      # probability-weighted realistic estimate
+    avg_fill_probability_pct: Decimal  # amount-weighted avg P(fill) as %
     fallback_used: bool
     notes: list[str]
     signals: list[PeriodSignalOut]

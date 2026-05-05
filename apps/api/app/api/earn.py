@@ -586,6 +586,7 @@ async def strategy_preview(
             kind=t.kind,
             multiplier=t.multiplier,
             capped=t.capped,
+            fill_probability=t.fill_probability,
         )
         for t in decision.tranches
     ]
@@ -611,6 +612,8 @@ async def strategy_preview(
             frr_apr_pct=frr_apr,
             tranches=tranches,
             avg_apr_pct=decision.total_apr_estimate_pct,
+            expected_apr_pct=decision.expected_apr_pct,
+            avg_fill_probability_pct=decision.avg_fill_probability_pct,
             fallback_used=decision.fallback_used,
             notes=list(decision.notes),
             signals=signal_rows,

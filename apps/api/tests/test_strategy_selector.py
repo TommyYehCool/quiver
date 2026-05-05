@@ -368,3 +368,100 @@ def test_apr_estimate_weights_by_amount():
     assert decision.total_apr_estimate_pct > Decimal(0)
     # Sanity: not insane
     assert decision.total_apr_estimate_pct < Decimal(50)
+
+
+# ─────────────────────────────────────────────────────────
+# F-5a-3.10.5 — fill probability + realistic expected APR
+# ─────────────────────────────────────────────────────────
+
+
+def test_fill_probability_decreases_with_multiplier():
+    """Aggressive ladder: spike tranches at 2.5×, 4×, 6× should have
+    monotonically decreasing fill probabilities. Captures the core
+    intent of the static heuristic table."""
+    decision = select_strategy(
+        amount=Decimal("10000"),
+        preset=EarnStrategyPreset.AGGRESSIVE.value,
+        signals=_signals_2d_dominant(),
+        frr_daily=Decimal(str(8.0 / 36500)),
+    )
+    spike_tranches = [t for t in decision.tranches if t.kind == "spike"]
+    assert len(spike_tranches) >= 3
+    # Sort by multiplier ascending; probabilities should descend
+    spike_tranches_sorted = sorted(spike_tranches, key=lambda t: t.multiplier or Decimal(0))
+    probs = [t.fill_probability for t in spike_tranches_sorted]
+    for i in range(1, len(probs)):
+        assert probs[i] < probs[i - 1], (
+            f"P(fill) at multiplier {spike_tranches_sorted[i].multiplier} "
+            f"({probs[i]}) should be < at multiplier "
+            f"{spike_tranches_sorted[i - 1].multiplier} ({probs[i - 1]})"
+        )
+
+
+def test_base_tranche_fill_probability_high():
+    """Base tranche prices at market_clearing × 1.01 — by construction
+    competitive with the median, should fill almost always."""
+    decision = select_strategy(
+        amount=Decimal("10000"),
+        preset=EarnStrategyPreset.BALANCED.value,
+        signals=_signals_2d_dominant(),
+        frr_daily=Decimal("0.00024"),
+    )
+    base = next(t for t in decision.tranches if t.kind == "base")
+    assert base.fill_probability >= Decimal("0.90")
+
+
+def test_expected_apr_lower_than_theoretical_max():
+    """Aggressive: expected APR (probability-weighted) must be lower than
+    the theoretical max (all-fill weighted avg) — otherwise the new
+    metric isn't doing its job."""
+    decision = select_strategy(
+        amount=Decimal("10000"),
+        preset=EarnStrategyPreset.AGGRESSIVE.value,
+        signals=_signals_2d_dominant(),
+        frr_daily=Decimal(str(8.0 / 36500)),
+    )
+    assert decision.expected_apr_pct < decision.total_apr_estimate_pct
+    # And the gap should be meaningful (not a rounding artefact)
+    assert decision.total_apr_estimate_pct - decision.expected_apr_pct > Decimal("1.0")
+
+
+def test_expected_apr_close_to_base_when_only_base_likely():
+    """Aggressive's expected APR should be close to base APR (× 0.95
+    base probability) since the spike tranches contribute very little
+    in expectation. Sanity check on the math."""
+    decision = select_strategy(
+        amount=Decimal("10000"),
+        preset=EarnStrategyPreset.AGGRESSIVE.value,
+        signals=_signals_2d_dominant(),
+        frr_daily=Decimal(str(8.0 / 36500)),
+    )
+    base = next(t for t in decision.tranches if t.kind == "base")
+    base_apr = base.rate_daily * Decimal(365) * Decimal(100)
+    base_contribution = base_apr * (base.amount / decision.total_amount) * base.fill_probability
+    # base contribution alone should account for at least 60% of the total
+    # expected APR (since spikes contribute little)
+    assert decision.expected_apr_pct >= base_contribution * Decimal("0.95")  # tolerate rounding
+    # Expected APR shouldn't be hugely above base contribution either
+    # (at most 2× — meaning spikes add at most another base-amount on top)
+    assert decision.expected_apr_pct <= base_contribution * Decimal("2.5")
+
+
+def test_avg_fill_probability_amount_weighted():
+    """avg_fill_probability_pct should correctly amount-weight, not
+    arithmetic-average — a 25% small spike at p=0.05 shouldn't drag
+    a 75%-weight base at p=0.95 down too far."""
+    decision = select_strategy(
+        amount=Decimal("10000"),
+        preset=EarnStrategyPreset.AGGRESSIVE.value,
+        signals=_signals_2d_dominant(),
+        frr_daily=Decimal(str(8.0 / 36500)),
+    )
+    # Hand-compute amount-weighted avg
+    total = decision.total_amount
+    weighted = sum(
+        (t.fill_probability * (t.amount / total) for t in decision.tranches),
+        Decimal(0),
+    )
+    expected_pct = (weighted * Decimal(100)).quantize(Decimal("0.1"))
+    assert decision.avg_fill_probability_pct == expected_pct

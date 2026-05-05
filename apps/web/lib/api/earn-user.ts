@@ -313,6 +313,9 @@ export interface StrategyTrancheOut {
   multiplier: string | null;
   /** spike-only: True iff hit FRR × ceiling cap (relevant for Aggressive preset). */
   capped: boolean;
+  /** F-5a-3.10.5: heuristic fill probability (0..1). UI renders as a badge
+   * so users see which tranches realistically fill vs which are spike-only. */
+  fill_probability: string;
 }
 
 export interface StrategyPreviewOut {
@@ -320,7 +323,13 @@ export interface StrategyPreviewOut {
   amount: string;
   frr_apr_pct: string | null;
   tranches: StrategyTrancheOut[];
+  /** Theoretical max if every tranche fills. F-5a-3.10.5 deprecated as
+   * the headline number — UI shows expected_apr_pct first now. */
   avg_apr_pct: string;
+  /** F-5a-3.10.5: probability-weighted realistic estimate. */
+  expected_apr_pct: string;
+  /** F-5a-3.10.5: amount-weighted avg P(fill) as a percentage. */
+  avg_fill_probability_pct: string;
   fallback_used: boolean;
   notes: string[];
   signals: PeriodSignalOut[];

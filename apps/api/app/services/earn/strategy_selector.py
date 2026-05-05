@@ -59,6 +59,72 @@ LADDER_FLOOR_USDT = Decimal("1875")
 # competitive but ensures we're not exactly tied with a hundred other offers.
 MARKET_CLEARING_PREMIUM = Decimal("1.01")
 
+# F-5a-3.10.5: static heuristic for "what fraction of similar offers fill
+# within their period". Maps multiplier-above-base to a rough fill
+# probability. Used to compute the dry-run UI's "預估實際 APR" — a more
+# honest version of the previous "weighted avg if everything fills" number
+# which was misleading (high-multiplier spike tranches rarely fill outside
+# spike events but still inflated the avg).
+#
+# The numbers are intuition-derived heuristics — NOT backed by historical
+# fill data yet. Once we accumulate ~6 months of real prod offers + outcomes
+# we can replace this with a calibrated lookup. For now: clearly labelled
+# "估算" in the UI, with the theoretical max also visible for context.
+#
+# Format: list of (multiplier_above_base, p_fill) sorted ascending. Linear
+# interpolation between entries; clamp to bounds outside.
+PROBABILITY_TABLE: list[tuple[Decimal, Decimal]] = [
+    (Decimal("1.00"), Decimal("0.95")),  # market_clearing × 1.01 → essentially always fills
+    (Decimal("1.10"), Decimal("0.85")),
+    (Decimal("1.20"), Decimal("0.70")),
+    (Decimal("1.30"), Decimal("0.55")),
+    (Decimal("1.50"), Decimal("0.30")),
+    (Decimal("1.80"), Decimal("0.15")),
+    (Decimal("2.00"), Decimal("0.10")),
+    (Decimal("2.50"), Decimal("0.05")),
+    (Decimal("3.00"), Decimal("0.025")),
+    (Decimal("4.00"), Decimal("0.012")),
+    (Decimal("5.00"), Decimal("0.007")),
+    (Decimal("6.00"), Decimal("0.004")),
+]
+# FRR market orders (rate=None) have no clean multiplier to look up.
+# Empirically they fill most of the time when FRR ≤ market clearing,
+# slowly when FRR > market clearing. Use a moderate confidence as a
+# placeholder until we collect data.
+FRR_MARKET_FILL_PROBABILITY = Decimal("0.70")
+# Floor for any multiplier above the table — never zero (extreme events do
+# happen) but tiny to acknowledge the rarity.
+EXTREME_MULTIPLIER_FLOOR = Decimal("0.001")
+
+
+def _fill_probability(kind: str, multiplier: Decimal | None) -> Decimal:
+    """Heuristic estimate of P(tranche fills within its period).
+
+    See PROBABILITY_TABLE comment for caveats — this is rough, not
+    historically calibrated. Used by StrategyDecision.expected_apr_pct
+    to give the UI a more honest "what will I actually earn" number.
+    """
+    if kind == "fallback":
+        return FRR_MARKET_FILL_PROBABILITY
+    if kind in ("single", "base") or multiplier is None:
+        # Base / single tranches anchor on market_clearing × 1.01 — by
+        # construction they're competitive with the median, so essentially
+        # always fill. Treat them all as "1.00× equivalent" for lookup.
+        return PROBABILITY_TABLE[0][1]
+    # Spike tranches: lookup table with linear interpolation
+    if multiplier <= PROBABILITY_TABLE[0][0]:
+        return PROBABILITY_TABLE[0][1]
+    if multiplier >= PROBABILITY_TABLE[-1][0]:
+        return EXTREME_MULTIPLIER_FLOOR
+    for i in range(len(PROBABILITY_TABLE) - 1):
+        m_lo, p_lo = PROBABILITY_TABLE[i]
+        m_hi, p_hi = PROBABILITY_TABLE[i + 1]
+        if m_lo <= multiplier <= m_hi:
+            ratio = (multiplier - m_lo) / (m_hi - m_lo)
+            return p_lo + ratio * (p_hi - p_lo)
+    return EXTREME_MULTIPLIER_FLOOR
+
+
 # Aggressive preset's hard cap on rate, expressed as multiplier of FRR.
 # Acts as a safety net so a 6× market_clearing tranche during steep term
 # structures doesn't post at literally unfillable rates. F-5a-3.10 picked
@@ -94,6 +160,8 @@ class StrategyTranche:
     kind: str                    # "single" | "base" | "spike" | "fallback"
     multiplier: Decimal | None   # spike-only: rate multiplier on base; null otherwise
     capped: bool                 # spike-only: True iff hit AGGRESSIVE_RATE_CEILING_MULT
+    # ──── F-5a-3.10.5 fill probability ────
+    fill_probability: Decimal    # 0..1 — heuristic estimate, see _fill_probability()
 
 
 @dataclass(frozen=True)
@@ -108,9 +176,13 @@ class StrategyDecision:
 
     @property
     def total_apr_estimate_pct(self) -> Decimal:
-        """Weighted-avg expected APR across tranches. None-rate tranches
-        contribute 0 to the avg (we don't know what they'll fill at).
-        Useful for the dry-run UI's headline number."""
+        """Theoretical max weighted-avg APR — assumes EVERY tranche fills.
+
+        Useful as the upper bound on the dry-run UI but misleading on its
+        own: spike tranches with multipliers > 1.5× rarely fill outside
+        spike events, so this number overstates expected return. Use
+        expected_apr_pct (F-5a-3.10.5) for the realistic estimate.
+        """
         total = self.total_amount
         if total == 0:
             return Decimal(0)
@@ -121,6 +193,46 @@ class StrategyDecision:
             apr = t.rate_daily * Decimal(365) * Decimal(100)
             weighted += apr * (t.amount / total)
         return weighted.quantize(Decimal("0.01"))
+
+    @property
+    def expected_apr_pct(self) -> Decimal:
+        """Probability-weighted expected APR (F-5a-3.10.5).
+
+        Formula: sum(amount × rate × P_fill) / total_amount
+
+        Treats unfilled tranches as 0 yield (the capital sits idle in
+        funding wallet for that period — small lost yield from not
+        re-deploying, but realistic since the next reconcile pass will
+        try again). This matches what the user actually expects to earn
+        on their TOTAL capital, not just the filled portion.
+
+        For tranches with rate_daily=None (FRR market), uses a
+        placeholder rate of 0 — we don't know the eventual fill rate.
+        Callers can override by passing FRR snapshot to a future
+        signature variant.
+        """
+        total = self.total_amount
+        if total == 0:
+            return Decimal(0)
+        weighted = Decimal(0)
+        for t in self.tranches:
+            if t.rate_daily is None:
+                # FRR market — unknown fill rate, contribute 0 to estimate
+                continue
+            apr = t.rate_daily * Decimal(365) * Decimal(100)
+            weighted += apr * (t.amount / total) * t.fill_probability
+        return weighted.quantize(Decimal("0.01"))
+
+    @property
+    def avg_fill_probability_pct(self) -> Decimal:
+        """Amount-weighted avg fill probability across tranches, as %."""
+        total = self.total_amount
+        if total == 0:
+            return Decimal(0)
+        weighted = Decimal(0)
+        for t in self.tranches:
+            weighted += t.fill_probability * (t.amount / total)
+        return (weighted * Decimal(100)).quantize(Decimal("0.1"))
 
 
 # ─────────────────────────────────────────────────────────
@@ -328,6 +440,7 @@ def select_strategy(
                     kind="fallback",
                     multiplier=None,
                     capped=False,
+                    fill_probability=_fill_probability("fallback", None),
                 ),
             ),
             notes=tuple(notes),
@@ -356,6 +469,7 @@ def select_strategy(
                     kind="fallback",
                     multiplier=None,
                     capped=False,
+                    fill_probability=_fill_probability("fallback", None),
                 ),
             ),
             notes=tuple(notes),
@@ -384,6 +498,7 @@ def select_strategy(
                     kind="single",
                     multiplier=None,
                     capped=False,
+                    fill_probability=_fill_probability("single", None),
                 ),
             ),
             notes=tuple(notes),
@@ -422,6 +537,7 @@ def select_strategy(
                     kind=base.kind,
                     multiplier=base.multiplier,
                     capped=base.capped,
+                    fill_probability=base.fill_probability,  # base prob unchanged by merge
                 )
             continue
 
@@ -462,6 +578,7 @@ def select_strategy(
                 kind=tranche_kind,
                 multiplier=tranche_mult,
                 capped=tranche_capped,
+                fill_probability=_fill_probability(tranche_kind, tranche_mult),
             )
         )
 
