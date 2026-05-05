@@ -263,8 +263,13 @@ def test_aggressive_prefers_long_period_when_rates_equal():
 
 
 def test_aggressive_spike_tranche_capped_at_frr_x_ceiling():
-    """A spike tranche with multiplier 4.0 on a market_clearing rate above
-    FRR would yield an unfillable rate; aggressive caps it at FRR × 1.3."""
+    """The highest-multiplier tranche (6×) on a hot market would yield
+    a literally-unfillable rate. Aggressive caps it at FRR × CEILING.
+
+    F-5a-3.10.1 raised the ceiling to 5.0 (was 1.3) so the spike-capture
+    tranches can actually reach reasonable spike rates instead of being
+    flattened to FRR × 1.3.
+    """
     # market_clearing computed from this signal would be high
     by_period = {
         2: _sig(2, median_apr=20.0, volume=100_000),  # very hot 2d market
@@ -285,6 +290,31 @@ def test_aggressive_spike_tranche_capped_at_frr_x_ceiling():
     expected_ceiling = frr * AGGRESSIVE_RATE_CEILING_MULT
     assert last.rate_daily is not None
     assert last.rate_daily <= expected_ceiling + Decimal("1e-9")
+    # Sanity: the cap should actually be bigger than market × 1.0 — otherwise
+    # the cap would be silently flattening the base tranche too. F-5a-3.10.1
+    # cap (5×) at FRR 8% = 40% APR > 2d clearing 20% APR, so OK.
+    base_rate = decision.tranches[0].rate_daily
+    assert base_rate is not None
+    assert base_rate < expected_ceiling
+
+
+def test_aggressive_has_six_tranches_with_progressive_multipliers():
+    """F-5a-3.10.1: aggressive ladder widened from 4 to 6 tranches with
+    multipliers 1.0/1.3/1.8/2.5/4.0/6.0. Confirms shape + monotonicity."""
+    decision = select_strategy(
+        amount=Decimal("10000"),
+        preset=EarnStrategyPreset.AGGRESSIVE.value,
+        signals=_signals_2d_dominant(),
+        frr_daily=Decimal(str(8.0 / 36500)),  # 8% APR FRR, plenty of cap headroom
+    )
+    assert len(decision.tranches) == 6
+    # Rates should be strictly increasing across tranches (the whole point
+    # of the ladder shape — bulk at base, premiums staircase up)
+    rates = [t.rate_daily for t in decision.tranches]
+    for r in rates:
+        assert r is not None  # aggressive never uses FRR-market None tranches
+    for i in range(1, len(rates)):
+        assert rates[i] > rates[i - 1]
 
 
 # ─────────────────────────────────────────────────────────

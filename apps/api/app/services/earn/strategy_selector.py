@@ -60,9 +60,15 @@ LADDER_FLOOR_USDT = Decimal("1875")
 MARKET_CLEARING_PREMIUM = Decimal("1.01")
 
 # Aggressive preset's hard cap on rate, expressed as multiplier of FRR.
-# Above this borrowers won't bite — they'd take FRR offers instead.
-# Picked at FRR × 1.3 per F-5a-3.10 spec.
-AGGRESSIVE_RATE_CEILING_MULT = Decimal("1.3")
+# Acts as a safety net so a 6× market_clearing tranche during steep term
+# structures doesn't post at literally unfillable rates. F-5a-3.10 picked
+# 1.3 conservatively; F-5a-3.10.1 raises it to 5.0 because the multipliers
+# in LADDER_AGGRESSIVE now anchor on market_clearing (not FRR), so a
+# CEILING ≈ 5× FRR (= ~43% APR in current conditions, ~150% APR during a
+# spike) is the right safety margin — it lets the spike-capture tranches
+# actually do their job during real liquidation events while still
+# protecting against degenerate cases.
+AGGRESSIVE_RATE_CEILING_MULT = Decimal("5.0")
 
 # Fallback period when signals are unavailable for ALL canonical periods.
 # Match the legacy DEFAULT_OFFER_PERIOD_DAYS (= 2).
@@ -230,11 +236,23 @@ LADDER_BALANCED: list[tuple[Decimal, Decimal]] = [
     (Decimal("0.07"), Decimal("2.00")),
     (Decimal("0.03"), Decimal("3.00")),
 ]
+# F-5a-3.10.1 — Aggressive widened: 6 tranches with multipliers reaching
+# 6× market_clearing. The bulk (25%) at clearing for fast fill, then
+# progressively higher rates that capture mild → extreme spike events.
+# The high-multiplier tranches will typically not fill in calm markets
+# (that's by design — they wait for spikes). The CEILING (5× FRR) caps
+# the absolute APR at ~43% during normal conditions, giving plenty of
+# headroom for genuine spike capture while preventing degenerate posts.
+#
+# Smallest fraction is 0.10 → at the ladder floor ($1875), the smallest
+# tranche is $187.50, which clears the Bitfinex per-offer minimum ($150).
 LADDER_AGGRESSIVE: list[tuple[Decimal, Decimal]] = [
-    (Decimal("0.40"), Decimal("1.00")),
-    (Decimal("0.25"), Decimal("1.10")),
-    (Decimal("0.20"), Decimal("1.20")),
-    (Decimal("0.15"), Decimal("1.30")),  # capped at AGGRESSIVE_RATE_CEILING_MULT
+    (Decimal("0.25"), Decimal("1.00")),  # base: market_clearing × 1.01
+    (Decimal("0.20"), Decimal("1.30")),  # mild premium
+    (Decimal("0.20"), Decimal("1.80")),  # moderate premium
+    (Decimal("0.15"), Decimal("2.50")),  # major spike target
+    (Decimal("0.10"), Decimal("4.00")),  # huge spike target
+    (Decimal("0.10"), Decimal("6.00")),  # extreme spike (typically capped)
 ]
 
 
