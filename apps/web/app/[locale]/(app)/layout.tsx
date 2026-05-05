@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import { TosGate } from "@/components/legal/tos-gate";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
+import { RefBindOnLogin } from "@/components/referral/ref-bind-on-login";
 import { fetchMeServer } from "@/lib/auth";
 
 /**
@@ -26,6 +27,10 @@ export default async function AppLayout({
   return (
     <ConfirmProvider>
       <div className="min-h-screen">
+        {/* F-5b-X: post-login ref-cookie consumer. Reads pending_ref
+            cookie set by marketing-page RefCookieCapture, calls bind
+            API, clears cookie. No-op when no cookie / already bound. */}
+        <RefBindOnLogin />
         {children}
         <TosGate locale={locale} />
       </div>

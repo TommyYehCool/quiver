@@ -1,3 +1,4 @@
+import * as React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
@@ -23,6 +24,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/common/locale-switcher";
+import { RefCookieCapture } from "@/components/referral/ref-cookie-capture";
 import { QuiverLogo } from "@/components/common/quiver-logo";
 
 export default function LandingPage({
@@ -32,6 +34,12 @@ export default function LandingPage({
 }) {
   return (
     <main className="relative min-h-screen overflow-hidden bg-paper dark:bg-slate-950">
+      {/* F-5b-X: capture ?ref=XXX from share links into a cookie that
+          survives the Google OAuth round-trip. RefBindOnLogin (mounted
+          on the (app) layout) consumes the cookie post-login. */}
+      <React.Suspense fallback={null}>
+        <RefCookieCapture />
+      </React.Suspense>
       <MacaronBlobs />
       <div className="relative">
         <Header locale={locale} />

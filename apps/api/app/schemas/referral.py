@@ -16,6 +16,10 @@ from pydantic import BaseModel, Field
 class ReferrerInfo(BaseModel):
     """Who I'm bound to as referee, if anyone."""
     referrer_user_id: int
+    # F-5b-X: include referrer's code so UI can show "你被 TOMMYYEH 推薦"
+    # instead of generic "you have a referrer". Always populated when
+    # the binding exists (every binding goes through a code lookup).
+    referrer_code: str
     bound_at: datetime
     binding_source: str
     revshare_started_at: datetime | None  # null = no perf_fee yet

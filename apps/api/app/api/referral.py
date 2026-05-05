@@ -51,8 +51,16 @@ async def get_referral_me(
 
     referrer_info: ReferrerInfo | None = None
     if referral_row is not None:
+        # Look up the referrer's own code so the UI can display
+        # "你被 TOMMYYEH 推薦" instead of generic "you have a referrer".
+        # Defensive: every binding goes through a code → referrer lookup
+        # so the code MUST exist; we still default to "—" if the row is
+        # somehow missing (would only happen if an admin nuked the code).
+        referrer_code_row = await repo.get_code_by_user(db, referral_row.referrer_user_id)
+        referrer_code = referrer_code_row.code if referrer_code_row else "—"
         referrer_info = ReferrerInfo(
             referrer_user_id=referral_row.referrer_user_id,
+            referrer_code=referrer_code,
             bound_at=referral_row.bound_at,
             binding_source=referral_row.binding_source,
             revshare_started_at=referral_row.revshare_started_at,

@@ -10,6 +10,9 @@ import { apiFetch } from "@/lib/api";
 
 export interface ReferrerInfo {
   referrer_user_id: number;
+  /** F-5b-X: referrer's own code (e.g. "TOMMYYEH") so UI can show
+   * "你被 TOMMYYEH 推薦" instead of generic "you have a referrer". */
+  referrer_code: string;
   bound_at: string;
   binding_source: string;
   revshare_started_at: string | null;

@@ -63,6 +63,7 @@ const STRINGS = {
     bind: {
       alreadyBoundTitle: "你已綁定推薦人",
       alreadyBoundDesc: "你的績效費結算時,會自動撥分潤給你的推薦人。",
+      alreadyBoundByTemplate: "你被 {code} 推薦",
       windowActiveTemplate: "分潤窗口開啟中 — 至 {date} 結束。",
       windowExpired: "分潤窗口已過期。",
       windowNotStarted: "分潤窗口尚未開始(等你產生第一筆績效費)。",
@@ -132,6 +133,7 @@ const STRINGS = {
     bind: {
       alreadyBoundTitle: "You're bound to a referrer",
       alreadyBoundDesc: "When your performance fee settles, your referrer automatically receives revshare.",
+      alreadyBoundByTemplate: "Referred by {code}",
       windowActiveTemplate: "Revshare window active — ends {date}.",
       windowExpired: "Revshare window expired.",
       windowNotStarted: "Revshare window hasn't started yet (waiting for your first performance fee).",
@@ -201,6 +203,7 @@ const STRINGS = {
     bind: {
       alreadyBoundTitle: "リファラーに紐付け済み",
       alreadyBoundDesc: "あなたのパフォーマンスフィー決済時、リファラーに自動でレベニューシェアが振り込まれます。",
+      alreadyBoundByTemplate: "{code} に招待されました",
       windowActiveTemplate: "レベニューシェア窓口アクティブ — {date} に終了。",
       windowExpired: "レベニューシェア窓口は期限切れです。",
       windowNotStarted: "レベニューシェア窓口はまだ開始していません(最初のパフォーマンスフィーを待機中)。",
