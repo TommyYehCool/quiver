@@ -49,6 +49,8 @@ export interface ActiveCreditOut {
   opened_at_ms: number;
   expires_at_ms: number;
   expected_interest_at_expiry: string;
+  /** F-5a-3.11: "USDT" or "USD" — which lending market this credit lives in. */
+  currency: string;
 }
 
 /** Pending funding offer — submitted to Bitfinex, not yet matched by a borrower.
@@ -61,6 +63,8 @@ export interface PendingOfferOut {
   /** True iff this is an FRR market order (rate_daily = "0"). */
   is_frr: boolean;
   period_days: number;
+  /** F-5a-3.11: "USDT" or "USD" — which currency this offer is denominated in. */
+  currency: string;
 }
 
 export type EarnTier = "none" | "internal" | "friend" | "public" | "commercial";
@@ -97,12 +101,18 @@ export interface EarnMeOut {
   funding_idle_usdt: string | null;
   lent_usdt: string | null;
   daily_earned_usdt: string | null;
+  /** F-5a-3.11: USD-side mirrors. Both sets coexist during the rollout
+   * window; UI shows whichever has value (or both if mixed). */
+  funding_idle_usd: string | null;
+  lent_usd: string | null;
+  daily_earned_usd: string | null;
   total_at_bitfinex: string | null;
   active_positions: EarnPositionUserOut[];
   active_credits: ActiveCreditOut[];
   pending_offers: PendingOfferOut[];
-  /** Sum of pending_offers.amount as a string (always present, "0" if empty). */
+  /** Sum of pending_offers.amount per currency as strings (always present, "0" if empty). */
   pending_offers_total_usdt: string;
+  pending_offers_total_usd: string;
   recent_snapshots: EarnSnapshotUserOut[];
 }
 

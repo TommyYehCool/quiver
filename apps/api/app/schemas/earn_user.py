@@ -50,6 +50,9 @@ class ActiveCreditOut(BaseModel):
     opened_at_ms: int
     expires_at_ms: int
     expected_interest_at_expiry: Decimal
+    # F-5a-3.11: which currency this credit is in. "USDT" or "USD".
+    # Default "USDT" because all pre-pivot data is USDT.
+    currency: str = "USDT"
 
 
 class CancelOfferIn(BaseModel):
@@ -228,10 +231,12 @@ class PendingOfferOut(BaseModel):
     match time.
     """
     id: int                          # offer id (for cancel / amend)
-    amount: Decimal                  # remaining unmatched amount (USDT)
+    amount: Decimal                  # remaining unmatched amount
     rate_daily: Decimal              # 0 = FRR market order; >0 = fixed-rate offer
     is_frr: bool                     # True if FRR market order (rate=0 sentinel)
     period_days: int
+    # F-5a-3.11: which currency this offer is in. "USDT" or "USD".
+    currency: str = "USDT"
 
 
 class EarnMeOut(BaseModel):
@@ -281,6 +286,12 @@ class EarnMeOut(BaseModel):
     lent_usdt: Decimal | None           # USDT actively lent out
     daily_earned_usdt: Decimal | None   # last snapshot daily earnings (estimate)
     total_at_bitfinex: Decimal | None   # funding_idle + lent (total at Bitfinex)
+    # F-5a-3.11: USD-side mirrors of the above. After the pivot, new
+    # capital lands here. Both currencies coexist during the transition;
+    # UI shows whichever has value (or both if mixed).
+    funding_idle_usd: Decimal | None
+    lent_usd: Decimal | None
+    daily_earned_usd: Decimal | None
 
     # In-flight pipeline state for transparency (e.g., "200 USDT broadcast, awaiting Bitfinex credit")
     active_positions: list[EarnPositionUserOut]
@@ -294,9 +305,11 @@ class EarnMeOut(BaseModel):
     # dedicated card so users see "submitted but not earning yet" capital.
     pending_offers: list[PendingOfferOut]
 
-    # Sum of pending_offers.amount — convenience for the big-number card.
-    # 0 (not None) when no pending offers, so UI never renders "—" here.
+    # Sum of pending_offers.amount per currency — convenience for the
+    # big-number card. 0 (not None) when no pending offers in that
+    # currency, so UI never renders "—" here.
     pending_offers_total_usdt: Decimal
+    pending_offers_total_usd: Decimal
 
     # Trend (last N days)
     recent_snapshots: list[EarnSnapshotUserOut]

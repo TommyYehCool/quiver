@@ -419,46 +419,32 @@ export default async function EarnPage({
               currently returns fUST data only; USD positions show in the
               new "USD positions" card below (added in a follow-up). */}
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>{s.bigNumbers.lent.label}</CardDescription>
-                <CardTitle className="font-mono text-2xl">
-                  {fmtUsd(earn.lent_usdt)}
-                  <span className="ml-1 text-sm text-slate-500">USDT</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-slate-500">{s.bigNumbers.lent.sub}</CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>{s.bigNumbers.pending.label}</CardDescription>
-                <CardTitle className="font-mono text-2xl text-amber-600 dark:text-amber-400">
-                  {fmtUsd(earn.pending_offers_total_usdt)}
-                  <span className="ml-1 text-sm text-amber-700/70 dark:text-amber-400/70">USDT</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-slate-500">{s.bigNumbers.pending.sub}</CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>{s.bigNumbers.funding.label}</CardDescription>
-                <CardTitle className="font-mono text-2xl">
-                  {fmtUsd(earn.funding_idle_usdt)}
-                  <span className="ml-1 text-sm text-slate-500">USDT</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-slate-500">{s.bigNumbers.funding.sub}</CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>{s.bigNumbers.earned.label}</CardDescription>
-                <CardTitle className="font-mono text-2xl text-emerald-600">
-                  {fmtUsd(earn.daily_earned_usdt)}
-                  <span className="ml-1 text-sm text-emerald-700/70 dark:text-emerald-500/70">USDT</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs text-slate-500">{s.bigNumbers.earned.sub}</CardContent>
-            </Card>
+            <DualCurrencyCard
+              label={s.bigNumbers.lent.label}
+              sub={s.bigNumbers.lent.sub}
+              usdt={earn.lent_usdt}
+              usd={earn.lent_usd}
+            />
+            <DualCurrencyCard
+              label={s.bigNumbers.pending.label}
+              sub={s.bigNumbers.pending.sub}
+              usdt={earn.pending_offers_total_usdt}
+              usd={earn.pending_offers_total_usd}
+              tone="amber"
+            />
+            <DualCurrencyCard
+              label={s.bigNumbers.funding.label}
+              sub={s.bigNumbers.funding.sub}
+              usdt={earn.funding_idle_usdt}
+              usd={earn.funding_idle_usd}
+            />
+            <DualCurrencyCard
+              label={s.bigNumbers.earned.label}
+              sub={s.bigNumbers.earned.sub}
+              usdt={earn.daily_earned_usdt}
+              usd={earn.daily_earned_usd}
+              tone="emerald"
+            />
           </div>
 
           {/* F-5b-1 strategy performance card — placed right after big numbers
@@ -685,6 +671,73 @@ function TierBadge({
       {label}
       <span className="text-xs opacity-70">{strings.feeSuffix(pct)}</span>
     </span>
+  );
+}
+
+/**
+ * F-5a-3.11 — big-number card that handles 0/1/2-currency display:
+ *   - both 0      → single $0.00 USDT line (default tone)
+ *   - only USDT   → single line with "USDT" suffix
+ *   - only USD    → single line with "USD" suffix
+ *   - both > 0    → 2 stacked lines (USDT first, USD below)
+ *
+ * Lets us keep the 4-card grid layout intact while transparently
+ * showing per-currency breakdown when the user has positions in both.
+ */
+function DualCurrencyCard({
+  label,
+  sub,
+  usdt,
+  usd,
+  tone = "default",
+}: {
+  label: string;
+  sub: string;
+  usdt: string | null;
+  usd: string | null;
+  tone?: "default" | "amber" | "emerald";
+}) {
+  const usdtNum = Number(usdt ?? 0);
+  const usdNum = Number(usd ?? 0);
+  const showBoth = usdtNum > 0 && usdNum > 0;
+  const colorMain =
+    tone === "amber"
+      ? "text-amber-600 dark:text-amber-400"
+      : tone === "emerald"
+        ? "text-emerald-600"
+        : "";
+  const colorSuffix =
+    tone === "amber"
+      ? "text-amber-700/70 dark:text-amber-400/70"
+      : tone === "emerald"
+        ? "text-emerald-700/70 dark:text-emerald-500/70"
+        : "text-slate-500";
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardDescription>{label}</CardDescription>
+        {showBoth ? (
+          <div className="space-y-0.5">
+            <CardTitle className={`font-mono text-2xl ${colorMain}`}>
+              {fmtUsd(usdt)}
+              <span className={`ml-1 text-sm ${colorSuffix}`}>USDT</span>
+            </CardTitle>
+            <CardTitle className={`font-mono text-2xl ${colorMain}`}>
+              {fmtUsd(usd)}
+              <span className={`ml-1 text-sm ${colorSuffix}`}>USD</span>
+            </CardTitle>
+          </div>
+        ) : (
+          <CardTitle className={`font-mono text-2xl ${colorMain}`}>
+            {usdNum > 0 ? fmtUsd(usd) : fmtUsd(usdt)}
+            <span className={`ml-1 text-sm ${colorSuffix}`}>
+              {usdNum > 0 ? "USD" : "USDT"}
+            </span>
+          </CardTitle>
+        )}
+      </CardHeader>
+      <CardContent className="text-xs text-slate-500">{sub}</CardContent>
+    </Card>
   );
 }
 

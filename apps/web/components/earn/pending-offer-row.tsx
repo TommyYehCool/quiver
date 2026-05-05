@@ -187,7 +187,10 @@ export function PendingOfferRow({ offer }: { offer: PendingOfferOut }) {
       <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50/50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <Coins className="h-4 w-4 text-amber-500" />
-          <span className="font-mono">{fmtUsd(offer.amount)}</span>
+          <span className="font-mono">
+            {fmtUsd(offer.amount)}{" "}
+            <span className="text-xs font-normal text-slate-500">{offer.currency || "USDT"}</span>
+          </span>
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
             {rateLabel}
           </span>

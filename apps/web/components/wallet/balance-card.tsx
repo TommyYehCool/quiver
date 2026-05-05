@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowUpRight, Clock, Coins, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Clock, Coins, Hourglass, TrendingUp } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchMyBalance, type Balance } from "@/lib/api/wallet";
@@ -20,27 +20,48 @@ const EARN_STRINGS: Record<Locale, {
   earnLabel: string;
   earnLent: (n: string) => string;
   earnIdle: (n: string) => string;
+  // F-5a-3.11.10 — per-credit detail card strings
+  creditsTitle: string;
+  creditOpened: string;
+  creditExpires: string;
+  creditApr: string;
+  creditExpired: string;
 }> = {
   "zh-TW": {
     totalTitle: "總資產",
-    totalDesc: "Quiver 託管 + Bitfinex Earn 持有的 USDT 總額",
+    totalDesc: "Quiver 託管 + Bitfinex Earn(USDT + USD)總額",
     earnLabel: "Bitfinex 賺息",
     earnLent: (n) => `已借出 ${n}`,
     earnIdle: (n) => `等掛單 ${n}`,
+    creditsTitle: "Bitfinex 借出明細",
+    creditOpened: "開始",
+    creditExpires: "到期",
+    creditApr: "APR",
+    creditExpired: "已到期",
   },
   en: {
     totalTitle: "Total Assets",
-    totalDesc: "USDT held in Quiver custody + Bitfinex Earn",
+    totalDesc: "Held in Quiver custody + Bitfinex Earn (USDT + USD)",
     earnLabel: "Bitfinex Earn",
     earnLent: (n) => `Lent ${n}`,
     earnIdle: (n) => `Idle ${n}`,
+    creditsTitle: "Bitfinex active credits",
+    creditOpened: "Opened",
+    creditExpires: "Expires",
+    creditApr: "APR",
+    creditExpired: "Expired",
   },
   ja: {
     totalTitle: "総資産",
-    totalDesc: "Quiver と Bitfinex Earn に保有する USDT の合計",
+    totalDesc: "Quiver と Bitfinex Earn の合計(USDT + USD)",
     earnLabel: "Bitfinex で運用中",
     earnLent: (n) => `貸出中 ${n}`,
     earnIdle: (n) => `待機 ${n}`,
+    creditsTitle: "Bitfinex 貸出明細",
+    creditOpened: "開始",
+    creditExpires: "満期",
+    creditApr: "APR",
+    creditExpired: "満期済",
   },
 };
 function pickLocale(l: string): Locale {
@@ -95,13 +116,21 @@ export function BalanceCard() {
 
   const available = Number(balance?.available ?? 0);
   const pending = Number(balance?.pending ?? 0);
-  const earnLent = Number(earn?.lent_usdt ?? 0);
-  const earnIdle = Number(earn?.funding_idle_usdt ?? 0);
+  // F-5a-3.11: aggregate USDT + USD positions (1:1 peg, displayed as
+  // single USDT-equivalent total). Per-currency breakdown lives in the
+  // active_credits detail list below the chips.
+  const earnLentUsdt = Number(earn?.lent_usdt ?? 0);
+  const earnLentUsd = Number(earn?.lent_usd ?? 0);
+  const earnIdleUsdt = Number(earn?.funding_idle_usdt ?? 0);
+  const earnIdleUsd = Number(earn?.funding_idle_usd ?? 0);
+  const earnLent = earnLentUsdt + earnLentUsd;
+  const earnIdle = earnIdleUsdt + earnIdleUsd;
   const earnTotal = earnLent + earnIdle;
   const total = available + earnTotal + pending;
   const showEarn = Boolean(earn?.has_earn_account) && earnTotal > 0;
   const showPending = pending > 0;
   const hasAnyBreakdown = showEarn || showPending;
+  const credits = earn?.active_credits ?? [];
 
   // 動態決定 title:有 Earn 部位用「總資產」更精確,沒就維持原本「餘額」
   const cardTitle = hasAnyBreakdown ? es.totalTitle : t("title");
@@ -161,6 +190,57 @@ export function BalanceCard() {
                 icon={<Clock className="h-3 w-3" />}
               />
             ) : null}
+          </div>
+        ) : null}
+
+        {/* F-5a-3.11.10 — per-credit detail list. Surfaces the per-loan
+            currency / APR / open-expire dates Tommy asked for, without
+            requiring a click into /earn. */}
+        {credits.length > 0 ? (
+          <div className="space-y-1.5 border-t border-emerald-300/30 pt-3 dark:border-emerald-900/40">
+            <p className="text-xs font-medium uppercase tracking-wider text-emerald-800/70 dark:text-emerald-300/70">
+              {es.creditsTitle}
+            </p>
+            <ul className="space-y-1.5">
+              {credits.map((c) => {
+                const opened = new Date(c.opened_at_ms);
+                const expires = new Date(c.expires_at_ms);
+                const isExpired = expires.getTime() <= Date.now();
+                const dateOpts: Intl.DateTimeFormatOptions = {
+                  month: "numeric",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                };
+                return (
+                  <li
+                    key={c.id}
+                    className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-md bg-emerald-50/40 px-2 py-1.5 text-xs dark:bg-emerald-950/20"
+                  >
+                    <span className="font-mono font-semibold tabular-nums">
+                      {fmt(c.amount)}
+                    </span>
+                    <span className="text-[10px] font-normal uppercase tracking-wider text-slate-500">
+                      {c.currency || "USDT"}
+                    </span>
+                    <Hourglass className="ml-1 h-3 w-3 text-emerald-600/70" />
+                    <span className="font-mono">
+                      {Number(c.apr_pct).toFixed(2)}% {es.creditApr}
+                    </span>
+                    <span className="ml-auto text-[11px] text-slate-500 tabular-nums">
+                      {opened.toLocaleString(undefined, dateOpts)} →{" "}
+                      {isExpired ? (
+                        <span className="text-amber-600 dark:text-amber-400">
+                          {es.creditExpired}
+                        </span>
+                      ) : (
+                        expires.toLocaleString(undefined, dateOpts)
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         ) : null}
       </CardContent>

@@ -90,7 +90,7 @@ export function ActiveCreditRow({ credit }: { credit: ActiveCreditOut }) {
         <div>
           <p className="font-display text-2xl font-semibold tabular-nums">
             {amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
-            <span className="text-sm font-normal text-slate-500">USDT</span>
+            <span className="text-sm font-normal text-slate-500">{credit.currency || "USDT"}</span>
           </p>
           <p className="text-xs text-slate-500">offer #{credit.id}</p>
         </div>

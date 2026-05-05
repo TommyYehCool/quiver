@@ -150,11 +150,15 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                 funding_idle_usdt=None,
                 lent_usdt=None,
                 daily_earned_usdt=None,
+                funding_idle_usd=None,
+                lent_usd=None,
+                daily_earned_usd=None,
                 total_at_bitfinex=None,
                 active_positions=[],
                 active_credits=[],
                 pending_offers=[],
                 pending_offers_total_usdt=Decimal(0),
+                pending_offers_total_usd=Decimal(0),
                 recent_snapshots=[],
             )
         )
@@ -173,12 +177,18 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
     funding_idle: Decimal | None = latest.bitfinex_funding_usdt if latest else None
     lent: Decimal | None = latest.bitfinex_lent_usdt if latest else None
     daily_earned: Decimal | None = latest.bitfinex_daily_earned if latest else None
+    # F-5a-3.11: USD-side mirrors. Snapshots only track USDT historically;
+    # USD starts at None until the first live Bitfinex query lands.
+    funding_idle_usd: Decimal | None = None
+    lent_usd: Decimal | None = None
+    daily_earned_usd: Decimal | None = None
     if conn is not None:
         try:
             from app.services.earn.bitfinex_adapter import BitfinexFundingAdapter
 
             adapter = await BitfinexFundingAdapter.from_connection(db, conn)
-            live_position = await adapter.get_funding_position()
+            # Query USDT side (existing behavior)
+            live_position = await adapter.get_funding_position(currency="UST")
             funding_idle = live_position.funding_available
             lent = live_position.lent_total
             daily_earned = live_position.daily_earned_estimate
@@ -192,15 +202,43 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                     opened_at_ms=c.opened_at_ms,
                     expires_at_ms=c.expires_at_ms,
                     expected_interest_at_expiry=c.expected_interest_at_expiry,
+                    currency="USDT",
                 )
                 for c in live_position.active_credits
             ]
+            # F-5a-3.11: USD side. Two extra API calls but both cheap;
+            # totals 4 calls (was 2). Bitfinex public budget = 90/min,
+            # we're nowhere near it.
+            try:
+                live_position_usd = await adapter.get_funding_position(currency="USD")
+                funding_idle_usd = live_position_usd.funding_available
+                lent_usd = live_position_usd.lent_total
+                daily_earned_usd = live_position_usd.daily_earned_estimate
+                active_credits.extend(
+                    ActiveCreditOut(
+                        id=c.id,
+                        amount=c.amount,
+                        rate_daily=c.rate_daily,
+                        apr_pct=c.apr_pct,
+                        period_days=c.period_days,
+                        opened_at_ms=c.opened_at_ms,
+                        expires_at_ms=c.expires_at_ms,
+                        expected_interest_at_expiry=c.expected_interest_at_expiry,
+                        currency="USD",
+                    )
+                    for c in live_position_usd.active_credits
+                )
+            except Exception as e:  # noqa: BLE001
+                logger.warning(
+                    "earn_me_usd_fetch_failed", user_id=user.id, error=str(e)
+                )
             # Pending offers — submitted but not yet matched. Separate API call
             # since get_funding_position only includes credits + wallet, not
-            # offers. Fail-open if this errors (page still renders without
-            # the pending card).
+            # offers. F-5a-3.11: query both currencies; tag each offer with
+            # its currency so UI can render correctly.
             try:
-                offers = await adapter.list_active_offers()
+                offers_ust = await adapter.list_active_offers(symbol="fUST")
+                offers_usd = await adapter.list_active_offers(symbol="fUSD")
                 pending_offers = [
                     PendingOfferOut(
                         id=o.id,
@@ -208,8 +246,19 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
                         rate_daily=o.rate,
                         is_frr=(o.rate == 0),
                         period_days=o.period,
+                        currency="USDT",
                     )
-                    for o in offers
+                    for o in offers_ust
+                ] + [
+                    PendingOfferOut(
+                        id=o.id,
+                        amount=o.amount,
+                        rate_daily=o.rate,
+                        is_frr=(o.rate == 0),
+                        period_days=o.period,
+                        currency="USD",
+                    )
+                    for o in offers_usd
                 ]
             except Exception as e:  # noqa: BLE001
                 logger.warning(
@@ -220,9 +269,18 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
         except Exception as e:  # noqa: BLE001
             logger.warning("earn_me_live_fetch_failed", user_id=user.id, error=str(e))
 
+    # Total at Bitfinex now sums BOTH currencies. USD ≈ USDT for display
+    # purposes (1:1 peg with tiny spread), so this is a usable rough total
+    # in "USDT-equivalent dollars". Frontend can break out per-currency.
     total = (
-        (funding_idle or Decimal(0)) + (lent or Decimal(0))
-        if (funding_idle is not None or lent is not None)
+        (funding_idle or Decimal(0))
+        + (lent or Decimal(0))
+        + (funding_idle_usd or Decimal(0))
+        + (lent_usd or Decimal(0))
+        if any(
+            x is not None
+            for x in (funding_idle, lent, funding_idle_usd, lent_usd)
+        )
         else None
     )
 
@@ -247,6 +305,9 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             funding_idle_usdt=funding_idle,
             lent_usdt=lent,
             daily_earned_usdt=daily_earned,
+            funding_idle_usd=funding_idle_usd,
+            lent_usd=lent_usd,
+            daily_earned_usd=daily_earned_usd,
             total_at_bitfinex=total,
             active_positions=[
                 EarnPositionUserOut(
@@ -266,7 +327,12 @@ async def get_earn_me(user: CurrentUserDep, db: DbDep) -> ApiResponse[EarnMeOut]
             active_credits=active_credits,
             pending_offers=pending_offers,
             pending_offers_total_usdt=sum(
-                (o.amount for o in pending_offers), Decimal(0)
+                (o.amount for o in pending_offers if o.currency == "USDT"),
+                Decimal(0),
+            ),
+            pending_offers_total_usd=sum(
+                (o.amount for o in pending_offers if o.currency == "USD"),
+                Decimal(0),
             ),
             recent_snapshots=[
                 EarnSnapshotUserOut(
