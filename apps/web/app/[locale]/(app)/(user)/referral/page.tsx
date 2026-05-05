@@ -1,12 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { Gift, TrendingUp, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Gift, TrendingUp, Users } from "lucide-react";
 
 import { fetchMeServer } from "@/lib/auth";
 import {
   fetchReferralInviteesServer,
   fetchReferralMeServer,
-  fetchReferralPayoutsServer,
 } from "@/lib/api/referral-server";
 import {
   Card,
@@ -17,8 +17,6 @@ import {
 } from "@/components/ui/card";
 import { CodeSection } from "@/components/referral/code-section";
 import { BindSection } from "@/components/referral/bind-section";
-import { InviteesList } from "@/components/referral/invitees-list";
-import { PayoutsTable } from "@/components/referral/payouts-table";
 
 type Locale = "zh-TW" | "en" | "ja";
 
@@ -82,15 +80,9 @@ const STRINGS = {
         "referral.cycleDetected": "綁定會造成循環,被擋下",
       },
     },
-    payouts: {
-      title: "撥款紀錄",
-      desc: "你收到的所有 L1 + L2 分潤明細,最近 100 筆。",
-      empty: "還沒有撥款紀錄。等你的被邀請人開始產生績效費才會有。",
-      date: "時間",
-      level: "層級",
-      amount: "金額 (USDT)",
-      l1: "L1 直邀",
-      l2: "L2 間接",
+    inviteeListCta: {
+      label: "邀請清單 — 看誰被你邀請了 + 你的分潤明細",
+      cta: "前往邀請清單",
     },
   },
   en: {
@@ -152,15 +144,9 @@ const STRINGS = {
         "referral.cycleDetected": "Binding would create a referral cycle — blocked",
       },
     },
-    payouts: {
-      title: "Payout history",
-      desc: "All L1 + L2 revshare you've received, most recent 100.",
-      empty: "No payouts yet. They'll appear once your invitees start generating performance fees.",
-      date: "Date",
-      level: "Level",
-      amount: "Amount (USDT)",
-      l1: "L1 direct",
-      l2: "L2 indirect",
+    inviteeListCta: {
+      label: "Invitee list — who you've invited + your commission breakdown",
+      cta: "Open invitee list",
     },
   },
   ja: {
@@ -222,15 +208,9 @@ const STRINGS = {
         "referral.cycleDetected": "紐付けるとループが発生するためブロック",
       },
     },
-    payouts: {
-      title: "支払い履歴",
-      desc: "受け取った全 L1 + L2 レベニューシェア、直近 100 件。",
-      empty: "まだ支払い記録はありません。招待者がパフォーマンスフィーを発生させると表示されます。",
-      date: "日時",
-      level: "レベル",
-      amount: "金額 (USDT)",
-      l1: "L1 直接",
-      l2: "L2 間接",
+    inviteeListCta: {
+      label: "招待リスト — 招待した users + コミッション内訳",
+      cta: "招待リストを開く",
     },
   },
 } as const;
@@ -262,8 +242,8 @@ export default async function ReferralPage({
   if (!user) redirect(`/${locale}/login`);
 
   const me = await fetchReferralMeServer(cookieHeader);
-  const payouts = await fetchReferralPayoutsServer(cookieHeader);
-  // F-5b-X: per-invitee progress + commission breakdown.
+  // F-5b-X.3: only need invitees count for the CTA badge here. Full
+  // invitee list + payout history live on /referral/invitees.
   const invitees = await fetchReferralInviteesServer(cookieHeader);
   const s = STRINGS[pickLocale(locale)];
 
@@ -280,7 +260,6 @@ export default async function ReferralPage({
   }
 
   const totalEarned = Number(me.total_earned_usdt);
-  const payoutsCount = payouts?.items.length ?? 0;
 
   return (
     <div className="container mx-auto max-w-3xl space-y-6 py-6">
@@ -295,8 +274,10 @@ export default async function ReferralPage({
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* Stats — F-5b-X.3: dropped the "撥款次數" tile since detailed
+          payout history moved to /referral/invitees. Two-tile layout
+          fits the more focused settings-only purpose of this page. */}
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
@@ -319,13 +300,6 @@ export default async function ReferralPage({
             </CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-slate-500">{s.statBlocks.totalEarnedSub}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>{s.statBlocks.payoutsCount}</CardDescription>
-            <CardTitle className="font-mono text-2xl">{payoutsCount}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-slate-500">{s.statBlocks.payoutsCountSub}</CardContent>
         </Card>
       </div>
 
@@ -363,25 +337,27 @@ export default async function ReferralPage({
         </CardContent>
       </Card>
 
-      {/* F-5b-X: per-invitee progress + commission breakdown */}
-      <Card>
-        <CardContent className="py-6">
-          <InviteesList
-            invitees={invitees?.invitees ?? []}
-            totalCommissionUsdt={invitees?.total_commission_l1_usdt ?? "0"}
-            locale={locale}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Payouts table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{s.payouts.title}</CardTitle>
-          <CardDescription>{s.payouts.desc}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PayoutsTable items={payouts?.items ?? []} strings={s.payouts} />
+      {/* F-5b-X.3 — invitees + payouts now live on /referral/invitees
+          ("邀請清單" menu item). This page focuses on settings (your
+          code + bind a referrer); the new page focuses on results. */}
+      <Card className="bg-cream-warm/40 dark:bg-slate-900/40">
+        <CardContent className="flex flex-col gap-2 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-rose-500" />
+            <span>{s.inviteeListCta.label}</span>
+            {(invitees?.invitees.length ?? 0) > 0 ? (
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                {invitees?.invitees.length}
+              </span>
+            ) : null}
+          </div>
+          <Link
+            href={`/${locale}/referral/invitees`}
+            className="inline-flex items-center gap-1 text-sm font-medium text-rose-700 hover:text-rose-900 dark:text-rose-300 dark:hover:text-rose-100"
+          >
+            {s.inviteeListCta.cta}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </CardContent>
       </Card>
     </div>

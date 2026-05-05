@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Trophy,
   UserCog,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -85,6 +86,7 @@ export function UserChrome({
       labelKey: "navSectionCommunity",
       items: [
         { href: `/${locale}/referral`, i18nKey: "referral", Icon: Gift },
+        { href: `/${locale}/referral/invitees`, i18nKey: "inviteeList", Icon: Users },
         { href: `/${locale}/guide`, i18nKey: "guide", Icon: BookOpen },
       ],
     },
