@@ -60,6 +60,14 @@ const config: Config = {
         slate: {
           ink: "#0F172A",
         },
+        // Cyberpunk accent palette — used sparingly for glow effects on
+        // dashboard data displays. See `cyber-glow-*` + `cyber-grid`
+        // utilities in globals.css. Dark mode only.
+        neon: {
+          cyan: "#00F0FF",
+          magenta: "#FF2BD6",
+          lime: "#39FF14",
+        },
       },
       backgroundImage: {
         "brand-gradient":

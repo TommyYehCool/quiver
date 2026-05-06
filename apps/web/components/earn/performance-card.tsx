@@ -267,7 +267,7 @@ export function PerformanceCard({
           : s.pills.equal;
 
   return (
-    <Card>
+    <Card className="cyber-grid">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Sparkles className="h-4 w-4 text-emerald-600" />
@@ -290,7 +290,7 @@ export function PerformanceCard({
           </div>
           <div className="flex items-baseline justify-between gap-3">
             <div>
-              <div className="font-mono text-3xl font-bold tabular-nums">
+              <div className="cyber-glow-cyan font-mono text-3xl font-bold tabular-nums dark:text-cyan-100">
                 {fmtPct(perf.weighted_avg_apr_pct, 2)}
                 <span className="ml-0.5 text-base font-normal text-slate-400">%</span>
               </div>
@@ -324,7 +324,7 @@ export function PerformanceCard({
               </div>
               <StatusPill tone="emerald" label={s.pills.realized30d} />
             </div>
-            <div className="font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+            <div className="cyber-glow-cyan font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
               {perf.realized_apr_30d_pct !== null
                 ? `${fmtPct(perf.realized_apr_30d_pct, 2)}%`
                 : "—"}
@@ -346,7 +346,7 @@ export function PerformanceCard({
               </div>
               <StatusPill tone="emerald" label={s.pills.realized7d} />
             </div>
-            <div className="font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+            <div className="cyber-glow-cyan font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
               {perf.realized_apr_7d_pct !== null
                 ? `${fmtPct(perf.realized_apr_7d_pct, 2)}%`
                 : "—"}
@@ -441,8 +441,8 @@ function Kpi({
 }) {
   const valueClass = cn(
     "font-mono text-lg font-semibold tabular-nums",
-    tone === "emerald" && "text-emerald-600 dark:text-emerald-400",
-    tone === "amber" && "text-amber-600 dark:text-amber-400",
+    tone === "emerald" && "cyber-glow-cyan text-emerald-600 dark:text-emerald-400",
+    tone === "amber" && "cyber-glow-magenta text-amber-600 dark:text-amber-400",
     tone === "slate" && "text-slate-700 dark:text-slate-200",
   );
   return (

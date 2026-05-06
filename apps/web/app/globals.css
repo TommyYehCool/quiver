@@ -26,4 +26,45 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /*
+   * ─────────────────────────────────────────────────
+   * Cyberpunk subtle utilities (dark mode only)
+   * Used to add HUD/neon flavor to data displays
+   * without breaking the macaron pastel identity.
+   * ─────────────────────────────────────────────────
+   */
+
+  /* Subtle neon glow on big numbers — only kicks in on dark mode */
+  .dark .cyber-glow-cyan {
+    text-shadow:
+      0 0 12px rgba(0, 240, 255, 0.45),
+      0 0 28px rgba(0, 240, 255, 0.18);
+  }
+  .dark .cyber-glow-magenta {
+    text-shadow:
+      0 0 12px rgba(255, 43, 214, 0.4),
+      0 0 28px rgba(255, 43, 214, 0.15);
+  }
+  .dark .cyber-glow-lime {
+    text-shadow:
+      0 0 12px rgba(57, 255, 20, 0.4),
+      0 0 26px rgba(57, 255, 20, 0.12);
+  }
+
+  /* Faint grid overlay — gives a HUD/Iron-Man feel without being noisy.
+   * Apply to a Card to get the cyberpunk dashboard vibe. */
+  .dark .cyber-grid {
+    background-image:
+      linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+
+  /* Subtle inner + outer cyan edge glow — for "active" / "data" cards */
+  .dark .cyber-edge-cyan {
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 240, 255, 0.18),
+      0 0 18px rgba(0, 240, 255, 0.08);
+  }
 }
