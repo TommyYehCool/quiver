@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/card";
 import type { EarnPerformanceOut } from "@/lib/api/earn-user";
 import { cn } from "@/lib/utils";
-import { StatusPill, accentBarClass, type PillTone } from "@/components/earn/status-pill";
+import { StatusPill, accentBarClass, cardToneClass, type PillTone } from "@/components/earn/status-pill";
 
 type Locale = "zh-TW" | "en" | "ja";
 
@@ -278,8 +278,9 @@ export function PerformanceCard({
       <CardContent className="space-y-4">
         {/* Headline: weighted APR + delta vs FRR */}
         <div className={cn(
-          "rounded-lg border border-cream-edge bg-cream-warm/50 p-4 dark:border-slate-700 dark:bg-slate-900/40",
+          "rounded-lg border bg-cream-warm/50 p-4 dark:bg-slate-900/40",
           accentBarClass(headlinePillTone),
+          cardToneClass(headlinePillTone),
         )}>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -313,8 +314,9 @@ export function PerformanceCard({
             currently posted", realized = "what actually settled". */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className={cn(
-            "rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20",
+            "rounded-lg border bg-emerald-50/40 p-3 dark:bg-emerald-950/20",
             accentBarClass("emerald"),
+            cardToneClass("emerald"),
           )}>
             <div className="mb-1 flex items-center justify-between gap-2">
               <div className="text-xs text-slate-600 dark:text-slate-400">
@@ -334,8 +336,9 @@ export function PerformanceCard({
             ) : null}
           </div>
           <div className={cn(
-            "rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20",
+            "rounded-lg border bg-emerald-50/40 p-3 dark:bg-emerald-950/20",
             accentBarClass("emerald"),
+            cardToneClass("emerald"),
           )}>
             <div className="mb-1 flex items-center justify-between gap-2">
               <div className="text-xs text-slate-600 dark:text-slate-400">
@@ -444,8 +447,9 @@ function Kpi({
   );
   return (
     <div className={cn(
-      "rounded-lg border border-cream-edge bg-paper p-3 dark:border-slate-700 dark:bg-slate-900/30",
+      "rounded-lg border bg-paper p-3 dark:bg-slate-900/30",
       accentBarClass(tone as PillTone),
+      cardToneClass(tone as PillTone),
     )}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1 text-[11px] uppercase tracking-wide text-slate-500">

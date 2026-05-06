@@ -28,7 +28,8 @@ import { ActiveCreditRow } from "@/components/earn/active-credit-row";
 import { BufferEmptyBanner } from "@/components/earn/buffer-empty-banner";
 import { FeeStatusCard } from "@/components/earn/fee-status-card";
 import { PendingOfferRow } from "@/components/earn/pending-offer-row";
-import { StatusPill, accentBarClass, type PillTone } from "@/components/earn/status-pill";
+import { StatusPill, accentBarClass, cardToneClass, type PillTone } from "@/components/earn/status-pill";
+import { cn } from "@/lib/utils";
 import { PerformanceCard } from "@/components/earn/performance-card";
 import { PublicStatsStrip } from "@/components/earn/public-stats-strip";
 // F-5a-3.10.3 — StrategyPreviewCard moved to its own page at /earn/strategy-lab.
@@ -441,7 +442,7 @@ export default async function EarnPage({
               sub={s.bigNumbers.funding.sub}
               usdt={earn.funding_idle_usdt}
               usd={earn.funding_idle_usd}
-              pillTone="amber"
+              pillTone="red"
               pillLabel={s.bigNumbers.funding.pill}
             />
             <DualCurrencyCard
@@ -727,7 +728,7 @@ function DualCurrencyCard({
           ? "text-red-700/70 dark:text-red-400/70"
           : "text-slate-500";
   return (
-    <Card className={accentBarClass(pillTone)}>
+    <Card className={cn(accentBarClass(pillTone), cardToneClass(pillTone))}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardDescription>{label}</CardDescription>
