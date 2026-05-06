@@ -28,7 +28,7 @@ import { ActiveCreditRow } from "@/components/earn/active-credit-row";
 import { BufferEmptyBanner } from "@/components/earn/buffer-empty-banner";
 import { FeeStatusCard } from "@/components/earn/fee-status-card";
 import { PendingOfferRow } from "@/components/earn/pending-offer-row";
-import { StatusPill, accentBarClass, cardToneClass, type PillTone } from "@/components/earn/status-pill";
+import { StatusPill, accentBarClass, cardToneClass, cyberCardClass, type PillTone } from "@/components/earn/status-pill";
 import { cn } from "@/lib/utils";
 import { PerformanceCard } from "@/components/earn/performance-card";
 import { PublicStatsStrip } from "@/components/earn/public-stats-strip";
@@ -114,9 +114,9 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       viewGuide: "查看完整教學",
     },
     bigNumbers: {
-      lent: { label: "已借出 (賺息中)", sub: "由 margin trader 接走,每日結算", pill: "賺息中" },
-      pending: { label: "掛單中 (Pending)", sub: "已提交 offer,等借方撮合", pill: "撮合中" },
-      funding: { label: "等待掛單 (Funding idle)", sub: "Bitfinex Funding wallet 待掛 offer", pill: "等待中" },
+      lent: { label: "已借出", sub: "由 margin trader 接走,每日結算", pill: "賺息中" },
+      pending: { label: "掛單中", sub: "已提交 offer,等借方撮合", pill: "撮合中" },
+      funding: { label: "等待掛單", sub: "Bitfinex Funding wallet 待掛 offer", pill: "等待中" },
       earned: { label: "當日預估收益", sub: "最新 snapshot 估算（非已入帳）", pill: "今日" },
     },
     activeLoans: {
@@ -728,7 +728,7 @@ function DualCurrencyCard({
           ? "text-red-700/70 dark:text-red-400/70"
           : "text-slate-500";
   return (
-    <Card className={cn(accentBarClass(pillTone), cardToneClass(pillTone))}>
+    <Card className={cn(accentBarClass(pillTone), cardToneClass(pillTone), cyberCardClass(pillTone))}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardDescription>{label}</CardDescription>

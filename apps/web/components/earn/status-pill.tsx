@@ -81,3 +81,15 @@ export function accentBarClass(tone: PillTone): string {
 export function cardToneClass(tone: PillTone): string {
   return CARD_TONE_CLASS[tone];
 }
+
+/**
+ * Returns the cyberpunk card classes (always-on neon glow + L-shaped corner
+ * brackets, dark mode only). Light mode: no effect — preserves macaron look.
+ *
+ * Defined in globals.css under `.dark .cyber-card[--tone]`.
+ */
+export function cyberCardClass(tone: PillTone): string {
+  // slate has no neon glow — keep it neutral
+  if (tone === "slate") return "";
+  return `cyber-card cyber-card--${tone}`;
+}

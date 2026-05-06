@@ -267,7 +267,7 @@ export function PerformanceCard({
           : s.pills.equal;
 
   return (
-    <Card className="cyber-grid">
+    <Card className="cyber-card cyber-grid">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Sparkles className="h-4 w-4 text-emerald-600" />
