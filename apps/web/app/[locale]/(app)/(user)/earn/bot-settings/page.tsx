@@ -62,15 +62,15 @@ const STRINGS: Record<Locale, {
   "zh-TW": {
     back: "回 Earn",
     title: "放貸機器人設定",
-    subtitle: "Bitfinex API key、Funding 入金地址、auto-lend 開關 — 都在這。連接後可隨時更新或撤銷。",
+    subtitle: "Bitfinex API key、Funding 入金地址、auto-lend 開關,都在這。\n連接後可隨時更新或撤銷。",
     connected: {
       statusTitle: "已連接 Bitfinex",
       statusDesc: "Quiver 正在用這支 key 自動放貸。要撤銷的話到 Bitfinex 點 Revoke 那支 key 即可。",
       fundingAddrLabel: "Funding 入金地址",
       autoLendTitle: "Auto-lend 自動放貸",
-      autoLendDesc: "ON:每筆新存進 Quiver 的 USDT 自動送到你 Bitfinex 並掛 offer。OFF:新 deposit 不進入 Bitfinex(已借出的部位不受影響,自然到期回 funding wallet)。",
+      autoLendDesc: "ON:每筆新存進 Quiver 的 USDT 自動送到你 Bitfinex 並轉換成 USD 並且掛單。\nOFF:新 deposit 不進入 Bitfinex(已借出的部位不受影響,自然到期回 funding wallet)。",
       strategyTitle: "策略類型",
-      strategyDesc: "選擇放貸風格 — 影響 Quiver 怎麼切分階梯掛單與選擇鎖定天數。隨時可換,下一次新存入或自動續借時生效。",
+      strategyDesc: "選擇放貸風格:影響 Quiver 怎麼切分階梯掛單與選擇鎖定天數。\n隨時可換,下一次新存入或自動續借時生效。",
       updateKeyTitle: "更新 API key",
       updateKeyDesc: "key 過期或想換一支?重新填表單覆寫即可。舊 key 會自動 revoke。",
     },
@@ -107,15 +107,15 @@ const STRINGS: Record<Locale, {
   en: {
     back: "Back to Earn",
     title: "Lending bot settings",
-    subtitle: "Your Bitfinex API key, Funding deposit address, and auto-lend toggle — all here. Update or revoke any time after connecting.",
+    subtitle: "Your Bitfinex API key, Funding deposit address, and auto-lend toggle — all here.\nUpdate or revoke any time after connecting.",
     connected: {
       statusTitle: "Connected to Bitfinex",
       statusDesc: "Quiver is auto-lending with this key. To revoke, head to Bitfinex and click Revoke on the key.",
       fundingAddrLabel: "Funding deposit address",
       autoLendTitle: "Auto-lend",
-      autoLendDesc: "ON: every new USDT deposit to Quiver is auto-sent to your Bitfinex and offered out. OFF: new deposits stay in Quiver (existing lent positions are unaffected and roll off naturally on offer expiry).",
+      autoLendDesc: "ON: every new USDT deposit to Quiver is auto-sent to your Bitfinex, converted to USD, and posted as a funding offer.\nOFF: new deposits stay in Quiver (existing lent positions are unaffected and roll off naturally on offer expiry).",
       strategyTitle: "Strategy preset",
-      strategyDesc: "Pick a lending style — controls how Quiver splits the ladder and selects the offer period. Switch any time; takes effect on the next deposit or auto-renew cycle.",
+      strategyDesc: "Pick a lending style: controls how Quiver splits the ladder and selects the offer period.\nSwitch any time; takes effect on the next deposit or auto-renew cycle.",
       updateKeyTitle: "Update API key",
       updateKeyDesc: "Key expired or want to rotate? Just fill the form again — the old key is automatically revoked.",
     },
@@ -152,15 +152,15 @@ const STRINGS: Record<Locale, {
   ja: {
     back: "Earn に戻る",
     title: "貸付ボット設定",
-    subtitle: "Bitfinex API キー、Funding 入金アドレス、auto-lend トグル — すべてここに。接続後はいつでも更新・取消可能。",
+    subtitle: "Bitfinex API キー、Funding 入金アドレス、auto-lend トグル、すべてここに。\n接続後はいつでも更新・取消可能。",
     connected: {
       statusTitle: "Bitfinex 接続済み",
       statusDesc: "Quiver はこのキーで自動貸付を実行中。取り消すには Bitfinex でこのキーを Revoke してください。",
       fundingAddrLabel: "Funding 入金アドレス",
       autoLendTitle: "Auto-lend 自動貸付",
-      autoLendDesc: "ON:Quiver への新規 USDT 入金は自動で Bitfinex に送られ offer が出ます。OFF:新規入金は Quiver に留まり、Bitfinex には送られません(既存の貸出ポジションは影響を受けず、満期時に funding wallet に自然に戻ります)。",
+      autoLendDesc: "ON:Quiver への新規 USDT 入金は自動で Bitfinex に送られ、USD に変換されて offer が出ます。\nOFF:新規入金は Bitfinex に送られず Quiver に留まります(既存の貸出ポジションは影響を受けず、満期時に funding wallet に自然に戻ります)。",
       strategyTitle: "戦略プリセット",
-      strategyDesc: "貸付スタイルを選択 — Quiver がどうラダーを分割し、オファー期間をどう選ぶかを制御します。いつでも変更可能 — 次の入金または自動更新から反映されます。",
+      strategyDesc: "貸付スタイルを選択:Quiver がラダーをどう分割し、ロック期間をどう選ぶかを制御します。\nいつでも変更可能、次の入金または自動更新から反映されます。",
       updateKeyTitle: "API キーを更新",
       updateKeyDesc: "キーが期限切れ?ローテーションしたい?フォームを再入力するだけで、古いキーは自動的に revoke されます。",
     },
@@ -235,7 +235,7 @@ export default async function EarnConnectPage({
 
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">{s.title}</h1>
-        <p className="mt-1 text-sm text-slate-500">{s.subtitle}</p>
+        <p className="mt-1 whitespace-pre-line text-sm text-slate-500">{s.subtitle}</p>
       </div>
 
       {/* Two-column layout on desktop: settings/form on left, perms diagram
@@ -303,7 +303,9 @@ export default async function EarnConnectPage({
                 <CardHeader className="flex-row items-start justify-between gap-4">
                   <div className="flex-1">
                     <CardTitle className="text-base">{s.connected.autoLendTitle}</CardTitle>
-                    <CardDescription>{s.connected.autoLendDesc}</CardDescription>
+                    <CardDescription className="whitespace-pre-line">
+                      {s.connected.autoLendDesc}
+                    </CardDescription>
                   </div>
                   <AutoLendToggle initial={earn.auto_lend_enabled} />
                 </CardHeader>
@@ -335,7 +337,9 @@ export default async function EarnConnectPage({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">{s.connected.strategyTitle}</CardTitle>
-                  <CardDescription>{s.connected.strategyDesc}</CardDescription>
+                  <CardDescription className="whitespace-pre-line">
+                    {s.connected.strategyDesc}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <StrategyPresetCard
