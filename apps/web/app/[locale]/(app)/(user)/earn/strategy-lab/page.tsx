@@ -40,7 +40,7 @@ const STRINGS: Record<Locale, {
     goSetup: "前往設定",
     about: {
       title: "這個頁面在做什麼？",
-      body: "智慧選擇器會在 auto-lend 觸發時，根據即時市場信號(各期間中位數利率 + 30 分鐘成交量 + FRR)自動算出最佳的 (利率, 期間, 金額) 組合，而不是用單一固定的 FRR 利率掛單。\n這個頁面是它的 dry-run 預覽，你可以改金額，\n看它在當下會怎麼決定。沒有任何實際下單行為。",
+      body: "智慧選擇器會在 auto-lend 觸發時，根據即時市場信號(各期間中位數利率 + 30 分鐘成交量 + FRR)，\n自動算出最佳的 (利率, 期間, 金額) 組合，而不是用單一固定的 FRR 利率掛單。\n這個頁面是它的 dry-run 預覽，你可以改金額，\n看它在當下會怎麼決定。沒有任何實際下單行為。",
     },
   },
   en: {
@@ -130,7 +130,7 @@ export default async function StrategyLabPage({
             <CardHeader>
               <CardTitle className="text-base">{s.about.title}</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-slate-600 dark:text-slate-400">
+            <CardContent className="whitespace-pre-line text-sm text-slate-600 dark:text-slate-400">
               {s.about.body}
             </CardContent>
           </Card>

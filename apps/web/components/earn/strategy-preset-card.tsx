@@ -29,13 +29,13 @@ const STRINGS: Record<
   "zh-TW": {
     title: "策略類型",
     subtitle:
-      "選一個風險偏好,Quiver 會用對應的方式切分階梯掛單、選擇鎖定天數。隨時可換,下一次新存入或自動續借就會生效。",
+      "選一個風險偏好，Quiver 會用對應的方式切分階梯掛單、選擇鎖定天數。\n隨時可換，下一次新存入或自動續借就會生效。",
     saved: "已儲存",
     failed: "儲存失敗",
     presets: {
       conservative: {
         label: "保守",
-        blurb: "8 成資金壓在最快成交的基礎利率,鎖定天數最長 7 天 — 適合想隨時取回的人。",
+        blurb: "8 成資金壓在最快成交的基礎利率，鎖定天數最長 7 天。\n適合想隨時取回的人。",
         bullets: [
           "階梯配置:80% 基礎 / 15% 小幅飆漲 / 5% 中度飆漲",
           "鎖定天數:最長 7 天(高利率也不長鎖)",
@@ -44,7 +44,7 @@ const STRINGS: Record<
       },
       balanced: {
         label: "平衡",
-        blurb: "Quiver 預設策略 — 6 成基礎成交快、3.4 成等待利率飆漲,鎖定 2 / 7 / 14 / 30 天分層。",
+        blurb: "Quiver 預設策略：\n6 成基礎成交快，3.4 成等待利率飆漲，鎖定 2 / 7 / 14 / 30 天分層。",
         bullets: [
           "階梯配置:60 / 20 / 10 / 7 / 3(五階)",
           "鎖定天數:2 / 7 / 14 / 30 天動態切換",
@@ -53,7 +53,7 @@ const STRINGS: Record<
       },
       aggressive: {
         label: "進取",
-        blurb: "更多資金壓在中高利率階段,極端飆漲鎖到 60 天 — 想極大化波動利潤的人。",
+        blurb: "更多資金壓在中高利率階段，極端飆漲鎖到 60 天。\n想極大化波動利潤的人。",
         bullets: [
           "階梯配置:40 / 25 / 15 / 12 / 8(重押飆漲)",
           "鎖定天數:最長 60 天(年化 20%+ 時鎖長)",
@@ -227,7 +227,7 @@ export function StrategyPresetCard({
                   <Loader2 className="ml-auto h-4 w-4 flex-none animate-spin text-slate-400" />
                 ) : null}
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <p className="whitespace-pre-line text-xs text-slate-600 dark:text-slate-400">
                 {copy.blurb}
               </p>
               <ul className="mt-1 space-y-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-500">

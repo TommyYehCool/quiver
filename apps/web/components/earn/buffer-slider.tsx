@@ -39,7 +39,7 @@ interface SliderStrings {
 const STRINGS: Record<Locale, SliderStrings> = {
   "zh-TW": {
     title: "保留不借出金額",
-    desc: "新存入的 USDT 之中,有多少比例留在 Quiver 錢包(隨時可提現)、其他自動送到 Bitfinex 借出賺息。",
+    desc: "新存入的 USDT 之中，有多少比例留在 Quiver 錢包(隨時可提現)，其他自動送到 Bitfinex 借出賺息。",
     hint: (pct) =>
       pct === 0
         ? "全部送 Bitfinex 借出 → 最高收益,但贖回要等 active credits 到期"
