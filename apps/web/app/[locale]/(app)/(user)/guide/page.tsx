@@ -47,14 +47,14 @@ const STRINGS: Record<Locale, Strings> = {
       lending: {
         step: "①",
         title: "何謂 Bitfinex 放貸？",
-        desc: "用最白話解釋：你借 USDT 給想做槓桿的交易者，他們付你利息。為什麼比銀行定存高、為什麼比 DeFi 安全。",
+        desc: "用最白話解釋：你借 USDT 給想做槓桿的交易者，他們付你利息。\n為什麼比銀行定存高、為什麼比 DeFi 安全。",
         cta: "看介紹",
         duration: "約 4 分鐘",
       },
       signup: {
         step: "②",
         title: "如何註冊 Bitfinex？",
-        desc: "Email 註冊 → 完成 KYC → 開啟 2FA。沒有 Bitfinex 帳號的話，先做這個。",
+        desc: "Email 註冊 → 完成 KYC → 開啟 2FA。\n沒有 Bitfinex 帳號的話，先做這個。",
         cta: "看註冊步驟",
         duration: "約 5 分鐘(KYC 審核另計)",
       },
@@ -68,7 +68,7 @@ const STRINGS: Record<Locale, Strings> = {
       strategy: {
         step: "④",
         title: "策略類型 + 階梯掛單完整說明",
-        desc: "保守 / 平衡 / 進取 真正的差別、階梯掛單怎麼把資金切成 5 階等待利率飆漲，為什麼小額看不到策略效果。實際數字 + 常見問答。",
+        desc: "保守 / 平衡 / 進取 真正的差別，階梯掛單怎麼把資金切成 5 階等待利率飆漲，為什麼小額看不到策略效果。\n實際數字 + 常見問答。",
         cta: "看策略拆解",
         duration: "約 7 分鐘",
       },

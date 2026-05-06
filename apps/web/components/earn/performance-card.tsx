@@ -50,7 +50,7 @@ interface PerfStrings {
 const STRINGS: Record<Locale, PerfStrings> = {
   "zh-TW": {
     title: "策略表現",
-    subtitle: "你的階梯掛單真的賺到錢的證據 — 對照 Bitfinex 浮動利率(FRR),看 Quiver 多賺了多少。",
+    subtitle: "你的階梯掛單真的賺到錢的證據對照。\nBitfinex 浮動利率(FRR)，看 Quiver 多賺了多少。",
     weightedAprLabel: "加權平均年化",
     vsFrrAbove: (delta) => `比浮動利率高 +${delta}%`,
     vsFrrBelow: (delta) => `比浮動利率低 ${delta}%`,
@@ -68,11 +68,11 @@ const STRINGS: Record<Locale, PerfStrings> = {
     trendLabel: "30 天日利息走勢",
     trendEmpty: "等待第一筆每日資料(每天 03:00 排程產生)",
     noDataYet:
-      "你的部位剛建立,Quiver 還在收第一批資料。掛單後 1-2 天會看到第一筆每日結算,再過 7-10 天走勢圖才有意思。",
+      "你的部位剛建立，Quiver 還在收第一批資料。\n掛單後 1-2 天會看到第一筆每日結算，再過 7-10 天走勢圖才有意思。",
     realized30dLabel: "已實現年化(30 天)",
     realized7dLabel: "已實現年化(7 天)",
     realizedNotReady: "資料天數不足",
-    realizedHint: "回看實際成交利率(已扣 Bitfinex 手續費),抓到 spike 時這個數字會跳很高",
+    realizedHint: "回看實際成交利率(已扣 Bitfinex 手續費)，抓到 spike 時這個數字會跳很高",
   },
   en: {
     title: "Strategy performance",
@@ -177,7 +177,7 @@ export function PerformanceCard({
             <Sparkles className="h-4 w-4 text-emerald-600" />
             {s.title}
           </CardTitle>
-          <CardDescription>{s.noDataYet}</CardDescription>
+          <CardDescription className="whitespace-pre-line">{s.noDataYet}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -210,7 +210,7 @@ export function PerformanceCard({
           <Sparkles className="h-4 w-4 text-emerald-600" />
           {s.title}
         </CardTitle>
-        <CardDescription>{s.subtitle}</CardDescription>
+        <CardDescription className="whitespace-pre-line">{s.subtitle}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Headline: weighted APR + delta vs FRR */}

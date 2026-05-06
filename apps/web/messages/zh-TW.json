@@ -207,7 +207,7 @@
     },
     "walletCard": {
       "title": "錢包操作",
-      "desc": "收款、轉帳、提領 — 點任一選項進入錢包頁。",
+      "desc": "收款、轉帳、提領，點任一選項進入錢包頁。",
       "receive": "收款",
       "send": "轉帳",
       "withdraw": "提領"
@@ -378,13 +378,13 @@
   },
   "wallet": {
     "pageTitle": "錢包",
-    "pageDesc": "收款、轉帳、提領 — 切換上方分頁進行對應操作。",
+    "pageDesc": "收款、轉帳、提領，切換上方分頁進行對應操作。",
     "tabsLabel": "錢包功能分頁",
     "tabReceive": "收款",
     "tabSend": "轉帳",
     "tabWithdraw": "提領",
     "title": "我的收款地址",
-    "desc": "把這個地址或 QR 給對方,USDT 會直接收到你的 Quiver 帳戶。",
+    "desc": "把這個地址或 QR 給對方，USDT 會直接收到你的 Quiver 帳戶。",
     "addressLabel": "收款地址 (TRON Network)",
     "copy": "複製地址",
     "copied": "已複製",

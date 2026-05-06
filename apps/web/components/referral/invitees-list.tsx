@@ -80,7 +80,7 @@ const SECTION_STRINGS: Record<Locale, {
 }> = {
   "zh-TW": {
     title: "你邀請的用戶",
-    desc: "已被你邀請的用戶,以及他們的進度與你從他們身上獲得的分潤(L1 直邀)。Email 部分遮蔽以保護被邀請人隱私。",
+    desc: "已被你邀請的用戶，以及他們的進度與你從他們身上獲得的分潤(L1 直邀)。\nEmail 部分遮蔽以保護被邀請人隱私。",
     empty: "你還沒有邀請任何人。把你的推薦碼或分享連結傳給朋友,他們完成註冊後會自動出現在這裡。",
     totalCommission: (n) => `累計 L1 分潤:$${n} USDT`,
     ineligibleNote: "Friend / Premium 等級用戶不會產生分潤(他們本來就 0% 績效費)",
@@ -183,7 +183,7 @@ export function InviteesList({
     return (
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">{s.title}</h2>
-        <p className="text-sm text-slate-500">{s.desc}</p>
+        <p className="whitespace-pre-line text-sm text-slate-500">{s.desc}</p>
         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
           {s.empty}
         </div>
@@ -196,7 +196,7 @@ export function InviteesList({
     <div className="space-y-3">
       <div>
         <h2 className="text-lg font-semibold">{s.title}</h2>
-        <p className="text-sm text-slate-500">{s.desc}</p>
+        <p className="whitespace-pre-line text-sm text-slate-500">{s.desc}</p>
       </div>
 
       {totalNum > 0 ? (

@@ -74,7 +74,7 @@ const STRINGS: Record<Locale, FeeStrings> = {
     subtitlePublic: (pct) =>
       `從你的利息收入抽 ${pct}% 績效費。Quiver 沒有 Bitfinex 提現權限,所以 fee 從你的 Quiver wallet 餘額扣 — Quiver wallet 留 buffer 才不會延遲扣款。`,
     subtitleFriend:
-      "你在 Friend 等級 — 不收績效費。下面紀錄留空是正常的。謝謝你早期支持 🙇",
+      "你在 Friend 等級，不收績效費。\n下面紀錄留空是正常的。謝謝你早期支持 🙇",
     subtitlePremium:
       "你訂閱了 Premium — 0% 績效費,本期不算 accrual。下方僅供查看歷史。",
     exemptFriendBadge: "Friend · 0% 永久免費",
@@ -278,7 +278,7 @@ export function FeeStatusCard({
                 {s.exemptFriendBadge}
               </span>
             </CardTitle>
-            <CardDescription>{s.subtitleFriend}</CardDescription>
+            <CardDescription className="whitespace-pre-line">{s.subtitleFriend}</CardDescription>
           </div>
         </CardHeader>
       </Card>

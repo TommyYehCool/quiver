@@ -71,7 +71,7 @@ interface CardStrings {
 const STRINGS: Record<Locale, CardStrings> = {
   "zh-TW": {
     title: "策略預覽",
-    desc: "F-5a-3.10 智慧選擇器:依即時市場信號決定 (利率, 期間, 金額) 組合。可改 preset / 金額試算。",
+    desc: "智慧選擇器：依即時市場信號決定 (利率, 期間, 金額) 組合。\n可改金額試算。",
     loading: "計算中...",
     refresh: "重新整理",
     errorPrefix: "失敗:",
@@ -296,7 +296,7 @@ export function StrategyPreviewCard({ initialPreset }: { initialPreset: string }
                 </span>
               )}
             </CardTitle>
-            <CardDescription>{s.desc}</CardDescription>
+            <CardDescription className="whitespace-pre-line">{s.desc}</CardDescription>
           </div>
           <Button
             type="button"
