@@ -51,36 +51,42 @@ function fmtMinutes(m: number | null): string {
  * silently drop new events when funnel.py adds them — admin sees the
  * raw code as a hint to add a label here.
  */
-const EVENT_LABEL_ZH: Record<string, string> = {
+const EVENT_LABELS: Record<string, { "zh-TW": string; en: string; ja: string }> = {
   // Onboarding
-  signup_completed: "註冊完成",
-  tos_accepted: "同意服務條款",
+  signup_completed: { "zh-TW": "註冊完成", en: "Signup completed", ja: "登録完了" },
+  tos_accepted: { "zh-TW": "同意服務條款", en: "Accepted ToS", ja: "利用規約に同意" },
   // KYC
-  kyc_form_opened: "打開 KYC 頁",
-  kyc_submitted: "送出 KYC",
-  kyc_approved: "KYC 通過",
-  kyc_rejected: "KYC 退回",
+  kyc_form_opened: { "zh-TW": "打開 KYC 頁", en: "Opened KYC", ja: "KYC を開いた" },
+  kyc_submitted: { "zh-TW": "送出 KYC", en: "Submitted KYC", ja: "KYC を提出" },
+  kyc_approved: { "zh-TW": "KYC 通過", en: "KYC approved", ja: "KYC 承認" },
+  kyc_rejected: { "zh-TW": "KYC 退回", en: "KYC rejected", ja: "KYC 却下" },
   // Earn / Bitfinex setup
-  bot_settings_opened: "打開放貸機器人設定",
-  bitfinex_connect_attempted: "嘗試連接 Bitfinex",
-  bitfinex_connect_failed: "Bitfinex 連接失敗",
-  bitfinex_connect_succeeded: "Bitfinex 連接成功",
+  bot_settings_opened: { "zh-TW": "打開放貸機器人設定", en: "Opened bot settings", ja: "ボット設定を開いた" },
+  bitfinex_connect_attempted: { "zh-TW": "嘗試連接 Bitfinex", en: "Tried Bitfinex connect", ja: "Bitfinex 接続を試行" },
+  bitfinex_connect_failed: { "zh-TW": "Bitfinex 連接失敗", en: "Bitfinex connect failed", ja: "Bitfinex 接続失敗" },
+  bitfinex_connect_succeeded: { "zh-TW": "Bitfinex 連接成功", en: "Connected Bitfinex", ja: "Bitfinex 接続成功" },
   // Money flow
-  first_deposit_received: "首次入金到帳",
-  first_lent_succeeded: "首次借出成功",
+  first_deposit_received: { "zh-TW": "首次入金到帳", en: "First deposit received", ja: "初回入金受取" },
+  first_lent_succeeded: { "zh-TW": "首次借出成功", en: "First lent ✨", ja: "初回貸付成功 ✨" },
   // Engagement
-  telegram_bound: "綁定 Telegram",
-  leaderboard_optin_enabled: "啟用排行榜",
-  strategy_preset_changed: "修改策略 preset",
-  auto_lend_disabled: "關閉自動放貸",
+  telegram_bound: { "zh-TW": "綁定 Telegram", en: "Bound Telegram", ja: "Telegram 連携" },
+  leaderboard_optin_enabled: { "zh-TW": "啟用排行榜", en: "Opted into leaderboard", ja: "ランキング参加" },
+  strategy_preset_changed: { "zh-TW": "修改策略 preset", en: "Changed strategy preset", ja: "戦略プリセット変更" },
+  auto_lend_disabled: { "zh-TW": "關閉自動放貸", en: "Disabled auto-lend", ja: "自動貸付を無効化" },
   // Compliance / billing
-  dunning_paused: "Quiver 暫停(欠費過久)",
-  dunning_resumed: "Quiver 自動恢復",
+  dunning_paused: { "zh-TW": "Quiver 暫停(欠費過久)", en: "Paused by Quiver (arrears)", ja: "Quiver により停止(滞納)" },
+  dunning_resumed: { "zh-TW": "Quiver 自動恢復", en: "Auto-resumed by Quiver", ja: "Quiver により自動再開" },
 };
 
-function fmtEvent(code: string | null): string {
+type FunnelLocale = "zh-TW" | "en" | "ja";
+function pickLocale(l: string): FunnelLocale {
+  if (l === "en" || l === "ja") return l;
+  return "zh-TW";
+}
+
+function fmtEvent(code: string | null, locale: FunnelLocale): string {
   if (!code) return "—";
-  return EVENT_LABEL_ZH[code] ?? code;
+  return EVENT_LABELS[code]?.[locale] ?? code;
 }
 
 function fmtDateTime(iso: string | null): string {
@@ -106,6 +112,7 @@ export default async function AdminFunnelPage({
     fetchAdminFunnelOverview(cookieHeader),
     fetchAdminFunnelUsers(cookieHeader),
   ]);
+  const loc = pickLocale(locale);
 
   if (!overview || !users) {
     return (
@@ -159,19 +166,19 @@ export default async function AdminFunnelPage({
                     : "text-slate-500";
             return (
               <div key={stage.event_name} className="space-y-0.5">
-                <div className="flex items-baseline justify-between gap-3 text-sm">
-                  <div className="flex items-baseline gap-2">
-                    <span className="w-6 font-mono text-xs text-slate-400">
+                <div className="flex items-baseline justify-between gap-2 text-sm">
+                  <div className="flex min-w-0 items-baseline gap-2">
+                    <span className="w-6 flex-none font-mono text-xs text-slate-400">
                       {i + 1}.
                     </span>
-                    <span className="font-medium">{stage.label}</span>
-                    <span className="font-mono text-xs text-slate-400">
+                    <span className="truncate font-medium">{fmtEvent(stage.event_name, loc)}</span>
+                    <span className="hidden font-mono text-xs text-slate-400 sm:inline">
                       ({stage.event_name})
                     </span>
                   </div>
-                  <div className="flex items-baseline gap-3">
+                  <div className="flex flex-none items-baseline gap-2 whitespace-nowrap sm:gap-3">
                     {stage.drop_off_pct !== null ? (
-                      <span className={cn("flex items-center gap-1 text-xs font-mono", dropTone)}>
+                      <span className={cn("flex items-center gap-1 font-mono text-xs", dropTone)}>
                         <TrendingDown className="h-3 w-3" />
                         -{stage.drop_off_pct}%
                       </span>
@@ -250,7 +257,7 @@ export default async function AdminFunnelPage({
                   </span>
                 </div>
                 <div className="mt-1.5 text-[10px] text-slate-500">
-                  最近事件:<span>{fmtEvent(u.last_event_name)}</span>
+                  最近事件:<span>{fmtEvent(u.last_event_name, loc)}</span>
                   {u.last_event_at ? (
                     <span className="ml-1 text-slate-400">@ {fmtDateTime(u.last_event_at)}</span>
                   ) : null}
@@ -304,7 +311,7 @@ export default async function AdminFunnelPage({
                       )}
                     </td>
                     <td className="py-2 px-2 text-[11px]" title={u.last_event_name ?? ""}>
-                      {fmtEvent(u.last_event_name)}
+                      {fmtEvent(u.last_event_name, loc)}
                     </td>
                     <td className="py-2 px-2 text-right font-mono text-[10px] text-slate-500">
                       {fmtDateTime(u.last_event_at)}

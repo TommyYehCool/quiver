@@ -129,8 +129,8 @@ export interface CreateEarnAccountIn {
   custody_mode: CustodyMode;
   perf_fee_bps: number;
   can_quiver_operate: boolean;
-  bitfinex_api_key: string;
-  bitfinex_api_secret: string;
+  bitfinex_api_key?: string | null;
+  bitfinex_api_secret?: string | null;
   bitfinex_permissions: BitfinexPermissions;
   evm_polygon_address?: string | null;
   evm_label?: string | null;

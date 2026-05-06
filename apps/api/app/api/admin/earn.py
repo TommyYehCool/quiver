@@ -259,8 +259,14 @@ async def create_earn_account(
         notes=payload.notes,
     )
 
-    # 5. 加密 + 寫 Bitfinex 連線
-    if payload.custody_mode == CustodyMode.SELF.value:
+    # 5. 加密 + 寫 Bitfinex 連線(只有 admin 真的填了 key 才寫 — 通常會
+    # 留空讓 friend 自己到 /earn/bot-settings 設,他們的 key 走同一個
+    # encrypt path,結果一樣)
+    if (
+        payload.custody_mode == CustodyMode.SELF.value
+        and payload.bitfinex_api_key
+        and payload.bitfinex_api_secret
+    ):
         try:
             cipher_key, key_ver = await earn_crypto.encrypt_bitfinex_key(
                 db, plaintext=payload.bitfinex_api_key

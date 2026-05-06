@@ -41,9 +41,10 @@ class CreateEarnAccountIn(BaseModel):
 
     can_quiver_operate: bool = Field(default=False)
 
-    # Bitfinex 連線
-    bitfinex_api_key: str = Field(..., min_length=20, max_length=200)
-    bitfinex_api_secret: str = Field(..., min_length=20, max_length=200)
+    # Bitfinex 連線(可選 — admin 加 friend 時通常不填,讓 friend 自己到
+    # /earn/bot-settings 設定。如果 admin 真的要代設,留著也支援)
+    bitfinex_api_key: str | None = Field(default=None, min_length=20, max_length=200)
+    bitfinex_api_secret: str | None = Field(default=None, min_length=20, max_length=200)
     bitfinex_permissions: str = Field(default="read", pattern=r"^(read|read\+funding-write)$")
 
     # EVM 地址
@@ -57,8 +58,8 @@ class CreateEarnAccountIn(BaseModel):
 
     @field_validator("bitfinex_api_key", "bitfinex_api_secret")
     @classmethod
-    def _strip_whitespace(cls, v: str) -> str:
-        return v.strip()
+    def _strip_whitespace(cls, v: str | None) -> str | None:
+        return v.strip() if v else v
 
 
 class EarnAccountOut(BaseModel):

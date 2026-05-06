@@ -35,8 +35,6 @@ export function AddFriendButton() {
     "friend",
   );
   const [perfFeeBps, setPerfFeeBps] = React.useState(0);
-  const [bitfinexKey, setBitfinexKey] = React.useState("");
-  const [bitfinexSecret, setBitfinexSecret] = React.useState("");
   const [evmAddress, setEvmAddress] = React.useState("");
   const [evmLabel, setEvmLabel] = React.useState("");
   const [notes, setNotes] = React.useState("");
@@ -62,8 +60,6 @@ export function AddFriendButton() {
     setUserId(null);
     setEarnTier("friend");
     setPerfFeeBps(0);
-    setBitfinexKey("");
-    setBitfinexSecret("");
     setEvmAddress("");
     setEvmLabel("");
     setNotes("");
@@ -74,10 +70,6 @@ export function AddFriendButton() {
   async function submit() {
     if (!userId) {
       setErr("請選擇 user");
-      return;
-    }
-    if (bitfinexKey.length < 20 || bitfinexSecret.length < 20) {
-      setErr("Bitfinex key 跟 secret 都要滿 20 字元");
       return;
     }
     if (evmAddress && !/^0x[0-9a-fA-F]{40}$/.test(evmAddress)) {
@@ -93,8 +85,6 @@ export function AddFriendButton() {
         custody_mode: "self",
         perf_fee_bps: perfFeeBps,
         can_quiver_operate: false,
-        bitfinex_api_key: bitfinexKey.trim(),
-        bitfinex_api_secret: bitfinexSecret.trim(),
         bitfinex_permissions: "read",
         evm_polygon_address: evmAddress.trim() || null,
         evm_label: evmLabel.trim() || null,
@@ -133,7 +123,7 @@ export function AddFriendButton() {
           <div className="w-full max-w-lg rounded-2xl border border-cream-edge bg-paper p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
             <h2 className="text-lg font-semibold">新增 Earn 帳戶</h2>
             <p className="mt-1 text-xs text-slate-500">
-              朋友自己保管資金、自己的 Bitfinex 帳戶。Quiver 只是 read-only 監控工具。
+朋友自己保管資金、自己的 Bitfinex 帳戶。建立後朋友自己到 /earn/bot-settings 連接 Bitfinex。
             </p>
 
             {done ? (
@@ -142,7 +132,7 @@ export function AddFriendButton() {
                   <CheckCircle2 className="h-4 w-4" /> 新增成功
                 </p>
                 <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
-                  接著可以從列表進入詳情、手動「同步」一次驗證 API key 是否能讀。
+請朋友登入後到 /earn/bot-settings 連接他自己的 Bitfinex。在那之前 Bitfinex 相關功能會停用。
                 </p>
                 <Button onClick={close} className="mt-3 w-full">
                   關閉
@@ -209,30 +199,11 @@ export function AddFriendButton() {
                     </p>
                   </div>
 
-                  <div>
-                    <Label htmlFor="bx-key">Bitfinex API Key</Label>
-                    <Input
-                      id="bx-key"
-                      type="password"
-                      value={bitfinexKey}
-                      onChange={(e) => setBitfinexKey(e.target.value)}
-                      placeholder="t-... (長 ~43 字元)"
-                      autoComplete="off"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="bx-secret">Bitfinex API Secret</Label>
-                    <Input
-                      id="bx-secret"
-                      type="password"
-                      value={bitfinexSecret}
-                      onChange={(e) => setBitfinexSecret(e.target.value)}
-                      placeholder="(長 ~43 字元)"
-                      autoComplete="off"
-                    />
-                    <p className="mt-1 text-xs text-slate-500">
-                      key 跟 secret 用 AES-GCM + KEK 加密儲存,只有 read 權限應該夠。
+                  <div className="rounded-md border border-sky-200/60 bg-sky-50/40 px-3 py-2 dark:border-sky-900/50 dark:bg-sky-950/30">
+                    <p className="text-xs text-sky-800 dark:text-sky-300">
+                      💡 不需要在這邊輸入 Bitfinex API key — 朋友註冊後自己到{" "}
+                      <code className="rounded bg-sky-200/40 px-1 dark:bg-sky-900/40">/earn/bot-settings</code>{" "}
+                      設定即可。
                     </p>
                   </div>
 
@@ -285,7 +256,7 @@ export function AddFriendButton() {
                     {busy ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        加密中
+建立中
                       </>
                     ) : (
                       "新增"

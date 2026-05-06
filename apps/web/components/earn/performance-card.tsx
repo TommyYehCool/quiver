@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import type { EarnPerformanceOut } from "@/lib/api/earn-user";
 import { cn } from "@/lib/utils";
+import { StatusPill, accentBarClass, type PillTone } from "@/components/earn/status-pill";
 
 type Locale = "zh-TW" | "en" | "ja";
 
@@ -45,6 +46,18 @@ interface PerfStrings {
   realized7dLabel: string;
   realizedNotReady: string;
   realizedHint: string;
+  // 三色狀態 pill 標籤
+  pills: {
+    above: string;
+    equal: string;
+    below: string;
+    realized30d: string;
+    realized7d: string;
+    earned: string;
+    spikeCaptured: string;
+    spikeNone: string;
+    bestApr: string;
+  };
 }
 
 const STRINGS: Record<Locale, PerfStrings> = {
@@ -73,6 +86,17 @@ const STRINGS: Record<Locale, PerfStrings> = {
     realized7dLabel: "已實現年化(7 天)",
     realizedNotReady: "資料天數不足",
     realizedHint: "回看實際成交利率(已扣 Bitfinex 手續費)，抓到 spike 時這個數字會跳很高",
+    pills: {
+      above: "優於基準",
+      equal: "持平",
+      below: "低於基準",
+      realized30d: "30 天",
+      realized7d: "7 天",
+      earned: "已賺",
+      spikeCaptured: "已捕捉",
+      spikeNone: "無 spike",
+      bestApr: "最佳",
+    },
   },
   en: {
     title: "Strategy performance",
@@ -99,6 +123,17 @@ const STRINGS: Record<Locale, PerfStrings> = {
     realized7dLabel: "Realized APR (7d)",
     realizedNotReady: "Building data",
     realizedHint: "What you actually earned, annualized (Bitfinex fees deducted). Jumps high when you catch spikes.",
+    pills: {
+      above: "Above",
+      equal: "On baseline",
+      below: "Below",
+      realized30d: "30D",
+      realized7d: "7D",
+      earned: "Earned",
+      spikeCaptured: "Captured",
+      spikeNone: "No spike",
+      bestApr: "Best",
+    },
   },
   ja: {
     title: "戦略パフォーマンス",
@@ -125,6 +160,17 @@ const STRINGS: Record<Locale, PerfStrings> = {
     realized7dLabel: "実現 APR (7 日)",
     realizedNotReady: "データ収集中",
     realizedHint: "実際の約定金利を年率換算(Bitfinex 手数料控除済)。spike を捕獲すると数値が跳ねます。",
+    pills: {
+      above: "基準超え",
+      equal: "基準",
+      below: "基準未満",
+      realized30d: "30 日",
+      realized7d: "7 日",
+      earned: "獲得",
+      spikeCaptured: "捕獲",
+      spikeNone: "スパイクなし",
+      bestApr: "最高",
+    },
   },
 };
 
@@ -202,6 +248,23 @@ export function PerformanceCard({
         : deltaNum < 0
           ? s.vsFrrBelow(fmtPct(delta, 2))
           : s.vsFrrEqual;
+  // status pill for headline weighted APR (vs FRR baseline)
+  const headlinePillTone: PillTone =
+    deltaNum === null
+      ? "slate"
+      : deltaNum > 0
+        ? "emerald"
+        : deltaNum < 0
+          ? "red"
+          : "amber";
+  const headlinePillLabel =
+    deltaNum === null
+      ? "—"
+      : deltaNum > 0
+        ? s.pills.above
+        : deltaNum < 0
+          ? s.pills.below
+          : s.pills.equal;
 
   return (
     <Card>
@@ -214,13 +277,19 @@ export function PerformanceCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Headline: weighted APR + delta vs FRR */}
-        <div className="rounded-lg border border-cream-edge bg-cream-warm/50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
+        <div className={cn(
+          "rounded-lg border border-cream-edge bg-cream-warm/50 p-4 dark:border-slate-700 dark:bg-slate-900/40",
+          accentBarClass(headlinePillTone),
+        )}>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              {s.weightedAprLabel}
+            </div>
+            <StatusPill tone={headlinePillTone} label={headlinePillLabel} />
+          </div>
           <div className="flex items-baseline justify-between gap-3">
             <div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
-                {s.weightedAprLabel}
-              </div>
-              <div className="mt-0.5 font-mono text-3xl font-bold tabular-nums">
+              <div className="font-mono text-3xl font-bold tabular-nums">
                 {fmtPct(perf.weighted_avg_apr_pct, 2)}
                 <span className="ml-0.5 text-base font-normal text-slate-400">%</span>
               </div>
@@ -243,11 +312,17 @@ export function PerformanceCard({
             avg APR so users see the contrast: weighted = "what's
             currently posted", realized = "what actually settled". */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-            <div className="text-xs text-slate-600 dark:text-slate-400">
-              {s.realized30dLabel}
+          <div className={cn(
+            "rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20",
+            accentBarClass("emerald"),
+          )}>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                {s.realized30dLabel}
+              </div>
+              <StatusPill tone="emerald" label={s.pills.realized30d} />
             </div>
-            <div className="mt-0.5 font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+            <div className="font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
               {perf.realized_apr_30d_pct !== null
                 ? `${fmtPct(perf.realized_apr_30d_pct, 2)}%`
                 : "—"}
@@ -258,11 +333,17 @@ export function PerformanceCard({
               </div>
             ) : null}
           </div>
-          <div className="rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-            <div className="text-xs text-slate-600 dark:text-slate-400">
-              {s.realized7dLabel}
+          <div className={cn(
+            "rounded-lg border border-emerald-300/50 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20",
+            accentBarClass("emerald"),
+          )}>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <div className="text-xs text-slate-600 dark:text-slate-400">
+                {s.realized7dLabel}
+              </div>
+              <StatusPill tone="emerald" label={s.pills.realized7d} />
             </div>
-            <div className="mt-0.5 font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+            <div className="font-mono text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
               {perf.realized_apr_7d_pct !== null
                 ? `${fmtPct(perf.realized_apr_7d_pct, 2)}%`
                 : "—"}
@@ -285,6 +366,7 @@ export function PerformanceCard({
             value={`$${fmtUsd(perf.total_interest_30d_usdt)}`}
             sub={s.daysWithData(perf.days_with_data)}
             tone="emerald"
+            pillLabel={s.pills.earned}
           />
           <Kpi
             label={s.spikeCaptured}
@@ -296,6 +378,7 @@ export function PerformanceCard({
             }
             tone={perf.spike_credits_count > 0 ? "amber" : "slate"}
             icon={<Zap className="h-3.5 w-3.5" />}
+            pillLabel={perf.spike_credits_count > 0 ? s.pills.spikeCaptured : s.pills.spikeNone}
           />
           <Kpi
             label={s.bestApr}
@@ -316,6 +399,7 @@ export function PerformanceCard({
                 : "slate"
             }
             icon={<TrendingUp className="h-3.5 w-3.5" />}
+            pillLabel={s.pills.bestApr}
           />
         </div>
 
@@ -343,12 +427,14 @@ function Kpi({
   sub,
   tone,
   icon,
+  pillLabel,
 }: {
   label: string;
   value: string;
   sub?: string;
   tone: "emerald" | "amber" | "slate";
   icon?: React.ReactNode;
+  pillLabel?: string;
 }) {
   const valueClass = cn(
     "font-mono text-lg font-semibold tabular-nums",
@@ -357,10 +443,16 @@ function Kpi({
     tone === "slate" && "text-slate-700 dark:text-slate-200",
   );
   return (
-    <div className="rounded-lg border border-cream-edge bg-paper p-3 dark:border-slate-700 dark:bg-slate-900/30">
-      <div className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-slate-500">
-        {icon}
-        <span className="truncate">{label}</span>
+    <div className={cn(
+      "rounded-lg border border-cream-edge bg-paper p-3 dark:border-slate-700 dark:bg-slate-900/30",
+      accentBarClass(tone as PillTone),
+    )}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1 text-[11px] uppercase tracking-wide text-slate-500">
+          {icon}
+          <span className="truncate">{label}</span>
+        </div>
+        {pillLabel ? <StatusPill tone={tone as PillTone} label={pillLabel} /> : null}
       </div>
       <div className={cn("mt-1", valueClass)}>{value}</div>
       {sub ? (

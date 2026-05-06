@@ -28,6 +28,7 @@ import { ActiveCreditRow } from "@/components/earn/active-credit-row";
 import { BufferEmptyBanner } from "@/components/earn/buffer-empty-banner";
 import { FeeStatusCard } from "@/components/earn/fee-status-card";
 import { PendingOfferRow } from "@/components/earn/pending-offer-row";
+import { StatusPill, accentBarClass, type PillTone } from "@/components/earn/status-pill";
 import { PerformanceCard } from "@/components/earn/performance-card";
 import { PublicStatsStrip } from "@/components/earn/public-stats-strip";
 // F-5a-3.10.3 — StrategyPreviewCard moved to its own page at /earn/strategy-lab.
@@ -69,10 +70,10 @@ interface PageStrings {
   kycGate: { title: string; descPrefix: string; cta: string };
   notSetup: { title: string; desc: string; cta: string; viewGuide: string };
   bigNumbers: {
-    lent: { label: string; sub: string };
-    pending: { label: string; sub: string };
-    funding: { label: string; sub: string };
-    earned: { label: string; sub: string };
+    lent: { label: string; sub: string; pill: string };
+    pending: { label: string; sub: string; pill: string };
+    funding: { label: string; sub: string; pill: string };
+    earned: { label: string; sub: string; pill: string };
   };
   activeLoans: { title: string; desc: string };
   pendingOffers: { title: string; desc: string; rateFrr: string; rateFixed: string; periodDays: (n: number) => string };
@@ -112,10 +113,10 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       viewGuide: "查看完整教學",
     },
     bigNumbers: {
-      lent: { label: "已借出 (賺息中)", sub: "由 margin trader 接走,每日結算" },
-      pending: { label: "掛單中 (Pending)", sub: "已提交 offer,等借方撮合" },
-      funding: { label: "等待掛單 (Funding idle)", sub: "Bitfinex Funding wallet 待掛 offer" },
-      earned: { label: "當日預估收益", sub: "最新 snapshot 估算（非已入帳）" },
+      lent: { label: "已借出 (賺息中)", sub: "由 margin trader 接走,每日結算", pill: "賺息中" },
+      pending: { label: "掛單中 (Pending)", sub: "已提交 offer,等借方撮合", pill: "撮合中" },
+      funding: { label: "等待掛單 (Funding idle)", sub: "Bitfinex Funding wallet 待掛 offer", pill: "等待中" },
+      earned: { label: "當日預估收益", sub: "最新 snapshot 估算（非已入帳）", pill: "今日" },
     },
     activeLoans: {
       title: "目前借出",
@@ -178,10 +179,10 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       viewGuide: "View full guide",
     },
     bigNumbers: {
-      lent: { label: "Lent (earning)", sub: "Borrowed by margin traders, settled daily" },
-      pending: { label: "Pending offer", sub: "Submitted, waiting to be matched" },
-      funding: { label: "Waiting in Funding (idle)", sub: "In Bitfinex Funding wallet, not yet offered" },
-      earned: { label: "Estimated earnings today", sub: "Latest snapshot estimate (not yet credited)" },
+      lent: { label: "Lent (earning)", sub: "Borrowed by margin traders, settled daily", pill: "Earning" },
+      pending: { label: "Pending offer", sub: "Submitted, waiting to be matched", pill: "Pending" },
+      funding: { label: "Waiting in Funding (idle)", sub: "In Bitfinex Funding wallet, not yet offered", pill: "Waiting" },
+      earned: { label: "Estimated earnings today", sub: "Latest snapshot estimate (not yet credited)", pill: "Today" },
     },
     activeLoans: {
       title: "Active loans",
@@ -243,10 +244,10 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
       viewGuide: "完全なガイドを見る",
     },
     bigNumbers: {
-      lent: { label: "貸出中(利息収入中)", sub: "margin トレーダーに貸付、毎日結算" },
-      pending: { label: "発注中 (Pending)", sub: "offer 送信済み、貸付待ち" },
-      funding: { label: "待機中(Funding idle)", sub: "Bitfinex Funding ウォレットで offer 待ち" },
-      earned: { label: "本日の予想収益", sub: "最新スナップショット推定（未着金）" },
+      lent: { label: "貸出中(利息収入中)", sub: "margin トレーダーに貸付、毎日結算", pill: "稼働中" },
+      pending: { label: "発注中 (Pending)", sub: "offer 送信済み、貸付待ち", pill: "マッチ待ち" },
+      funding: { label: "待機中(Funding idle)", sub: "Bitfinex Funding ウォレットで offer 待ち", pill: "待機中" },
+      earned: { label: "本日の予想収益", sub: "最新スナップショット推定（未着金）", pill: "本日" },
     },
     activeLoans: {
       title: "現在の貸出",
@@ -424,26 +425,32 @@ export default async function EarnPage({
               sub={s.bigNumbers.lent.sub}
               usdt={earn.lent_usdt}
               usd={earn.lent_usd}
+              pillTone="emerald"
+              pillLabel={s.bigNumbers.lent.pill}
             />
             <DualCurrencyCard
               label={s.bigNumbers.pending.label}
               sub={s.bigNumbers.pending.sub}
               usdt={earn.pending_offers_total_usdt}
               usd={earn.pending_offers_total_usd}
-              tone="amber"
+              pillTone="amber"
+              pillLabel={s.bigNumbers.pending.pill}
             />
             <DualCurrencyCard
               label={s.bigNumbers.funding.label}
               sub={s.bigNumbers.funding.sub}
               usdt={earn.funding_idle_usdt}
               usd={earn.funding_idle_usd}
+              pillTone="amber"
+              pillLabel={s.bigNumbers.funding.pill}
             />
             <DualCurrencyCard
               label={s.bigNumbers.earned.label}
               sub={s.bigNumbers.earned.sub}
               usdt={earn.daily_earned_usdt}
               usd={earn.daily_earned_usd}
-              tone="emerald"
+              pillTone="emerald"
+              pillLabel={s.bigNumbers.earned.pill}
             />
           </div>
 
@@ -689,33 +696,43 @@ function DualCurrencyCard({
   sub,
   usdt,
   usd,
-  tone = "default",
+  pillTone,
+  pillLabel,
 }: {
   label: string;
   sub: string;
   usdt: string | null;
   usd: string | null;
-  tone?: "default" | "amber" | "emerald";
+  pillTone: PillTone;
+  pillLabel: string;
 }) {
   const usdtNum = Number(usdt ?? 0);
   const usdNum = Number(usd ?? 0);
   const showBoth = usdtNum > 0 && usdNum > 0;
+  // value text color follows the pill tone for visual coherence
   const colorMain =
-    tone === "amber"
+    pillTone === "amber"
       ? "text-amber-600 dark:text-amber-400"
-      : tone === "emerald"
-        ? "text-emerald-600"
-        : "";
+      : pillTone === "emerald"
+        ? "text-emerald-600 dark:text-emerald-400"
+        : pillTone === "red"
+          ? "text-red-600 dark:text-red-400"
+          : "";
   const colorSuffix =
-    tone === "amber"
+    pillTone === "amber"
       ? "text-amber-700/70 dark:text-amber-400/70"
-      : tone === "emerald"
+      : pillTone === "emerald"
         ? "text-emerald-700/70 dark:text-emerald-500/70"
-        : "text-slate-500";
+        : pillTone === "red"
+          ? "text-red-700/70 dark:text-red-400/70"
+          : "text-slate-500";
   return (
-    <Card>
+    <Card className={accentBarClass(pillTone)}>
       <CardHeader className="pb-2">
-        <CardDescription>{label}</CardDescription>
+        <div className="flex items-start justify-between gap-2">
+          <CardDescription>{label}</CardDescription>
+          <StatusPill tone={pillTone} label={pillLabel} />
+        </div>
         {showBoth ? (
           <div className="space-y-0.5">
             <CardTitle className={`font-mono text-2xl ${colorMain}`}>
