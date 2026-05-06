@@ -728,7 +728,7 @@ function DualCurrencyCard({
           ? "text-red-700/70 dark:text-red-400/70"
           : "text-slate-500";
   return (
-    <Card className={cn(accentBarClass(pillTone), cardToneClass(pillTone), cyberCardClass(pillTone))}>
+    <Card className={cyberCardClass(pillTone)}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardDescription>{label}</CardDescription>

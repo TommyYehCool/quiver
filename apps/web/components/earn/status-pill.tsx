@@ -88,8 +88,17 @@ export function cardToneClass(tone: PillTone): string {
  *
  * Defined in globals.css under `.dark .cyber-card[--tone]`.
  */
+const CYBER_CARD_LIGHT: Record<PillTone, string> = {
+  // light-mode tone-tinted border (subtle) — gives at-a-glance category
+  // hint without competing with the dark-mode neon bloom
+  emerald: "border-emerald-300/60",
+  amber: "border-amber-300/60",
+  red: "border-red-300/60",
+  slate: "",
+};
+
 export function cyberCardClass(tone: PillTone): string {
   // slate has no neon glow — keep it neutral
   if (tone === "slate") return "";
-  return `cyber-card cyber-card--${tone}`;
+  return `${CYBER_CARD_LIGHT[tone]} cyber-card cyber-card--${tone}`;
 }

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quiver — Cyber Cards Demo (Bloom)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    /* matches Quiver dark mode */
+    --bg-page:    #020617;          /* slate-950 */
+    --bg-card:    #0F172A;          /* slate-900 */
+    --border:     #1E293B;          /* slate-800 */
+    --text:       #F8FAFC;          /* slate-50 */
+    --text-mute:  #94A3B8;          /* slate-400 */
+    --text-faint: #64748B;          /* slate-500 */
+
+    /* glow tints (rgba so we can layer transparency) */
+    --emerald: 16, 185, 129;
+    --amber:   245, 158, 11;
+    --red:     239, 68, 68;
+
+    /* DEFAULT bloom values — tuned to match the reference circle:
+       strong rim + heavy mid bloom + soft far atmospheric glow */
+    --rim:    60;   /* bright thin ring on the border */
+    --close:  35;   /* tight close glow ~14px out */
+    --mid:    25;   /* mid bloom ~28px out */
+    --far:    14;   /* far atmospheric glow ~60px out */
+    --inset:   8;   /* inner rim glow */
+    --border-alpha: 0.55;  /* how strong the colored border ring itself is */
+  }
+
+  body {
+    background: var(--bg-page);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding: 40px 24px;
+    min-height: 100vh;
+    /* faint grid backdrop so the bloom has something to "bleed" into */
+    background-image:
+      linear-gradient(rgba(0,240,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ── DEMO CONTROLS ────────────────────────────── */
+  .controls {
+    max-width: 1200px;
+    margin: 0 auto 40px;
+    padding: 18px 22px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 20px;
+    align-items: center;
+  }
+  .controls label { font-size: 13px; color: var(--text-mute); display: flex; gap: 8px; align-items: center; }
+  .controls input[type=range] { flex: 1; min-width: 0; }
+  .controls .val { color: var(--text); font-family: monospace; min-width: 36px; text-align: right; }
+  .controls h2 { font-size: 14px; font-weight: 600; color: var(--text); grid-column: 1 / -1; margin-bottom: 4px; }
+  .controls .note { grid-column: 1 / -1; font-size: 12px; color: var(--text-faint); }
+  .controls .reset {
+    grid-column: 1 / -1;
+    justify-self: end;
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .controls .reset:hover { background: rgba(255,255,255,0.10); }
+
+  /* ── CARD GRID ────────────────────────────────── */
+  .grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;  /* extra gap so the bloom has room to breathe */
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ── CARD ─────────────────────────────────────── */
+  .card {
+    position: relative;
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 18px 20px 20px;
+    transition: box-shadow 250ms ease, transform 250ms ease;
+    /* Border itself is colored per tone — this defines the "tube" edge.
+       Strong border + multi-layer outer shadow = the neon-tube halo look. */
+    border: 1.5px solid;
+  }
+
+  /* Tone variants — drives EVERYTHING (border color + bloom layers) */
+  .card--emerald {
+    border-color: rgba(var(--emerald), var(--border-alpha));
+    box-shadow:
+      /* INSET: subtle inner rim */
+      inset 0 0 24px rgba(var(--emerald), calc(var(--inset) / 100)),
+      /* RIM: tight bright outline */
+      0 0 0 1px rgba(var(--emerald), calc(var(--rim) / 100)),
+      /* CLOSE: ~14px out, very visible */
+      0 0 14px rgba(var(--emerald), calc(var(--close) / 100)),
+      /* MID: ~28px out, the main bloom */
+      0 0 28px rgba(var(--emerald), calc(var(--mid) / 100)),
+      /* FAR: ~60px out, atmospheric */
+      0 0 60px rgba(var(--emerald), calc(var(--far) / 100));
+  }
+  .card--amber {
+    border-color: rgba(var(--amber), var(--border-alpha));
+    box-shadow:
+      inset 0 0 24px rgba(var(--amber), calc(var(--inset) / 100)),
+      0 0 0 1px rgba(var(--amber), calc(var(--rim) / 100)),
+      0 0 14px rgba(var(--amber), calc(var(--close) / 100)),
+      0 0 28px rgba(var(--amber), calc(var(--mid) / 100)),
+      0 0 60px rgba(var(--amber), calc(var(--far) / 100));
+  }
+  .card--red {
+    border-color: rgba(var(--red), var(--border-alpha));
+    box-shadow:
+      inset 0 0 24px rgba(var(--red), calc(var(--inset) / 100)),
+      0 0 0 1px rgba(var(--red), calc(var(--rim) / 100)),
+      0 0 14px rgba(var(--red), calc(var(--close) / 100)),
+      0 0 28px rgba(var(--red), calc(var(--mid) / 100)),
+      0 0 60px rgba(var(--red), calc(var(--far) / 100));
+  }
+
+  /* Hover: bigger bloom + lift */
+  .card:hover { transform: translateY(-2px); }
+  .card--emerald:hover {
+    box-shadow:
+      inset 0 0 24px rgba(var(--emerald), calc((var(--inset) + 4) / 100)),
+      0 0 0 1px rgba(var(--emerald), calc((var(--rim) + 15) / 100)),
+      0 0 22px rgba(var(--emerald), calc((var(--close) + 15) / 100)),
+      0 0 44px rgba(var(--emerald), calc((var(--mid) + 12) / 100)),
+      0 0 90px rgba(var(--emerald), calc((var(--far) + 8) / 100));
+  }
+  .card--amber:hover {
+    box-shadow:
+      inset 0 0 24px rgba(var(--amber), calc((var(--inset) + 4) / 100)),
+      0 0 0 1px rgba(var(--amber), calc((var(--rim) + 15) / 100)),
+      0 0 22px rgba(var(--amber), calc((var(--close) + 15) / 100)),
+      0 0 44px rgba(var(--amber), calc((var(--mid) + 12) / 100)),
+      0 0 90px rgba(var(--amber), calc((var(--far) + 8) / 100));
+  }
+  .card--red:hover {
+    box-shadow:
+      inset 0 0 24px rgba(var(--red), calc((var(--inset) + 4) / 100)),
+      0 0 0 1px rgba(var(--red), calc((var(--rim) + 15) / 100)),
+      0 0 22px rgba(var(--red), calc((var(--close) + 15) / 100)),
+      0 0 44px rgba(var(--red), calc((var(--mid) + 12) / 100)),
+      0 0 90px rgba(var(--red), calc((var(--far) + 8) / 100));
+  }
+
+  /* ── CARD CONTENT ────────────────────────────── */
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .card-label { font-size: 13px; color: var(--text-mute); }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .pill--emerald {
+    color: rgb(110, 231, 183);
+    background: rgba(var(--emerald), 0.20);
+    border-color: rgba(var(--emerald), 0.95);
+    box-shadow: 0 0 10px rgba(var(--emerald), 0.30);
+  }
+  .pill--amber {
+    color: rgb(252, 211, 77);
+    background: rgba(var(--amber), 0.22);
+    border-color: rgba(var(--amber), 0.95);
+    box-shadow: 0 0 10px rgba(var(--amber), 0.30);
+  }
+  .pill--red {
+    color: rgb(252, 165, 165);
+    background: rgba(var(--red), 0.20);
+    border-color: rgba(var(--red), 0.95);
+    box-shadow: 0 0 10px rgba(var(--red), 0.30);
+  }
+
+  .card-value {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .card-value .unit { font-size: 13px; font-weight: 500; margin-left: 4px; opacity: 0.7; }
+  .card--emerald .card-value {
+    color: rgb(110, 231, 183);
+    text-shadow: 0 0 12px rgba(var(--emerald), 0.45), 0 0 28px rgba(var(--emerald), 0.18);
+  }
+  .card--amber .card-value {
+    color: rgb(252, 211, 77);
+    text-shadow: 0 0 12px rgba(var(--amber), 0.45), 0 0 28px rgba(var(--amber), 0.18);
+  }
+  .card--red .card-value {
+    color: rgb(252, 165, 165);
+    text-shadow: 0 0 12px rgba(var(--red), 0.45), 0 0 28px rgba(var(--red), 0.18);
+  }
+
+  .card-sub { font-size: 12px; color: var(--text-mute); line-height: 1.4; }
+</style>
+</head>
+<body>
+
+  <div class="controls">
+    <h2>🎛 Bloom 強度即時調整(opacity %)</h2>
+    <label>邊框 rim<input type="range" id="rim" min="0" max="100" value="60" /><span class="val" id="rimV">60</span></label>
+    <label>近光 close<input type="range" id="close" min="0" max="80" value="35" /><span class="val" id="closeV">35</span></label>
+    <label>中光 mid<input type="range" id="mid" min="0" max="80" value="25" /><span class="val" id="midV">25</span></label>
+    <label>遠光 far<input type="range" id="far" min="0" max="60" value="14" /><span class="val" id="farV">14</span></label>
+    <label>內側 inset<input type="range" id="inset" min="0" max="30" value="8" /><span class="val" id="insetV">8</span></label>
+    <label>邊框透明 α<input type="range" id="balpha" min="0" max="100" value="55" /><span class="val" id="balphaV">55</span></label>
+    <button class="reset" id="reset">重置預設值</button>
+    <p class="note">
+      💡 預設值已調成你提供的圓形圖那種「霓虹燈管」感。Hover 卡片可看 hover 加強光暈 + 升起 2px 效果。<br>
+      想要的數字告訴我 → 我把 prod CSS 對應改成同樣值上線。
+    </p>
+  </div>
+
+  <div class="grid">
+
+    <div class="card card--emerald">
+      <div class="card-head">
+        <span class="card-label">已借出</span>
+        <span class="pill pill--emerald">賺息中</span>
+      </div>
+      <div class="card-value">$200.02<span class="unit">USDT</span></div>
+      <div class="card-sub">由 margin trader 接走<br>每日結算</div>
+    </div>
+
+    <div class="card card--amber">
+      <div class="card-head">
+        <span class="card-label">掛單中</span>
+        <span class="pill pill--amber">撮合中</span>
+      </div>
+      <div class="card-value">$0.00<span class="unit">USDT</span></div>
+      <div class="card-sub">已提交 offer<br>等借方撮合</div>
+    </div>
+
+    <div class="card card--red">
+      <div class="card-head">
+        <span class="card-label">等待掛單</span>
+        <span class="pill pill--red">等待中</span>
+      </div>
+      <div class="card-value">$0.0135<span class="unit">USDT</span></div>
+      <div class="card-sub">Bitfinex Funding wallet<br>待掛 offer</div>
+    </div>
+
+    <div class="card card--emerald">
+      <div class="card-head">
+        <span class="card-label">當日預估收益</span>
+        <span class="pill pill--emerald">今日</span>
+      </div>
+      <div class="card-value">$0.0232<span class="unit">USDT</span></div>
+      <div class="card-sub">最新 snapshot 估算<br>(非已入帳)</div>
+    </div>
+
+  </div>
+
+<script>
+  /* Live-tune the 6 CSS vars from the sliders. No build step. */
+  const root = document.documentElement;
+  const DEFAULTS = { rim: 60, close: 35, mid: 25, far: 14, inset: 8, balpha: 55 };
+
+  function bind(id, cssVar, transform = v => v) {
+    const el = document.getElementById(id);
+    const v  = document.getElementById(id + "V");
+    el.addEventListener("input", () => {
+      root.style.setProperty("--" + cssVar, transform(el.value));
+      v.textContent = el.value;
+    });
+  }
+  bind("rim",   "rim");
+  bind("close", "close");
+  bind("mid",   "mid");
+  bind("far",   "far");
+  bind("inset", "inset");
+  bind("balpha","border-alpha", v => (v / 100));
+
+  document.getElementById("reset").addEventListener("click", () => {
+    Object.entries(DEFAULTS).forEach(([k, v]) => {
+      const el = document.getElementById(k);
+      const lab = document.getElementById(k + "V");
+      el.value = v;
+      lab.textContent = v;
+      const cssVar = k === "balpha" ? "border-alpha" : k;
+      const cssVal = k === "balpha" ? (v / 100) : v;
+      root.style.setProperty("--" + cssVar, cssVal);
+    });
+  });
+</script>
+
+</body>
+</html>

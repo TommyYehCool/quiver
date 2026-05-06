@@ -279,8 +279,7 @@ export function PerformanceCard({
         {/* Headline: weighted APR + delta vs FRR */}
         <div className={cn(
           "rounded-lg border bg-cream-warm/50 p-4 dark:bg-slate-900/40",
-          accentBarClass(headlinePillTone),
-          cardToneClass(headlinePillTone),
+          cyberCardClass(headlinePillTone),
         )}>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <div className="text-xs text-slate-500 dark:text-slate-400">
@@ -315,8 +314,7 @@ export function PerformanceCard({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className={cn(
             "rounded-lg border bg-emerald-50/40 p-3 dark:bg-emerald-950/20",
-            accentBarClass("emerald"),
-            cardToneClass("emerald"),
+            cyberCardClass("emerald"),
           )}>
             <div className="mb-1 flex items-center justify-between gap-2">
               <div className="text-xs text-slate-600 dark:text-slate-400">
@@ -337,8 +335,7 @@ export function PerformanceCard({
           </div>
           <div className={cn(
             "rounded-lg border bg-emerald-50/40 p-3 dark:bg-emerald-950/20",
-            accentBarClass("emerald"),
-            cardToneClass("emerald"),
+            cyberCardClass("emerald"),
           )}>
             <div className="mb-1 flex items-center justify-between gap-2">
               <div className="text-xs text-slate-600 dark:text-slate-400">
@@ -448,8 +445,7 @@ function Kpi({
   return (
     <div className={cn(
       "rounded-lg border bg-paper p-3 dark:bg-slate-900/30",
-      accentBarClass(tone as PillTone),
-      cardToneClass(tone as PillTone),
+      cyberCardClass(tone as PillTone),
     )}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1 text-[11px] uppercase tracking-wide text-slate-500">

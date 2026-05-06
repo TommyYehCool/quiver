@@ -82,44 +82,66 @@
    * ─────────────────────────────────────────────────
    */
 
+  /*
+   * 5-layer bloom (tuned via local HTML demo):
+   *   inset 0 0 24px      —  3% opacity   inner rim
+   *   0 0 0 1px           — 41% opacity   sharp tube edge
+   *   0 0 14px            — 45% opacity   close glow
+   *   0 0 28px            —  4% opacity   mid bloom
+   *   0 0 60px            —  7% opacity   far atmospheric
+   * + tone-colored 1.5px border at 46% opacity (matches --border-alpha)
+   */
   .dark .cyber-card {
-    /* layered glow: soft outer halo + tight inner rim glow */
+    border-color: rgba(0, 240, 255, 0.46) !important;
     box-shadow:
-      inset 0 0 24px rgba(0, 240, 255, 0.05),
-      0 0 18px rgba(0, 240, 255, 0.18),
-      0 0 38px rgba(0, 240, 255, 0.10);
+      inset 0 0 24px rgba(0, 240, 255, 0.03),
+      0 0 0 1px rgba(0, 240, 255, 0.41),
+      0 0 14px rgba(0, 240, 255, 0.45),
+      0 0 28px rgba(0, 240, 255, 0.04),
+      0 0 60px rgba(0, 240, 255, 0.07);
   }
 
   .dark .cyber-card.cyber-card--emerald {
+    border-color: rgba(16, 185, 129, 0.46) !important;
     box-shadow:
-      inset 0 0 24px rgba(16, 185, 129, 0.05),
-      0 0 18px rgba(16, 185, 129, 0.20),
-      0 0 38px rgba(16, 185, 129, 0.10);
+      inset 0 0 24px rgba(16, 185, 129, 0.03),
+      0 0 0 1px rgba(16, 185, 129, 0.41),
+      0 0 14px rgba(16, 185, 129, 0.45),
+      0 0 28px rgba(16, 185, 129, 0.04),
+      0 0 60px rgba(16, 185, 129, 0.07);
   }
 
   .dark .cyber-card.cyber-card--amber {
+    border-color: rgba(245, 158, 11, 0.46) !important;
     box-shadow:
-      inset 0 0 24px rgba(245, 158, 11, 0.05),
-      0 0 18px rgba(245, 158, 11, 0.20),
-      0 0 38px rgba(245, 158, 11, 0.10);
+      inset 0 0 24px rgba(245, 158, 11, 0.03),
+      0 0 0 1px rgba(245, 158, 11, 0.41),
+      0 0 14px rgba(245, 158, 11, 0.45),
+      0 0 28px rgba(245, 158, 11, 0.04),
+      0 0 60px rgba(245, 158, 11, 0.07);
   }
 
   .dark .cyber-card.cyber-card--red {
+    border-color: rgba(239, 68, 68, 0.46) !important;
     box-shadow:
-      inset 0 0 24px rgba(239, 68, 68, 0.05),
-      0 0 18px rgba(239, 68, 68, 0.20),
-      0 0 38px rgba(239, 68, 68, 0.10);
+      inset 0 0 24px rgba(239, 68, 68, 0.03),
+      0 0 0 1px rgba(239, 68, 68, 0.41),
+      0 0 14px rgba(239, 68, 68, 0.45),
+      0 0 28px rgba(239, 68, 68, 0.04),
+      0 0 60px rgba(239, 68, 68, 0.07);
   }
 
-  /* Hover variant: brighter outer halo + lift */
+  /* Hover variant: punch up close + add 90px mega-halo + lift */
   .dark .cyber-card-interactive {
     transition: box-shadow 200ms ease, transform 200ms ease;
   }
   .dark .cyber-card-interactive:hover {
     box-shadow:
-      inset 0 0 24px rgba(0, 240, 255, 0.08),
-      0 0 24px rgba(0, 240, 255, 0.30),
-      0 0 56px rgba(0, 240, 255, 0.15);
+      inset 0 0 24px rgba(0, 240, 255, 0.07),
+      0 0 0 1px rgba(0, 240, 255, 0.55),
+      0 0 22px rgba(0, 240, 255, 0.55),
+      0 0 44px rgba(0, 240, 255, 0.16),
+      0 0 90px rgba(0, 240, 255, 0.15);
     transform: translateY(-2px);
   }
 }
