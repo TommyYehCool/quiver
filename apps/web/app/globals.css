@@ -70,9 +70,10 @@
 
   /*
    * ─────────────────────────────────────────────────
-   * Cyber card "glow rendering" — inspired by CyberCore CSS
-   * Always-on inner + outer glow + L-shaped corner brackets
-   * (top-right + bottom-left). Dark mode only.
+   * Cyber card "光暈渲染" — soft surrounding neon glow only.
+   * No hard brackets / no cut corners (those felt too gimmicky
+   * over Quiver's rounded card layout). Dark mode only — light
+   * mode keeps the existing macaron pastel look.
    *
    * Use `cyber-card` (cyan default) or pair with a tone class:
    *   cyber-card cyber-card--emerald
@@ -82,73 +83,43 @@
    */
 
   .dark .cyber-card {
-    position: relative;
+    /* layered glow: soft outer halo + tight inner rim glow */
     box-shadow:
-      inset 0 0 30px rgba(0, 240, 255, 0.06),
-      0 0 24px rgba(0, 240, 255, 0.18);
-  }
-  .dark .cyber-card::before,
-  .dark .cyber-card::after {
-    content: "";
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    border: 1.5px solid rgba(0, 240, 255, 0.7);
-    pointer-events: none;
-    border-radius: 1px;
-  }
-  .dark .cyber-card::before {
-    top: -1px;
-    right: -1px;
-    border-left: none;
-    border-bottom: none;
-  }
-  .dark .cyber-card::after {
-    bottom: -1px;
-    left: -1px;
-    border-right: none;
-    border-top: none;
+      inset 0 0 24px rgba(0, 240, 255, 0.05),
+      0 0 18px rgba(0, 240, 255, 0.18),
+      0 0 38px rgba(0, 240, 255, 0.10);
   }
 
-  /* Tone variants — swap accent color on glow + brackets */
   .dark .cyber-card.cyber-card--emerald {
     box-shadow:
-      inset 0 0 30px rgba(16, 185, 129, 0.06),
-      0 0 24px rgba(16, 185, 129, 0.22);
-  }
-  .dark .cyber-card.cyber-card--emerald::before,
-  .dark .cyber-card.cyber-card--emerald::after {
-    border-color: rgba(16, 185, 129, 0.75);
+      inset 0 0 24px rgba(16, 185, 129, 0.05),
+      0 0 18px rgba(16, 185, 129, 0.20),
+      0 0 38px rgba(16, 185, 129, 0.10);
   }
 
   .dark .cyber-card.cyber-card--amber {
     box-shadow:
-      inset 0 0 30px rgba(245, 158, 11, 0.06),
-      0 0 24px rgba(245, 158, 11, 0.22);
-  }
-  .dark .cyber-card.cyber-card--amber::before,
-  .dark .cyber-card.cyber-card--amber::after {
-    border-color: rgba(245, 158, 11, 0.75);
+      inset 0 0 24px rgba(245, 158, 11, 0.05),
+      0 0 18px rgba(245, 158, 11, 0.20),
+      0 0 38px rgba(245, 158, 11, 0.10);
   }
 
   .dark .cyber-card.cyber-card--red {
     box-shadow:
-      inset 0 0 30px rgba(239, 68, 68, 0.06),
-      0 0 24px rgba(239, 68, 68, 0.22);
-  }
-  .dark .cyber-card.cyber-card--red::before,
-  .dark .cyber-card.cyber-card--red::after {
-    border-color: rgba(239, 68, 68, 0.75);
+      inset 0 0 24px rgba(239, 68, 68, 0.05),
+      0 0 18px rgba(239, 68, 68, 0.20),
+      0 0 38px rgba(239, 68, 68, 0.10);
   }
 
-  /* Hover variant: brighter outer glow + lift */
+  /* Hover variant: brighter outer halo + lift */
   .dark .cyber-card-interactive {
     transition: box-shadow 200ms ease, transform 200ms ease;
   }
   .dark .cyber-card-interactive:hover {
     box-shadow:
-      inset 0 0 30px rgba(0, 240, 255, 0.10),
-      0 0 36px rgba(0, 240, 255, 0.32);
+      inset 0 0 24px rgba(0, 240, 255, 0.08),
+      0 0 24px rgba(0, 240, 255, 0.30),
+      0 0 56px rgba(0, 240, 255, 0.15);
     transform: translateY(-2px);
   }
 }
