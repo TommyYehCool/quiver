@@ -33,46 +33,46 @@ const STRINGS: Record<Locale, Strings> = {
   "zh-TW": {
     back: "回教學首頁",
     title: "② 如何註冊 Bitfinex",
-    subtitle: "從沒帳號到能用 Funding 放貸,實際操作 5 分鐘加上 KYC 審核(通常數小時到 1-2 個工作天)。",
+    subtitle: "從沒帳號到能用 Funding 放貸，實際操作 5 分鐘加上 KYC 審核(通常數小時到 1-2 個工作天)。",
 
     refBox: {
-      lead: "用以下連結註冊,可以幫助 Quiver:",
+      lead: "用以下連結註冊，可以幫助 Quiver:",
       cta: "用推薦連結註冊 Bitfinex",
-      benefit: "你會獲得手續費折扣 6%(Bitfinex 原生機制),完全沒副作用、不影響你權限。",
+      benefit: "你會獲得手續費折扣 6%(Bitfinex 原生機制)，完全沒副作用，不影響你權限。",
     },
 
     s1: {
       h: "註冊前提醒",
-      body: "Bitfinex 有最低存款額(目前 $0),但要做 Funding 放貸至少要完成 Intermediate 等級 KYC。準備好身分證 / 護照、地址證明(銀行對帳單或水電費單)。整個流程不需要付任何錢給 Bitfinex。",
+      body: "Bitfinex 有最低存款額(目前 $0)，但要做 Funding 放貸至少要完成 Intermediate 等級 KYC。\n準備好身分證 / 護照、地址證明(銀行對帳單或水電費單)。\n整個流程不需要付任何錢給 Bitfinex。",
     },
 
     s2: {
       h: "步驟一:Email 註冊",
-      lead: "點上面的推薦連結後:",
+      lead: "點上面的推薦連結後：",
       steps: [
         "輸入 Email + 一個強密碼(建議用 password manager 隨機生成)",
         "選擇你所在國家(影響可用功能)",
-        "勾選同意條款,送出",
+        "勾選同意條款，送出",
         "去 email 收信點驗證連結",
       ],
-      tail: "驗證 email 後,你已經有 Bitfinex 帳號。但目前還不能存款 / 放貸,要先過 KYC。",
+      tail: "驗證 email 後，你已經有 Bitfinex 帳號。但目前還不能存款 / 放貸，要先過 KYC。",
     },
 
     s3: {
-      h: "步驟二:完成 KYC(身分驗證)",
-      lead: "登入後左上角點頭像 → Verification。Bitfinex 分 Basic / Intermediate / Full 三級,Funding 放貸至少要 Intermediate。",
+      h: "步驟二：完成 KYC(身分驗證)",
+      lead: "登入後左上角點頭像 → Verification。Bitfinex 分 Basic / Intermediate / Full 三級，Funding 放貸至少要 Intermediate。",
       steps: [
-        "Basic:輸入姓名、生日、國籍 — 5 分鐘搞定",
-        "Intermediate:上傳身分證或護照 + 地址證明(銀行對帳單 / 水電費單,需 3 個月內)",
+        "Basic：輸入姓名、生日、國籍 — 5 分鐘搞定",
+        "Intermediate：上傳身分證或護照 + 地址證明(銀行對帳單 / 水電費單,需 3 個月內)",
         "上傳自拍照(手持身分證)",
-        "送出 → 等審核(通常數小時到 1-2 工作天,旺季可能更久)",
+        "送出 → 等審核(通常數小時到 1-2 工作天，旺季可能更久)",
       ],
-      warning: "⚠ 地址證明要跟你註冊時填的地址一致,不然會被退回。",
+      warning: "⚠ 地址證明要跟你註冊時填的地址一致，不然會被退回。",
     },
 
     s4: {
-      h: "步驟三:開啟兩步驟驗證(2FA)",
-      lead: "KYC 過了就立刻設 2FA,這是必做。Settings → Security → Two-Factor Authentication:",
+      h: "步驟三：開啟兩步驟驗證(2FA)",
+      lead: "KYC 過了就立刻設 2FA，這是必做。\nSettings → Security → Two-Factor Authentication:",
       steps: [
         "選 Google Authenticator(或 Authy)",
         "用手機 app 掃 QR code",
@@ -82,8 +82,8 @@ const STRINGS: Record<Locale, Strings> = {
     },
 
     s5: {
-      h: "步驟四:準備好 Funding 錢包",
-      body: "Bitfinex 有三個錢包:Exchange(現貨交易)、Margin(槓桿)、Funding(放貸)。Quiver 之後會送 USDT 到你的 Funding 錢包,你不需要先存錢進去 — 等下一步把 API key 設好,Quiver 會自動處理整個流程。",
+      h: "步驟四：準備好 Funding 錢包",
+      body: "Bitfinex 有三個錢包：Exchange(現貨交易)、Margin(槓桿)、Funding(放貸)。\nQuiver 之後會送 USDT 到你的 Funding 錢包，你不需要先存錢進去，等下一步把 API key 設好，Quiver 會自動處理整個流程。",
     },
 
     faq: {
@@ -95,15 +95,15 @@ const STRINGS: Record<Locale, Strings> = {
         },
         {
           q: "Q. 可以用台灣 / 日本 / 美國身分嗎?",
-          a: "Bitfinex 在絕大多數國家都能用,但有少數限制名單(包含美國 / 北韓 / 伊朗等)。註冊頁面選國家時就會看到是否可用。",
+          a: "Bitfinex 在絕大多數國家都能用，但有少數限制名單(包含美國 / 北韓 / 伊朗等)。註冊頁面選國家時就會看到是否可用。",
         },
         {
           q: "Q. KYC 多久過?",
-          a: "通常數小時到 1-2 個工作天。旺季(BTC 大漲時)可能拖 3-7 天。提交完之後可以先去看 Quiver 的「③ API Key 設定教學」做心理準備。",
+          a: "通常數小時到 1-2 個工作天。\n旺季(BTC 大漲時)可能拖 3-7 天。\n提交完之後可以先去看 Quiver 的「③ API Key 設定教學」做心理準備。",
         },
         {
           q: "Q. 一定要用你的推薦連結嗎?",
-          a: "不一定。直接 google 「Bitfinex sign up」也行,Quiver 完全不會少功能或加費用。推薦連結只是雙方都拿到 Bitfinex 的手續費折扣 — 你拿 6%,Tommy 拿一點。",
+          a: "不一定。直接 google 「Bitfinex sign up」也行，Quiver 完全不會少功能或加費用。\n推薦連結只是雙方都拿到 Bitfinex 的手續費折扣，你拿 6%，Tommy 拿一點。",
         },
       ],
     },
@@ -324,7 +324,7 @@ export default function SignUpBitfinexPage({
           <CardTitle className="text-base">{s.s1.h}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-slate-700 dark:text-slate-300">
-          <p>{s.s1.body}</p>
+          <p className="whitespace-pre-line">{s.s1.body}</p>
         </CardContent>
       </Card>
 
@@ -361,7 +361,7 @@ export default function SignUpBitfinexPage({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{s.s4.h}</CardTitle>
-          <CardDescription>{s.s4.lead}</CardDescription>
+          <CardDescription className="whitespace-pre-line">{s.s4.lead}</CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-slate-700 dark:text-slate-300">
           <ol className="ml-4 list-decimal space-y-1.5">
@@ -377,7 +377,7 @@ export default function SignUpBitfinexPage({
           <CardTitle className="text-base">{s.s5.h}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-slate-700 dark:text-slate-300">
-          <p>{s.s5.body}</p>
+          <p className="whitespace-pre-line">{s.s5.body}</p>
         </CardContent>
       </Card>
 
@@ -389,7 +389,7 @@ export default function SignUpBitfinexPage({
           {s.faq.items.map((item, i) => (
             <div key={i}>
               <div className="font-medium">{item.q}</div>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{item.a}</p>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 whitespace-pre-line">{item.a}</p>
             </div>
           ))}
         </CardContent>

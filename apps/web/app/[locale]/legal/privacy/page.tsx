@@ -24,9 +24,9 @@ const STRINGS: Record<Locale, {
 }> = {
   "zh-TW": {
     title: "隱私政策",
-    lastUpdated: "最後更新:2026-04-30",
-    version: "版本:2026-04-30-v1",
-    draftWarning: "⚠ 本頁為範本,正式上線前需請律師 review 並依台灣個資法施行細則調整。",
+    lastUpdated: "最後更新：2026-04-30",
+    version: "版本：2026-04-30-v1",
+    draftWarning: "⚠ 本頁為範本，正式上線前需請律師 review 並依台灣個資法施行細則調整。",
     s1: {
       h: "1. 我們收集的資料",
       account: { strong: "帳戶資料:", body: "email、Google 顯示名稱、頭像 URL、語系偏好。" },
@@ -37,7 +37,7 @@ const STRINGS: Record<Locale, {
     s2: {
       h: "2. 我們不收集的資料",
       items: [
-        "密碼(本服務透過 Google OAuth 登入,不接觸你的 Google 密碼)。",
+        "密碼(本服務透過 Google OAuth 登入，不接觸你的 Google 密碼)。",
         "銀行帳戶 / 信用卡(本服務不接受法幣支付)。",
         "你錢包的私鑰(由本服務代管,使用者不直接接觸)。",
       ],
@@ -45,15 +45,15 @@ const STRINGS: Record<Locale, {
     s3: {
       h: "3. 資料使用目的",
       items: [
-        "提供服務:帳戶管理、交易執行、客服支援。",
-        "合規義務:KYC / AML / 洗錢防制 / 稅務申報協助。",
-        "安全防護:異常交易偵測、帳戶冒用偵測。",
-        "系統改善:聚合層級的使用統計(無個人識別)。",
+        "提供服務：帳戶管理、交易執行、客服支援。",
+        "合規義務：KYC / AML / 洗錢防制 / 稅務申報協助。",
+        "安全防護：異常交易偵測、帳戶冒用偵測。",
+        "系統改善：聚合層級的使用統計(無個人識別)。",
       ],
     },
     s4: {
       h: "4. 資料保存期限",
-      body: "交易紀錄依法保留 7 年(會計法 / 稅捐稽徵法)。KYC 資料自帳戶終止後保留 5 年(洗錢防制法第 7 條)。其他個資於目的消滅後刪除。",
+      body: "交易紀錄依法保留 7 年(會計法 / 稅捐稽徵法)。\nKYC 資料自帳戶終止後保留 5 年(洗錢防制法第 7 條)。\n其他個資於目的消滅後刪除。",
     },
     s5: {
       h: "5. 資料分享",
@@ -66,17 +66,17 @@ const STRINGS: Record<Locale, {
     },
     s6: {
       h: "6. 你的權利",
-      lead: "依個資法第 3 條,你有權:",
+      lead: "依個資法第 3 條,你有權：",
       items: [
-        "查詢、閱覽你的個資 — 請至設定頁「匯出我的資料」。",
-        "更正錯誤個資 — 來信客服。",
-        "請求刪除帳戶 — 設定頁「刪除帳號」(需餘額為 0)。",
-        "限制處理目的 — 來信客服。",
+        "查詢、閱覽你的個資：請至設定頁「匯出我的資料」。",
+        "更正錯誤個資：來信客服。",
+        "請求刪除帳戶：設定頁「刪除帳號」(需餘額為 0)。",
+        "限制處理目的：來信客服。",
       ],
     },
     s7: {
       h: "7. Cookie 與追蹤",
-      body: "本服務僅使用必要 cookie(登入 session)。不使用第三方追蹤、廣告 cookie。",
+      body: "本服務僅使用必要 cookie(登入 session)。\n不使用第三方追蹤、廣告 cookie。",
     },
     s8: {
       h: "8. 資料安全",
@@ -288,7 +288,7 @@ export default function PrivacyPage({
 
       <section className="mt-10">
         <h2 className="text-xl font-semibold">{s.s4.h}</h2>
-        <p className="mt-3">{s.s4.body}</p>
+        <p className="mt-3 whitespace-pre-line">{s.s4.body}</p>
       </section>
 
       <section className="mt-10">
@@ -313,7 +313,7 @@ export default function PrivacyPage({
 
       <section className="mt-10">
         <h2 className="text-xl font-semibold">{s.s7.h}</h2>
-        <p className="mt-3">{s.s7.body}</p>
+        <p className="mt-3 whitespace-pre-line">{s.s7.body}</p>
       </section>
 
       <section className="mt-10">

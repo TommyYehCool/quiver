@@ -142,7 +142,7 @@ function Naming() {
           <p className="mt-4 text-base text-slate-600 dark:text-slate-300">
             {t("subtitle")}
           </p>
-          <p className="mt-3 text-base text-slate-600 dark:text-slate-300">
+          <p className="mt-3 whitespace-pre-line text-base text-slate-600 dark:text-slate-300">
             {t("story")}
           </p>
           <p className="mt-5 border-l-4 border-violet-400 pl-4 text-sm font-medium italic text-slate-700 dark:border-violet-600 dark:text-slate-200">

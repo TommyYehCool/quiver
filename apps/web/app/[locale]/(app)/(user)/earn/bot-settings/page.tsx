@@ -62,28 +62,28 @@ const STRINGS: Record<Locale, {
   "zh-TW": {
     back: "回 Earn",
     title: "放貸機器人設定",
-    subtitle: "Bitfinex API key、Funding 入金地址、auto-lend 開關,都在這。\n連接後可隨時更新或撤銷。",
+    subtitle: "Bitfinex API key、Funding 入金地址、auto-lend 開關，都在這。\n連接後可隨時更新或撤銷。",
     connected: {
       statusTitle: "已連接 Bitfinex",
       statusDesc: "Quiver 正在用這支 key 自動放貸。要撤銷的話到 Bitfinex 點 Revoke 那支 key 即可。",
       fundingAddrLabel: "Funding 入金地址",
       autoLendTitle: "Auto-lend 自動放貸",
-      autoLendDesc: "ON:每筆新存進 Quiver 的 USDT 自動送到你 Bitfinex 並轉換成 USD 並且掛單。\nOFF:新 deposit 不進入 Bitfinex(已借出的部位不受影響,自然到期回 funding wallet)。",
+      autoLendDesc: "ON：每筆新存進 Quiver 的 USDT 自動送到你 Bitfinex 並轉換成 USD 並且掛單。\nOFF：新 deposit 不進入 Bitfinex(已借出的部位不受影響，自然到期回 funding wallet)。",
       strategyTitle: "策略類型",
-      strategyDesc: "選擇放貸風格:影響 Quiver 怎麼切分階梯掛單與選擇鎖定天數。\n隨時可換,下一次新存入或自動續借時生效。",
+      strategyDesc: "選擇放貸風格：影響 Quiver 怎麼切分階梯掛單與選擇鎖定天數。\n隨時可換，下一次新存入或自動續借時生效。",
       updateKeyTitle: "更新 API key",
-      updateKeyDesc: "key 過期或想換一支?重新填表單覆寫即可。舊 key 會自動 revoke。",
+      updateKeyDesc: "key 過期或想換一支？重新填表單覆寫即可。舊 key 會自動 revoke。",
     },
     feeCard: {
       titleFriend: "🎉 你會進入 Friend 名額",
       titlePublic: "標準費率",
       descFriend: (remaining, total) =>
         `前 ${total} 名連接者享受 Friend 等級費率。目前還剩 ${remaining} 個名額。`,
-      descPublic: "Friend 名額已滿,你會以標準公開費率連接。Quiver 從你利息收入抽取績效費,本金永遠不抽。",
+      descPublic: "Friend 名額已滿，你會以標準公開費率連接。\nQuiver 從你利息收入抽取績效費，本金永遠不抽。",
       feeLabel: "績效費(只從你的利息收入扣,本金不動)",
       feeNote: "本金永遠不會被扣手續費。Fee 只在你的部位獲得利息且贖回時計算,從利息總額中抽取上述比例。",
     },
-    bufferTip: "💡 建議 Quiver wallet 留 $50+ 作為 fee 預留 — 因為 Quiver 沒有 Bitfinex 提現權限,fee 從你的 Quiver wallet 扣;留 buffer 可避免 4 週連續積欠後 auto-lend 被自動暫停。Premium 訂閱可完全跳過。",
+    bufferTip: "💡 建議 Quiver wallet 留 $50+ 作為 fee 預留，因為 Quiver 沒有 Bitfinex 提現權限，fee 從你的 Quiver wallet 扣；\n留 buffer 可避免 4 週連續積欠後 auto-lend 被自動暫停。Premium 訂閱可完全跳過。",
     dunningPaused: {
       title: "Auto-lend 已被 Quiver 暫停(連續 4 週未付 fee)",
       body: "你的 auto-lend 目前被 Quiver 自動暫停 — 即使你下面把 toggle 打開,下個週一 cron 跑完還是會再被暫停。要恢復:儲值 Quiver wallet 補足欠款,或升級 Premium。",
@@ -92,11 +92,11 @@ const STRINGS: Record<Locale, {
     },
     telegramSection: {
       title: "Telegram 通知",
-      desc: "綁定 Telegram 後,Quiver 會在「借出成功」「捕捉到利率飆漲」「自動續借」等事件即時推訊息給你。",
+      desc: "綁定 Telegram 後，Quiver 會在「借出成功」「捕捉到利率飆漲」「自動續借」等事件即時推訊息給你。",
     },
     guideCard: {
-      title: "第一次設定?先看完整教學",
-      desc: "教學包含:Bitfinex 怎麼開 API key、權限要勾哪些 / 不能勾哪些(尤其 Withdrawal 永遠不要開)、IP allowlist 設定、入金地址在哪裡找。",
+      title: "第一次設定？先看完整教學",
+      desc: "教學包含：Bitfinex 怎麼開 API key，權限要勾哪些 / 不能勾哪些(尤其 Withdrawal 永遠不要開)、IP allowlist 設定、入金地址在哪裡找。",
       cta: "開啟教學頁面 →",
     },
     formCard: {
@@ -115,7 +115,7 @@ const STRINGS: Record<Locale, {
       autoLendTitle: "Auto-lend",
       autoLendDesc: "ON: every new USDT deposit to Quiver is auto-sent to your Bitfinex, converted to USD, and posted as a funding offer.\nOFF: new deposits stay in Quiver (existing lent positions are unaffected and roll off naturally on offer expiry).",
       strategyTitle: "Strategy preset",
-      strategyDesc: "Pick a lending style: controls how Quiver splits the ladder and selects the offer period.\nSwitch any time; takes effect on the next deposit or auto-renew cycle.",
+      strategyDesc: "Pick a lending style — controls how Quiver splits the ladder and selects the offer period.\nSwitch any time; takes effect on the next deposit or auto-renew cycle.",
       updateKeyTitle: "Update API key",
       updateKeyDesc: "Key expired or want to rotate? Just fill the form again — the old key is automatically revoked.",
     },
@@ -152,15 +152,15 @@ const STRINGS: Record<Locale, {
   ja: {
     back: "Earn に戻る",
     title: "貸付ボット設定",
-    subtitle: "Bitfinex API キー、Funding 入金アドレス、auto-lend トグル、すべてここに。\n接続後はいつでも更新・取消可能。",
+    subtitle: "Bitfinex API キー、Funding 入金アドレス、auto-lend トグル — すべてここに。接続後はいつでも更新・取消可能。",
     connected: {
       statusTitle: "Bitfinex 接続済み",
       statusDesc: "Quiver はこのキーで自動貸付を実行中。取り消すには Bitfinex でこのキーを Revoke してください。",
       fundingAddrLabel: "Funding 入金アドレス",
       autoLendTitle: "Auto-lend 自動貸付",
-      autoLendDesc: "ON:Quiver への新規 USDT 入金は自動で Bitfinex に送られ、USD に変換されて offer が出ます。\nOFF:新規入金は Bitfinex に送られず Quiver に留まります(既存の貸出ポジションは影響を受けず、満期時に funding wallet に自然に戻ります)。",
+      autoLendDesc: "ON:Quiver への新規 USDT 入金は自動で Bitfinex に送られ offer が出ます。OFF:新規入金は Quiver に留まり、Bitfinex には送られません(既存の貸出ポジションは影響を受けず、満期時に funding wallet に自然に戻ります)。",
       strategyTitle: "戦略プリセット",
-      strategyDesc: "貸付スタイルを選択:Quiver がラダーをどう分割し、ロック期間をどう選ぶかを制御します。\nいつでも変更可能、次の入金または自動更新から反映されます。",
+      strategyDesc: "貸付スタイルを選択 — Quiver がどうラダーを分割し、オファー期間をどう選ぶかを制御します。いつでも変更可能 — 次の入金または自動更新から反映されます。",
       updateKeyTitle: "API キーを更新",
       updateKeyDesc: "キーが期限切れ?ローテーションしたい?フォームを再入力するだけで、古いキーは自動的に revoke されます。",
     },
@@ -303,16 +303,14 @@ export default async function EarnConnectPage({
                 <CardHeader className="flex-row items-start justify-between gap-4">
                   <div className="flex-1">
                     <CardTitle className="text-base">{s.connected.autoLendTitle}</CardTitle>
-                    <CardDescription className="whitespace-pre-line">
-                      {s.connected.autoLendDesc}
-                    </CardDescription>
+                    <CardDescription className="whitespace-pre-line">{s.connected.autoLendDesc}</CardDescription>
                   </div>
                   <AutoLendToggle initial={earn.auto_lend_enabled} />
                 </CardHeader>
                 {/* F-5b-2: buffer hint for paying users (skip Friend & Premium). */}
                 {(earn.perf_fee_bps ?? 0) > 0 && !earn.is_premium ? (
                   <CardContent className="pt-0">
-                    <p className="rounded-md border border-sky-200/60 bg-sky-50/40 px-3 py-2 text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300">
+                    <p className="rounded-md border border-sky-200/60 bg-sky-50/40 px-3 py-2 whitespace-pre-line text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300">
                       {s.bufferTip}
                     </p>
                   </CardContent>
@@ -337,9 +335,7 @@ export default async function EarnConnectPage({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">{s.connected.strategyTitle}</CardTitle>
-                  <CardDescription className="whitespace-pre-line">
-                    {s.connected.strategyDesc}
-                  </CardDescription>
+                  <CardDescription className="whitespace-pre-line">{s.connected.strategyDesc}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <StrategyPresetCard
@@ -390,7 +386,7 @@ export default async function EarnConnectPage({
                           ? s.feeCard.titleFriend
                           : s.feeCard.titlePublic}
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="whitespace-pre-line">
                         {preview.tier === "friend"
                           ? s.feeCard.descFriend(
                               preview.friend_slots_remaining,
@@ -418,7 +414,7 @@ export default async function EarnConnectPage({
                         buffer requirement before they connect (Friend tier
                         skips this — they pay no fee). */}
                     {preview.tier !== "friend" ? (
-                      <p className="rounded-md border border-sky-200/60 bg-sky-50/40 px-3 py-2 text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300">
+                      <p className="rounded-md border border-sky-200/60 bg-sky-50/40 px-3 py-2 whitespace-pre-line text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300">
                         {s.bufferTip}
                       </p>
                     ) : null}

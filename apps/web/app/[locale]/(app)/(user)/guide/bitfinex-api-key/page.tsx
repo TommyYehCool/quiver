@@ -40,17 +40,17 @@ const STRINGS: Record<Locale, Strings> = {
     back: "回教學首頁",
     title: "③ Bitfinex API Key 設定教學",
     subtitle:
-      "5 分鐘設好,讓 Quiver 自動幫你在 Bitfinex 放貸賺利息。你的錢始終在你自己 Bitfinex 帳號裡(Quiver 沒有提現權限)。",
+      "5 分鐘設好,讓 Quiver 自動幫你在 Bitfinex 放貸賺利息。\n你的錢始終在你自己 Bitfinex 帳號裡。",
     step1: {
-      title: "步驟一:登入 Bitfinex 開新 API Key",
+      title: "步驟一：登入 Bitfinex 開新 API Key",
       introBefore: "登入 ",
       linkText: "setting.bitfinex.com/api",
       introAfter: ",點 Create New API Key。",
       labelHint: "Label 建議:quiver-earn",
     },
     step2: {
-      title: "步驟二:勾選權限",
-      desc: "看清楚,勾錯會出問題",
+      title: "步驟二：勾選權限",
+      desc: "看清楚，勾錯會出問題",
       yesHeader: "✅ 要打開的",
       yes: [
         "Account Info → Get account fee information",
@@ -72,29 +72,29 @@ const STRINGS: Record<Locale, Strings> = {
       ],
     },
     step3: {
-      title: "步驟三:IP Allowlist(必做)",
+      title: "步驟三：IP Allowlist(必做)",
       instruction:
         "找到「IP Access restrictions」,確保「Allow access from any IP」維持 OFF,然後在框框填入:",
       ipNote: "這是 Quiver prod server IP。萬一 key 外洩,從別的 IP 也用不了。",
     },
     step4: {
-      title: "步驟四:Generate + 複製 key",
+      title: "步驟四：Generate + 複製 key",
       body: "輸入 2FA 後 Generate Key。Bitfinex 會給你 API Key + Secret(Secret 只顯示一次,複製好)。",
     },
     step5: {
-      title: "步驟五:複製 Funding wallet 入金地址",
+      title: "步驟五：複製 Funding wallet 入金地址",
       desc: "Quiver 需要這個地址才能把你的 USDT 送過去",
       steps: [
         "Bitfinex → Wallets → Deposit",
         "選 Tether (USDt)",
         "Network 選 Tron (TRX)",
         "會看到三個地址(Exchange / Margin / Funding)",
-        "只複製 Funding wallet address(不是 Exchange,不是 Margin)",
+        "只複製 Funding wallet address(不是 Exchange，不是 Margin)",
       ],
-      warning: "⚠ 複製錯地址會讓錢卡在錯的 wallet,要 Funding 才能放貸",
+      warning: "⚠ 複製錯地址會讓錢卡在錯的 wallet，要 Funding 才能放貸",
     },
     step6: {
-      title: "步驟六:回 Quiver 連接",
+      title: "步驟六：回 Quiver 連接",
       bodyBefore: "把 API key + Secret + Funding 入金地址貼進 ",
       linkText: "/earn/bot-settings",
       bodyAfter: " 的表單。Quiver 會立刻 call Bitfinex 驗證 key 通過才存。",
@@ -108,11 +108,11 @@ const STRINGS: Record<Locale, Strings> = {
         },
         {
           q: "Q. 萬一 key 被偷會怎樣?",
-          a: "攻擊者不能提走你的錢(沒 Withdrawal 權限),最多能幫你掛/取消 funding offer。加上 IP allowlist,攻擊者必須先攻陷 Quiver server 才能用這把 key。",
+          a: "攻擊者不能提走你的錢(沒 Withdrawal 權限),最多能幫你掛/取消 funding offer。加上 IP allowlist，攻擊者必須先攻陷 Quiver server 才能用這把 key。",
         },
         {
           q: "Q. 我可以隨時把錢從 Bitfinex 提走嗎?",
-          a: "可以,100% 在你控制。先在 Bitfinex 取消 active funding offer 或等到期,再從 Bitfinex 提到任何錢包。Quiver 沒有提現權限,提錢始終是你自己操作。",
+          a: "可以，100% 在你控制。先在 Bitfinex 取消 active funding offer 或等到期，再從 Bitfinex 提到任何錢包。Quiver 沒有提現權限，提錢始終是你自己操作。",
         },
         {
           q: "Q. Bitfinex KYC 沒過可以用嗎?",
@@ -331,7 +331,7 @@ export default function SetupGuidePage({
 
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight">{s.title}</h1>
-        <p className="mt-2 text-sm text-slate-500">{s.subtitle}</p>
+        <p className="mt-2 text-sm text-slate-500 whitespace-pre-line">{s.subtitle}</p>
       </div>
 
       <Card>

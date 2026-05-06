@@ -13,7 +13,7 @@
     },
     "features": {
       "sectionTitle": "錢包功能",
-      "sectionDesc": "上線、收款、轉帳、提領 — 一個帳號全部搞定。",
+      "sectionDesc": "上線、收款、轉帳、提領，一個帳號全部搞定。",
       "f1": {
         "title": "用熟悉的法幣顯示",
         "desc": "看到的數字就是你熟悉的本地貨幣，不用換算、不用心算。"
@@ -30,17 +30,17 @@
     "naming": {
       "badge": "命名故事",
       "title": "為什麼叫「Quiver」?",
-      "subtitle": "Quiver 中文是「箭袋」— 古代弓箭手用來收納箭支的容器。",
-      "story": "我們把每一筆 USDT 想像成你的箭。Quiver 就是屬於你的那個箭袋,把這些「箭」(資產)整齊收好、隨時可發、安心保管。",
-      "tagline": "你的錢不在某個交易所、不在某個 protocol 黑箱裡 — 在你自己的 Quiver 裡。"
+      "subtitle": "Quiver 中文是「箭袋」：古代弓箭手用來收納箭支的容器。",
+      "story": "我們把每一筆 USDT 想像成你的箭。\nQuiver 就是屬於你的那個箭袋，把這些「箭」(資產)整齊收好、隨時可發、安心保管。",
+      "tagline": "你的錢不在某個交易所、不在某個黑箱裡，在你自己的 Quiver 裡。"
     },
     "painPoint": {
       "title": "為什麼用加密貨幣這麼麻煩？",
       "subtitle": "我們把那些「行內人才知道」的細節全部處理好，讓你像用 Apple Pay 一樣輕鬆。",
-      "p1Problem": "看到 USDT、TRC20、TRX、Wei、gwei 一頭霧水",
+      "p1Problem": "看到 USDT、TRC20、TRX 一頭霧水",
       "p1Solution": "Quiver 全程顯示熟悉的本地貨幣，所有區塊鏈名詞翻譯成日常語言。",
       "p2Problem": "每筆交易都要付鏈上手續費，新手經常燒錢學經驗",
-      "p2Solution": "用戶間轉帳完全免費；提領時所有 gas 費由我們承擔。",
+      "p2Solution": "用戶間轉帳完全免費；提領時大部分手續費由我們承擔。",
       "p3Problem": "錢包私鑰自己保管，掉了就永遠沒了",
       "p3Solution": "Google 帳號登入，私鑰用銀行級加密 + Shamir 分片冷備份。",
       "p4Problem": "想被動賺利息但不會用 DeFi，又怕 CEX 倒",

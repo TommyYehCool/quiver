@@ -94,7 +94,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
   "zh-TW": {
     loadFailed: "無法載入 Earn 資料,請稍後再試或聯絡 admin。",
     headerSubtitle:
-      "Quiver 自動把你的 USDT 送到你 Bitfinex Funding wallet 並掛 funding offer 賺利息",
+      "Quiver 自動把你的 USDT 送到你 Bitfinex Funding wallet 並轉換成 USD 掛單賺利息",
     tierBadge: {
       friend: "Friend 等級",
       public: "Public 等級",
@@ -107,7 +107,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     notSetup: {
       title: "連接你的 Bitfinex 帳號",
       desc:
-        "提供你的 Bitfinex API key + Funding wallet 入金地址,Quiver 會自動把你存進來的 USDT 送過去並掛 funding offer。你的錢始終在你自己 KYC 過的 Bitfinex 帳號裡,Quiver 沒有提現權限。",
+        "提供你的 Bitfinex API key + Funding wallet 入金地址，Quiver 會自動把你存進來的 USDT 送過去並轉換成 USD 掛單。\n你的錢始終在你自己 KYC 過的 Bitfinex 帳號裡。",
       cta: "開始連接",
       viewGuide: "查看完整教學",
     },
@@ -119,18 +119,18 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     },
     activeLoans: {
       title: "目前借出",
-      desc: "Bitfinex 上正在計息的 funding loans。每筆借期到期後自動回 funding wallet,系統會 auto-renew 重新掛單。",
+      desc: "Bitfinex 上正在計息的 funding loans。\n每筆借期到期後自動回 funding wallet，系統會 auto-renew 重新掛單。",
     },
     pendingOffers: {
       title: "掛單中明細",
-      desc: "已掛 funding offer、等待借方撮合。撮合後會自動轉成「目前借出」開始計息。",
+      desc: "已掛 funding offer、等待借方撮合。\n撮合後會自動轉成「目前借出」開始計息。",
       rateFrr: "FRR 市場單",
       rateFixed: "固定利率",
       periodDays: (n) => `${n} 天`,
     },
     autoLend: {
       title: "Auto-lend 自動放貸",
-      desc: "打開時:每筆新存進 Quiver 的 USDT 會自動送到你 Bitfinex 並掛 offer。關掉時:新 deposit 不會自動進入 Bitfinex(已借出的部位不受影響,自然到期回 funding wallet)。",
+      desc: "打開時：每筆新存進 Quiver 的 USDT 會自動送到你的 Bitfinex 並轉換成 USD 掛單。關掉時：新 deposit 不會自動進入 Bitfinex (已借出的部位不受影響，自然到期回 funding wallet)。",
       statusOn: "已開啟",
       statusOff: "已關閉",
       movedNote: "(toggle 已移到放貸機器人設定)",
@@ -157,7 +157,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     },
   },
   en: {
-    loadFailed: "Failed to load Earn data — please try again later or contact admin.",
+    loadFailed: "Failed to load Earn data: please try again later or contact admin.",
     headerSubtitle:
       "Quiver automatically sends your USDT to your Bitfinex Funding wallet and posts a funding offer to earn interest",
     tierBadge: {
@@ -381,7 +381,7 @@ export default async function EarnPage({
         <Card>
           <CardHeader>
             <CardTitle>{s.notSetup.title}</CardTitle>
-            <CardDescription>{s.notSetup.desc}</CardDescription>
+            <CardDescription className="whitespace-pre-line">{s.notSetup.desc}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row">
             <Button asChild>
@@ -458,7 +458,7 @@ export default async function EarnPage({
             <Card>
               <CardHeader>
                 <CardTitle>{s.activeLoans.title}</CardTitle>
-                <CardDescription>{s.activeLoans.desc}</CardDescription>
+                <CardDescription className="whitespace-pre-line">{s.activeLoans.desc}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -477,7 +477,7 @@ export default async function EarnPage({
             <Card>
               <CardHeader>
                 <CardTitle>{s.pendingOffers.title}</CardTitle>
-                <CardDescription>{s.pendingOffers.desc}</CardDescription>
+                <CardDescription className="whitespace-pre-line">{s.pendingOffers.desc}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">

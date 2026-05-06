@@ -30,15 +30,15 @@ const STRINGS = {
     subtitle: "訂閱後績效費變 0%。所有未來放貸利息全部歸你。",
     plan: {
       title: "Premium 月費方案",
-      desc: "$9.99 USDT / 月,績效費全免。隨時可取消,當期結束失效。",
+      desc: "$9.99 USDT / 月，績效費全免。隨時可取消,當期結束失效。",
       bullet1: "✓ 0% 績效費(取代 5% / 15% 級距)",
-      bullet2: (days: number) => `✓ ${days} 天為一期,自動從你 Quiver 主錢包扣款`,
+      bullet2: (days: number) => `✓ ${days} 天為一期，自動從你 Quiver 主錢包扣款`,
       bullet3: (days: number) => `✓ 餘額不足會 PAST_DUE 寬限 ${days} 天再失效`,
       bullet4: "✓ 取消後仍可享受到當期結束",
     },
     notSubscribed: {
       ctaTemplate: "訂閱：${price} USDT / 月",
-      ctaNote: "立即從你 Quiver 主錢包扣款,確認後即享 0% 績效費。",
+      ctaNote: "立即從你 Quiver 主錢包扣款，確認後即享 0% 績效費。",
     },
     activeSection: {
       titleActive: "Premium 訂閱中 ✓",

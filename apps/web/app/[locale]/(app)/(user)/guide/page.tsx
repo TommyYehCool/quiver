@@ -40,35 +40,35 @@ interface Strings {
 const STRINGS: Record<Locale, Strings> = {
   "zh-TW": {
     title: "Earn 教學",
-    subtitle: "從不會 Bitfinex 到自動賺利息,3 個步驟看完不到 15 分鐘。",
+    subtitle: "從不會 Bitfinex 到自動賺利息，3 個步驟看完不到 15 分鐘。",
     flowHint: "完全沒接觸過的話,建議照 ① → ② → ③ 順序看。",
-    advancedHint: "進階:想理解 Quiver 的策略 + 階梯掛單內部運作怎麼決定你的利率,看 ④。",
+    advancedHint: "進階：想理解 Quiver 的策略 + 階梯掛單內部運作怎麼決定你的利率,看 ④。",
     cards: {
       lending: {
         step: "①",
-        title: "何謂 Bitfinex 放貸?",
-        desc: "用最白話解釋:你借 USDT 給想做槓桿的交易者,他們付你利息。為什麼比銀行定存高、為什麼比 DeFi 安全。",
+        title: "何謂 Bitfinex 放貸？",
+        desc: "用最白話解釋：你借 USDT 給想做槓桿的交易者，他們付你利息。為什麼比銀行定存高、為什麼比 DeFi 安全。",
         cta: "看介紹",
         duration: "約 4 分鐘",
       },
       signup: {
         step: "②",
-        title: "如何註冊 Bitfinex?",
-        desc: "Email 註冊 → 完成 KYC → 開啟 2FA。沒有 Bitfinex 帳號的話,先做這個。",
+        title: "如何註冊 Bitfinex？",
+        desc: "Email 註冊 → 完成 KYC → 開啟 2FA。沒有 Bitfinex 帳號的話，先做這個。",
         cta: "看註冊步驟",
         duration: "約 5 分鐘(KYC 審核另計)",
       },
       apiKey: {
         step: "③",
         title: "Bitfinex API Key 設定",
-        desc: "在 Bitfinex 開一把唯讀 + 放貸權限的 API key,貼到 Quiver 就能自動放貸。詳列權限勾哪些、不要勾哪些。",
+        desc: "在 Bitfinex 開一把唯讀 + 放貸權限的 API key，貼到 Quiver 就能自動放貸。\n詳列權限勾哪些、不要勾哪些。",
         cta: "看 API key 教學",
         duration: "約 5 分鐘",
       },
       strategy: {
         step: "④",
         title: "策略類型 + 階梯掛單完整說明",
-        desc: "保守 / 平衡 / 進取 真正的差別、階梯掛單怎麼把資金切成 5 階等待利率飆漲、為什麼小額看不到策略效果。實際數字 + 常見問答。",
+        desc: "保守 / 平衡 / 進取 真正的差別、階梯掛單怎麼把資金切成 5 階等待利率飆漲，為什麼小額看不到策略效果。實際數字 + 常見問答。",
         cta: "看策略拆解",
         duration: "約 7 分鐘",
       },
@@ -178,7 +178,7 @@ function GuideCard({ href, Icon, copy, accent }: GuideCardProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <CardDescription>{copy.desc}</CardDescription>
+          <CardDescription className="whitespace-pre-line">{copy.desc}</CardDescription>
           <div className="inline-flex items-center gap-1 text-sm font-medium text-brand group-hover:underline">
             {copy.cta} <ArrowRight className="h-3.5 w-3.5" />
           </div>

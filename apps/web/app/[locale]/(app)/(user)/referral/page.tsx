@@ -23,7 +23,7 @@ type Locale = "zh-TW" | "en" | "ja";
 const STRINGS = {
   "zh-TW": {
     title: "推薦",
-    subtitle: "邀請朋友加入 Quiver Earn,從他們未來 6 個月的績效費賺分潤。",
+    subtitle: "邀請朋友加入 Quiver Earn，從他們未來 6 個月的績效費賺分潤。",
     statBlocks: {
       directInvitees: "已邀請人數",
       directInviteesSub: "直接被你邀請的用戶",
@@ -34,24 +34,24 @@ const STRINGS = {
     },
     howItWorks: {
       title: "怎麼運作",
-      l1Pct: (pct: string) => `**直邀(L1)**:被你邀請的人每次被收績效費,你拿其中 **${pct}%**`,
-      l2Pct: (pct: string) => `**間接(L2)**:被邀請人邀請的下一層,你拿 **${pct}%**`,
+      l1Pct: (pct: string) => `**直邀(L1)**:被你邀請的人每次被收績效費，你拿其中 **${pct}%**`,
+      l2Pct: (pct: string) => `**間接(L2)**:被邀請人邀請的下一層，你拿 **${pct}%**`,
       window: (days: number) => `每位被邀請人的分潤窗口為 **${days} 天**,從他們第一筆績效費結算當天起算。`,
-      payment: "撥款即時 — 績效費結算當下,自動撥到你的 Quiver 錢包,可直接提領或繼續賺利息。",
+      payment: "撥款即時：績效費結算當下，自動撥到你的 Quiver 錢包，可直接提領或繼續賺利息。",
       eligibility:
-        "⚠️ 分潤產生條件:**你推薦的人必須是標準等級用戶**(預設 15% 績效費),而且當週確實有績效費被扣到。Friend 等級永久 0% 不收費,Premium 訂戶也是 0%,這兩種都不會產生你的分潤。",
+        "⚠️ 分潤產生條件:**你推薦的人必須是標準等級用戶**(預設 15% 績效費)，而且當週確實有績效費被扣到。\nFriend 等級永久 0% 不收費，Premium 訂戶也是 0%，這兩種都不會產生你的分潤。",
     },
     code: {
       haveCodeTitle: "你的推薦碼",
-      haveCodeDesc: "把這組碼或下面的連結傳給朋友,他們在連接 Bitfinex 時填入或事後綁定都行。",
+      haveCodeDesc: "把這組碼或下面的連結傳給朋友，他們在連接 Bitfinex 時填入或事後綁定都行。",
       shareLinkLabel: "分享連結",
       copy: "複製",
       copied: "已複製",
       setTitle: "建立你的推薦碼",
-      setDesc: "用戶可自選 4-12 字元 [A-Z0-9],一旦設定無法變更(找 admin)。",
+      setDesc: "用戶可自選 4-12 字元 [A-Z0-9]，一旦設定無法變更(找 admin)。",
       inputLabel: "推薦碼",
       inputPlaceholder: "例如 TOMMY8",
-      rules: "4-12 字元,只允許 A-Z 與 0-9。",
+      rules: "4-12 字元，只允許 A-Z 與 0-9。",
       submit: "建立",
       errors: {
         "referral.codeInvalid": "格式錯誤(4-12 字元 [A-Z0-9])",
@@ -62,13 +62,13 @@ const STRINGS = {
     },
     bind: {
       alreadyBoundTitle: "你已綁定推薦人",
-      alreadyBoundDesc: "你的績效費結算時,會自動撥分潤給你的推薦人。",
+      alreadyBoundDesc: "你的績效費結算時，會自動撥分潤給你的推薦人。",
       alreadyBoundByTemplate: "你被 {code} 推薦",
-      windowActiveTemplate: "分潤窗口開啟中 — 至 {date} 結束。",
+      windowActiveTemplate: "分潤窗口開啟中：至 {date} 結束。",
       windowExpired: "分潤窗口已過期。",
       windowNotStarted: "分潤窗口尚未開始(等你產生第一筆績效費)。",
       bindTitle: "輸入別人的推薦碼",
-      bindDesc: "如果是朋友邀你來的,輸入他們的碼把你綁定。一旦綁定無法變更。",
+      bindDesc: "如果是朋友邀你來的，輸入他們的碼把你綁定。一旦綁定無法變更。",
       inputLabel: "推薦碼",
       inputPlaceholder: "例如 ALICE12",
       submit: "綁定",
@@ -313,7 +313,7 @@ export default async function ReferralPage({
           <p>{renderBold(s.howItWorks.l2Pct(me.l2_pct))}</p>
           <p>{renderBold(s.howItWorks.window(me.window_days))}</p>
           <p className="text-xs text-slate-600 dark:text-slate-300">{s.howItWorks.payment}</p>
-          <p className="rounded-md border border-amber-300/60 bg-amber-100/50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          <p className="whitespace-pre-line rounded-md border border-amber-300/60 bg-amber-100/50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
             {renderBold(s.howItWorks.eligibility)}
           </p>
         </CardContent>

@@ -29,11 +29,11 @@ const STRINGS: Record<Locale, Strings> = {
   "zh-TW": {
     back: "回教學首頁",
     title: "① 何謂 Bitfinex 放貸?",
-    subtitle: "Bitfinex Funding 是把你閒置的 USDT 借給做槓桿的交易者,他們付你利息。完全不用懂技術,5 分鐘看完就懂。",
+    subtitle: "Bitfinex Funding 是把你閒置的 USDT 借給做槓桿的交易者，他們付你利息。\n完全不用懂技術，5 分鐘看完就懂。",
 
     s1: {
       h: "為什麼有人要借 USDT?",
-      body: "Bitfinex 是個能做槓桿(margin)的交易所。交易者要做 5 倍多單,自己只有 2,000 USDT,就要借 8,000 USDT 來開倉。借這 8,000 的人就是「funding lender」— 也就是你。交易者付的利息扣掉 Bitfinex 抽成 15%,剩下都是你的。",
+      body: "Bitfinex 是個能做槓桿(margin)的交易所。\n交易者要做 5 倍多單，自己只有 2,000 USDT，就要借 8,000 USDT 來開倉。\n借這 8,000 的人就是「funding lender」也就是你。\n交易者付的利息扣掉 Bitfinex 抽成 15%，剩下都是你的。",
     },
 
     s2: {
@@ -43,16 +43,16 @@ const STRINGS: Record<Locale, Strings> = {
         "你存 USDT 進 Quiver(或 Quiver 內部轉帳收到)",
         "Quiver 自動把 USDT 從你的 Quiver 餘額送到你 Bitfinex Funding 錢包",
         "Quiver 在 Bitfinex 上掛 funding offer(例如「我借出 1,000 USDT,2 天,日利率 0.03%」)",
-        "想做槓桿的交易者「接走」你的 offer,你的 USDT 就借出去了",
-        "到期那刻,Bitfinex 自動把本金 + 利息退回你的 Funding 錢包",
-        "Quiver 看到錢回來,自動再掛新 offer 賺下一輪",
+        "想做槓桿的交易者「接走」你的 offer，你的 USDT 就借出去了",
+        "到期那刻，Bitfinex 自動把本金 + 利息退回你的 Funding 錢包",
+        "Quiver 看到錢回來，自動再掛新 offer 賺下一輪",
       ],
-      tail: "整個過程錢始終在你自己 Bitfinex 帳戶 — Quiver 沒有提現權限。Bitfinex 上的部位你隨時可自己取消、自己提走。",
+      tail: "整個過程錢始終在你自己 Bitfinex 帳戶。Bitfinex 上的部位你隨時可自己取消、自己提走。",
     },
 
     s3: {
       h: "實際能賺多少?",
-      lead: "依市場波動,Bitfinex Funding USDT 近年常見利率區間大致如下(僅供參考,非保證):",
+      lead: "依市場波動,Bitfinex Funding USDT 近年常見利率區間大致如下(僅供參考，非保證):",
       rows: [
         { period: "Bear / 平靜期", rate: "0.005-0.015% / 日", apy: "1.8-5.5% APY" },
         { period: "正常市場", rate: "0.02-0.04% / 日", apy: "7-15% APY" },
@@ -290,7 +290,7 @@ export default function WhatIsBitfinexLendingPage({
 
       <div>
         <h1 className="font-display text-3xl font-bold tracking-tight">{s.title}</h1>
-        <p className="mt-2 text-sm text-slate-500">{s.subtitle}</p>
+        <p className="mt-2 text-sm text-slate-500 whitespace-pre-line">{s.subtitle}</p>
       </div>
 
       <Card>
@@ -298,7 +298,7 @@ export default function WhatIsBitfinexLendingPage({
           <CardTitle className="text-base">{s.s1.h}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-slate-700 dark:text-slate-300">
-          <p>{s.s1.body}</p>
+          <p className="whitespace-pre-line">{s.s1.body}</p>
         </CardContent>
       </Card>
 
