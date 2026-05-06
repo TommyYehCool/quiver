@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/card";
 import type { EarnPerformanceOut } from "@/lib/api/earn-user";
 import { cn } from "@/lib/utils";
-import { StatusPill, accentBarClass, cardToneClass, type PillTone } from "@/components/earn/status-pill";
+import { StatusPill, cyberCardClass, type PillTone } from "@/components/earn/status-pill";
 
 type Locale = "zh-TW" | "en" | "ja";
 

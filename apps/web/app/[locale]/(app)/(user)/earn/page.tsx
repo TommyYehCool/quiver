@@ -28,8 +28,7 @@ import { ActiveCreditRow } from "@/components/earn/active-credit-row";
 import { BufferEmptyBanner } from "@/components/earn/buffer-empty-banner";
 import { FeeStatusCard } from "@/components/earn/fee-status-card";
 import { PendingOfferRow } from "@/components/earn/pending-offer-row";
-import { StatusPill, accentBarClass, cardToneClass, cyberCardClass, type PillTone } from "@/components/earn/status-pill";
-import { cn } from "@/lib/utils";
+import { StatusPill, cyberCardClass, type PillTone } from "@/components/earn/status-pill";
 import { PerformanceCard } from "@/components/earn/performance-card";
 import { PublicStatsStrip } from "@/components/earn/public-stats-strip";
 // F-5a-3.10.3 — StrategyPreviewCard moved to its own page at /earn/strategy-lab.
