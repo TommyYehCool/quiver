@@ -28,6 +28,7 @@ interface Strings {
   step1: { title: string; introBefore: string; linkText: string; introAfter: string; labelHint: string };
   step2: { title: string; desc: string; yesHeader: string; yes: string[]; noHeader: string; no: string[] };
   step3: { title: string; instruction: string; ipNote: string };
+  stepWhitelist: { title: string; instruction: string; substeps: string[]; safetyNote: string };
   step4: { title: string; body: string };
   step5: { title: string; desc: string; steps: string[]; warning: string };
   step6: { title: string; bodyBefore: string; linkText: string; bodyAfter: string };
@@ -60,11 +61,11 @@ const STRINGS: Record<Locale, Strings> = {
         "Margin Funding → Get funding statuses and info ⭐",
         "Margin Funding → Offer, cancel and close funding ⭐(核心)",
         "Wallets → Get wallet balances and addresses ⭐",
+        "Wallets → Withdraw to whitelisted addresses ⭐(必勾,搭配下方提領白名單步驟)",
         "Settings → Read account settings",
       ],
       noHeader: "❌ 絕對不要打開",
       no: [
-        "Withdrawals → Create a new withdrawal(被偷錢的最大入口,任何時候都不要開)",
         "Wallets → Transfer between your wallets",
         "Orders → Create and cancel orders",
         "Margin Trading → Claim a position",
@@ -76,6 +77,18 @@ const STRINGS: Record<Locale, Strings> = {
       instruction:
         "找到「IP Access restrictions」,確保「Allow access from any IP」維持 OFF,然後在框框填入:",
       ipNote: "這是 Quiver prod server IP。萬一 key 外洩,從別的 IP 也用不了。",
+    },
+    stepWhitelist: {
+      title: "附加安全建議：設定提領白名單(強烈建議)",
+      instruction: "Bitfinex 設定 → Account → Whitelist Withdrawals 開啟，加入你的 Quiver 入金地址當作唯一允許的提領目標。",
+      substeps: [
+        "Bitfinex 右上角 → Settings → Account",
+        "找到 Whitelist Withdrawals,把它打開",
+        "幣種選 Tether (USDt)、Network 選 Tron (TRX)",
+        "貼上你的 Quiver 入金地址(到 Quiver 錢包頁面複製，或先做完步驟五再回來)",
+        "確認 + 完成 2FA",
+      ],
+      safetyNote: "設了之後即使 API key 外洩，攻擊者也只能把錢提回你 Quiver 帳戶，無法挪到外部錢包。Quiver 自己的自動提現也走這個白名單。",
     },
     step4: {
       title: "步驟四：Generate + 複製 key",
@@ -108,11 +121,11 @@ const STRINGS: Record<Locale, Strings> = {
         },
         {
           q: "Q. 萬一 key 被偷會怎樣?",
-          a: "攻擊者不能提走你的錢(沒 Withdrawal 權限),最多能幫你掛/取消 funding offer。加上 IP allowlist，攻擊者必須先攻陷 Quiver server 才能用這把 key。",
+          a: "如果你有設提領白名單，攻擊者最多只能把錢提回你的 Quiver 帳戶，無法挪到外部錢包，最多幫你掛 / 取消 funding offer。加上 IP allowlist，攻擊者必須先攻陷 Quiver server 才能用這把 key。",
         },
         {
           q: "Q. 我可以隨時把錢從 Bitfinex 提走嗎?",
-          a: "可以，100% 在你控制。先在 Bitfinex 取消 active funding offer 或等到期，再從 Bitfinex 提到任何錢包。Quiver 沒有提現權限，提錢始終是你自己操作。",
+          a: "可以，100% 在你控制。先在 Bitfinex 取消 active funding offer 或等到期，再從 Bitfinex 提到任何錢包。Quiver 的自動提現只會送回你 Quiver 帳戶，要把錢提到別的錢包始終是你自己操作。",
         },
         {
           q: "Q. Bitfinex KYC 沒過可以用嗎?",
@@ -127,7 +140,7 @@ const STRINGS: Record<Locale, Strings> = {
     back: "Back to guide hub",
     title: "③ Bitfinex API Key Setup",
     subtitle:
-      "Set up in 5 minutes so Quiver can auto-lend your USDT on Bitfinex Funding. Your money stays in your own Bitfinex account — Quiver has no withdrawal permission.",
+      "Set up in 5 minutes so Quiver can auto-lend your USDT on Bitfinex Funding. Your money stays in your own KYC'd Bitfinex account — Quiver's withdrawal scope is limited to redeeming earnings back to your Quiver wallet (set up the whitelist in the step below for extra safety).",
     step1: {
       title: "Step 1 — Sign in to Bitfinex and create a new API key",
       introBefore: "Sign in at ",
@@ -147,11 +160,11 @@ const STRINGS: Record<Locale, Strings> = {
         "Margin Funding → Get funding statuses and info ⭐",
         "Margin Funding → Offer, cancel and close funding ⭐ (core)",
         "Wallets → Get wallet balances and addresses ⭐",
+        "Wallets → Withdraw to whitelisted addresses ⭐ (required — pair with the whitelist step below)",
         "Settings → Read account settings",
       ],
       noHeader: "❌ NEVER enable these",
       no: [
-        "Withdrawals → Create a new withdrawal (the #1 attack vector — never enable)",
         "Wallets → Transfer between your wallets",
         "Orders → Create and cancel orders",
         "Margin Trading → Claim a position",
@@ -164,6 +177,20 @@ const STRINGS: Record<Locale, Strings> = {
         'Find "IP Access restrictions", make sure "Allow access from any IP" stays OFF, then add this IP to the box:',
       ipNote:
         "This is Quiver's prod server IP. Even if your key leaks, attackers from other IPs cannot use it.",
+    },
+    stepWhitelist: {
+      title: "Additional Security — Withdrawal Address Whitelist (strongly recommended)",
+      instruction:
+        "Bitfinex Settings → Account → Whitelist Withdrawals → enable, and add your Quiver deposit address as the only allowed withdrawal destination.",
+      substeps: [
+        "Bitfinex top-right → Settings → Account",
+        "Find Whitelist Withdrawals, turn it on",
+        "Currency: Tether (USDt), Network: Tron (TRX)",
+        "Paste your Quiver deposit address (copy from your Quiver wallet page, or finish Step 5 first then come back)",
+        "Confirm + complete 2FA",
+      ],
+      safetyNote:
+        "Once enabled, even if your API key leaks, attackers can only send funds back to your Quiver account — they cannot redirect to any external wallet. Quiver's own auto-withdrawal also goes through this whitelist.",
     },
     step4: {
       title: "Step 4 — Generate + copy the key",
@@ -199,11 +226,11 @@ const STRINGS: Record<Locale, Strings> = {
         },
         {
           q: "Q. What if my key gets stolen?",
-          a: "An attacker cannot withdraw your funds (no Withdrawal permission). Worst case: they place / cancel funding offers on your behalf. Combined with IP allowlist, attackers would need to compromise Quiver's server first to even use the key.",
+          a: "If you set up the withdrawal whitelist, attackers can only send funds back to your own Quiver account — never to any external wallet. Worst case: they place / cancel funding offers on your behalf. Combined with IP allowlist, attackers would need to compromise Quiver's server first to even use the key.",
         },
         {
           q: "Q. Can I withdraw from Bitfinex any time?",
-          a: "Yes — 100% under your control. Cancel active funding offers in Bitfinex (or wait for them to mature), then withdraw to any wallet. Quiver has no withdraw permission — withdrawals are always your own action.",
+          a: "Yes — 100% under your control. Cancel active funding offers in Bitfinex (or wait for them to mature), then withdraw to any wallet. Quiver's auto-withdrawal only sends funds back to your Quiver account; sending to other wallets is always your own action.",
         },
         {
           q: "Q. Can I use this without Bitfinex KYC?",
@@ -218,7 +245,7 @@ const STRINGS: Record<Locale, Strings> = {
     back: "ガイドトップに戻る",
     title: "③ Bitfinex API キー設定ガイド",
     subtitle:
-      "5 分で設定すれば、Quiver が Bitfinex Funding で自動貸付を行います。資金は常にあなたの Bitfinex アカウント内 — Quiver には出金権限はありません。",
+      "5 分で設定すれば、Quiver が Bitfinex Funding で自動貸付を行います。資金は常にあなたの Bitfinex アカウント内 — Quiver の出金は獲得した USD を Quiver wallet へ戻すためのみ使用されます(下記のホワイトリスト設定で追加の安全性確保推奨)。",
     step1: {
       title: "ステップ 1 — Bitfinex にログインして新しい API キーを作成",
       introBefore: "",
@@ -238,11 +265,11 @@ const STRINGS: Record<Locale, Strings> = {
         "Margin Funding → Get funding statuses and info ⭐",
         "Margin Funding → Offer, cancel and close funding ⭐(核心)",
         "Wallets → Get wallet balances and addresses ⭐",
+        "Wallets → Withdraw to whitelisted addresses ⭐(必須 — 下記のホワイトリスト設定と併用)",
         "Settings → Read account settings",
       ],
       noHeader: "❌ 絶対に有効にしない",
       no: [
-        "Withdrawals → Create a new withdrawal(資金窃取の最大入口、絶対に有効にしない)",
         "Wallets → Transfer between your wallets",
         "Orders → Create and cancel orders",
         "Margin Trading → Claim a position",
@@ -255,6 +282,20 @@ const STRINGS: Record<Locale, Strings> = {
         "「IP Access restrictions」を見つけ、「Allow access from any IP」を OFF のままにして、ボックスに次の IP を入力:",
       ipNote:
         "これは Quiver 本番サーバーの IP です。万一キーが漏洩しても、他の IP からは使用できません。",
+    },
+    stepWhitelist: {
+      title: "追加セキュリティ — 出金アドレスホワイトリスト(強く推奨)",
+      instruction:
+        "Bitfinex Settings → Account → Whitelist Withdrawals を有効化し、Quiver 入金アドレスを唯一許可される出金先として登録します。",
+      substeps: [
+        "Bitfinex 右上 → Settings → Account",
+        "Whitelist Withdrawals を見つけて有効化",
+        "通貨: Tether (USDt)、ネットワーク: Tron (TRX)",
+        "Quiver 入金アドレスを貼り付け(Quiver wallet ページからコピー、またはステップ 5 を終わらせてから戻る)",
+        "確認して 2FA で承認",
+      ],
+      safetyNote:
+        "設定後は API キーが漏れても、攻撃者は資金を Quiver アカウントへ戻すことしかできず、外部ウォレットへ流出させることはできません。Quiver の自動出金もこのホワイトリスト経由で行われます。",
     },
     step4: {
       title: "ステップ 4 — キーを生成してコピー",
@@ -291,11 +332,11 @@ const STRINGS: Record<Locale, Strings> = {
         },
         {
           q: "Q. もしキーが盗まれたらどうなりますか?",
-          a: "攻撃者は資金を引き出せません(出金権限がないため)。最悪の場合、funding offer の作成 / 取消が可能なだけです。IP Allowlist と組み合わせれば、攻撃者は Quiver サーバーを侵害しない限りキーを使用できません。",
+          a: "出金ホワイトリストを設定していれば、攻撃者は資金をあなたの Quiver アカウントに戻すことしかできず、外部ウォレットへの転送は不可能です。最悪の場合でも funding offer の作成 / 取消が可能なだけ。IP Allowlist と組み合わせれば、攻撃者は Quiver サーバーを侵害しない限りキーを使用できません。",
         },
         {
           q: "Q. いつでも Bitfinex から資金を引き出せますか?",
-          a: "はい、100% あなたの管理下です。Bitfinex でアクティブな funding offer を取消するか満期を待ち、任意のウォレットに出金してください。Quiver には出金権限がないため、出金は常にあなた自身の操作です。",
+          a: "はい、100% あなたの管理下です。Bitfinex でアクティブな funding offer を取消するか満期を待ち、任意のウォレットに出金してください。Quiver の自動出金はあなたの Quiver アカウントへのみ可能で、他のウォレットへの出金は常にあなた自身の操作です。",
         },
         {
           q: "Q. Bitfinex KYC を完了していなくても使えますか?",
@@ -376,6 +417,21 @@ export default function SetupGuidePage({
             {PROD_IP}
           </div>
           <p className="text-xs text-slate-500">{s.step3.ipNote}</p>
+        </CardContent>
+      </Card>
+
+      <Card className="border-emerald-200/60 bg-emerald-50/30 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+        <CardHeader>
+          <CardTitle className="text-base">{s.stepWhitelist.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p>{s.stepWhitelist.instruction}</p>
+          <ol className="ml-4 list-decimal space-y-1 text-slate-700 dark:text-slate-300">
+            {s.stepWhitelist.substeps.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ol>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400">{s.stepWhitelist.safetyNote}</p>
         </CardContent>
       </Card>
 

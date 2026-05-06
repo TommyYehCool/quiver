@@ -89,7 +89,7 @@ const STRINGS: Record<Locale, {
     sEarn: {
       h: "8. Quiver Earn 服務(Bitfinex 自動放貸串接)",
       body:
-        "Earn 為選用功能(opt-in),使用者自願提供其本人持有之 Bitfinex API 金鑰(僅需 Margin Funding 讀寫權限,「絕不」要求 Withdrawal 權限)及 Funding 錢包之 TRC-20 入金地址。本服務據此自動將使用者於 Quiver 之 USDT 餘額轉至其本人 Bitfinex Funding 錢包,並於 Bitfinex 上自動掛 / 撤 / 續 funding offer 以協助賺取利息。使用者資金始終存放於其本人 KYC 之 Bitfinex 帳戶內,本服務無提現權限,亦無權將資金轉出至其他帳戶。Bitfinex 為獨立第三方平台,其平台事故、停運、破產、政策調整或鏈上事件等所致之任何損失,本服務不負賠償責任。使用者可隨時於 Bitfinex 端撤銷該 API 金鑰,撤銷後本服務即無法再操作其 Bitfinex 帳戶。",
+        "Earn 為選用功能(opt-in),使用者自願提供其本人持有之 Bitfinex API 金鑰(需 Margin Funding 讀寫權限,以及 Withdrawal 權限以將賺取之利息自動換回 USDT 並提領至使用者本人 Quiver 入金地址)及 Funding 錢包之 TRC-20 入金地址。本服務據此自動將使用者於 Quiver 之 USDT 餘額轉至其本人 Bitfinex Funding 錢包、自動執行 USDT/USD 轉換、於 Bitfinex 上自動掛 / 撤 / 續 funding offer 以協助賺取利息,並將賺取之資金提領回使用者本人 Quiver 入金地址。本服務之提領功能僅限於將資金送回使用者本人 Quiver 帳戶,無權將資金轉出至任何第三方錢包,並強烈建議使用者於 Bitfinex 端自行設定「提領地址白名單」加以技術性限制。Bitfinex 為獨立第三方平台,其平台事故、停運、破產、政策調整或鏈上事件等所致之任何損失,本服務不負賠償責任。使用者可隨時於 Bitfinex 端撤銷該 API 金鑰,撤銷後本服務即無法再操作其 Bitfinex 帳戶。",
     },
     sPerfFee: {
       h: "9. 績效費(performance fee)",
@@ -183,7 +183,7 @@ const STRINGS: Record<Locale, {
     sEarn: {
       h: "8. Quiver Earn services (Bitfinex auto-lending integration)",
       body:
-        "Earn is an optional (opt-in) feature. Users voluntarily provide their own Bitfinex API key (limited to Margin Funding read/write permissions; the Service will NEVER request Withdrawal permission) and the TRC-20 deposit address of their Bitfinex Funding wallet. Based on this, the Service automatically transfers USDT from the user's Quiver balance to their own Bitfinex Funding wallet and automatically posts / cancels / renews funding offers on Bitfinex on the user's behalf. User funds always reside in the user's own KYC'd Bitfinex account; the Service has no withdrawal permission and cannot move funds to other accounts. Bitfinex is an independent third-party platform; the Service is not liable for any losses arising from Bitfinex platform incidents, downtime, insolvency, policy changes, or on-chain events. Users may revoke the Bitfinex API key at any time, immediately preventing further actions by the Service.",
+        "Earn is an optional (opt-in) feature. Users voluntarily provide their own Bitfinex API key (requiring Margin Funding read/write permissions and Withdrawal permission, used to automatically convert earned interest back to USDT and withdraw it to the user's own Quiver deposit address) and the TRC-20 deposit address of their Bitfinex Funding wallet. Based on this, the Service automatically transfers USDT from the user's Quiver balance to the user's own Bitfinex Funding wallet, performs USDT/USD conversion, posts / cancels / renews funding offers on Bitfinex on the user's behalf, and withdraws earned funds back to the user's own Quiver deposit address. The Service's withdrawal capability is restricted to sending funds back to the user's own Quiver account; the Service cannot move funds to any third-party wallet, and users are strongly encouraged to additionally configure Bitfinex's withdrawal address whitelist for technical enforcement. Bitfinex is an independent third-party platform; the Service is not liable for any losses arising from Bitfinex platform incidents, downtime, insolvency, policy changes, or on-chain events. Users may revoke the Bitfinex API key at any time, immediately preventing further actions by the Service.",
     },
     sPerfFee: {
       h: "9. Performance fee",
@@ -275,7 +275,7 @@ const STRINGS: Record<Locale, {
     sEarn: {
       h: "8. Quiver Earn サービス(Bitfinex 自動貸付連携)",
       body:
-        "Earn はオプション(opt-in)機能です。ユーザーは自身が保有する Bitfinex API キー(Margin Funding の読み書き権限のみ。本サービスは Withdrawal 権限を「絶対に」要求しません)および Bitfinex Funding ウォレットの TRC-20 入金アドレスを自発的に提供します。本サービスはこれに基づき、ユーザーの Quiver 残高の USDT を自身の Bitfinex Funding ウォレットへ自動転送し、Bitfinex 上で funding offer の自動掲載・取消・更新を行います。ユーザーの資金は常に本人の KYC 済み Bitfinex アカウント内に保管され、本サービスには出金権限はなく、他のアカウントへ資金を移動することもできません。Bitfinex は独立した第三者プラットフォームであり、Bitfinex のプラットフォーム事故、停止、破綻、ポリシー変更、オンチェーンイベント等に起因する損失について、本サービスは賠償責任を負いません。ユーザーはいつでも Bitfinex 側で当該 API キーを取り消すことができ、取り消し後は本サービスはアカウントを操作できなくなります。",
+        "Earn はオプション(opt-in)機能です。ユーザーは自身が保有する Bitfinex API キー(Margin Funding の読み書き権限、および獲得した利息を自動的に USDT に変換しユーザー本人の Quiver 入金アドレスへ出金するための Withdrawal 権限が必要)および Bitfinex Funding ウォレットの TRC-20 入金アドレスを自発的に提供します。本サービスはこれに基づき、ユーザーの Quiver 残高の USDT を自身の Bitfinex Funding ウォレットへ自動転送し、USDT/USD 変換、Bitfinex 上での funding offer の自動掲載・取消・更新、および獲得した資金のユーザー本人 Quiver 入金アドレスへの自動出金を行います。本サービスの出金機能はユーザー本人の Quiver アカウントへの送金のみに制限されており、第三者ウォレットへ資金を移動することはできません。技術的な追加制限として、ユーザーは Bitfinex 側で「出金アドレスホワイトリスト」を設定することを強く推奨されます。Bitfinex は独立した第三者プラットフォームであり、Bitfinex のプラットフォーム事故、停止、破綻、ポリシー変更、オンチェーンイベント等に起因する損失について、本サービスは賠償責任を負いません。ユーザーはいつでも Bitfinex 側で当該 API キーを取り消すことができ、取り消し後は本サービスはアカウントを操作できなくなります。",
     },
     sPerfFee: {
       h: "9. パフォーマンスフィー",

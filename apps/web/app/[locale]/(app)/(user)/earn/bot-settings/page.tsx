@@ -83,7 +83,7 @@ const STRINGS: Record<Locale, {
       feeLabel: "績效費(只從你的利息收入扣,本金不動)",
       feeNote: "本金永遠不會被扣手續費。Fee 只在你的部位獲得利息且贖回時計算,從利息總額中抽取上述比例。",
     },
-    bufferTip: "💡 建議 Quiver wallet 留 $50+ 作為 fee 預留，因為 Quiver 沒有 Bitfinex 提現權限，fee 從你的 Quiver wallet 扣；\n留 buffer 可避免 4 週連續積欠後 auto-lend 被自動暫停。Premium 訂閱可完全跳過。",
+    bufferTip: "💡 建議 Quiver wallet 留 $50+ 作為 fee 預留，fee 會從你的 Quiver wallet 餘額扣。\n留 buffer 可避免 4 週連續積欠後 auto-lend 被自動暫停。Premium 訂閱可完全跳過。",
     dunningPaused: {
       title: "Auto-lend 已被 Quiver 暫停(連續 4 週未付 fee)",
       body: "你的 auto-lend 目前被 Quiver 自動暫停 — 即使你下面把 toggle 打開,下個週一 cron 跑完還是會再被暫停。要恢復:儲值 Quiver wallet 補足欠款,或升級 Premium。",
@@ -96,7 +96,7 @@ const STRINGS: Record<Locale, {
     },
     guideCard: {
       title: "第一次設定？先看完整教學",
-      desc: "教學包含：Bitfinex 怎麼開 API key，權限要勾哪些 / 不能勾哪些(尤其 Withdrawal 永遠不要開)、IP allowlist 設定、入金地址在哪裡找。",
+      desc: "教學包含：Bitfinex 怎麼開 API key、權限要勾哪些(尤其 Withdrawal 必開並設「提領白名單」鎖到你 Quiver 入金地址)、IP allowlist 設定、入金地址在哪裡找。",
       cta: "開啟教學頁面 →",
     },
     formCard: {
@@ -128,7 +128,7 @@ const STRINGS: Record<Locale, {
       feeLabel: "Performance fee (charged from interest only — never principal)",
       feeNote: "Your principal is never charged. The fee is calculated only when your position earns interest and you redeem, taking the above percentage from gross interest.",
     },
-    bufferTip: "💡 Keep $50+ in your Quiver wallet as a fee buffer — since Quiver has no Bitfinex withdrawal permission, fees deduct from your Quiver wallet balance. Without a buffer, after 4 consecutive unpaid weeks Quiver will auto-pause your auto-lend until you top up. Premium subscription bypasses this entirely.",
+    bufferTip: "💡 Keep $50+ in your Quiver wallet as a fee buffer — fees are deducted from your Quiver wallet balance. Without a buffer, after 4 consecutive unpaid weeks Quiver will auto-pause your auto-lend until you top up. Premium subscription bypasses this entirely.",
     dunningPaused: {
       title: "Auto-lend paused by Quiver (4 weeks of unpaid fees)",
       body: "Your auto-lend has been auto-paused by Quiver. Toggling it on below won't help — the next Monday cron will pause it again. To resume: top up your Quiver wallet to cover the arrears, or upgrade to Premium.",
@@ -141,7 +141,7 @@ const STRINGS: Record<Locale, {
     },
     guideCard: {
       title: "First time? Read the full guide",
-      desc: "The guide covers: how to create the API key, which permissions to enable / never enable (especially Withdrawal — never), IP allowlist setup, and where to find the deposit address.",
+      desc: "The guide covers: how to create the API key, which permissions to enable (especially Withdrawal — required, paired with the withdrawal whitelist locked to your Quiver deposit address), IP allowlist setup, and where to find the deposit address.",
       cta: "Open setup guide →",
     },
     formCard: {
@@ -173,7 +173,7 @@ const STRINGS: Record<Locale, {
       feeLabel: "パフォーマンス手数料(償還時、利息のみから差引)",
       feeNote: "元本に手数料がかかることはありません。手数料はポジションが利息を得て償還するときのみ計算され、利息総額から上記のパーセンテージが差し引かれます。",
     },
-    bufferTip: "💡 Quiver wallet に $50+ をフィーバッファとして保持することを推奨 — Quiver は Bitfinex の出金権限を持たないため、フィーは Quiver wallet 残高から差し引かれます。バッファなしで 4 週連続未払いになると、Quiver は auto-lend を自動的に一時停止します。Premium 購読でこれを回避できます。",
+    bufferTip: "💡 Quiver wallet に $50+ をフィーバッファとして保持することを推奨 — フィーは Quiver wallet 残高から差し引かれます。バッファなしで 4 週連続未払いになると、Quiver は auto-lend を自動的に一時停止します。Premium 購読でこれを回避できます。",
     dunningPaused: {
       title: "Auto-lend は Quiver により一時停止されました(4 週連続未払い)",
       body: "Auto-lend は Quiver により自動的に一時停止されています — 下のトグルをオンにしても、次回月曜の cron で再び停止されます。再開するには、Quiver wallet をチャージして滞納を解消するか、Premium にアップグレードしてください。",
@@ -186,7 +186,7 @@ const STRINGS: Record<Locale, {
     },
     guideCard: {
       title: "初めての設定?先にガイドを読む",
-      desc: "ガイドの内容:API キーの作成方法、有効にする / 絶対に有効にしない権限(特に Withdrawal は絶対に有効にしない)、IP allowlist の設定、入金アドレスの場所。",
+      desc: "ガイドの内容:API キーの作成方法、有効にする権限(特に Withdrawal は必須、出金ホワイトリストを Quiver 入金アドレスに固定して使用)、IP allowlist の設定、入金アドレスの場所。",
       cta: "セットアップガイドを開く →",
     },
     formCard: {

@@ -173,7 +173,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     notSetup: {
       title: "Connect your Bitfinex account",
       desc:
-        "Provide your Bitfinex API key + Funding wallet deposit address. Quiver will auto-send your deposits over and post funding offers. Your money stays in your own KYC'd Bitfinex account — Quiver has no withdrawal permission.",
+        "Provide your Bitfinex API key + Funding wallet deposit address. Quiver will auto-send your deposits over and post funding offers. Your money stays in your own KYC'd Bitfinex account.",
       cta: "Start connecting",
       viewGuide: "View full guide",
     },
@@ -238,7 +238,7 @@ const PAGE_STRINGS: Record<Locale, PageStrings> = {
     notSetup: {
       title: "Bitfinex アカウントを接続",
       desc:
-        "Bitfinex API キー + Funding ウォレットの入金アドレスを提供してください。Quiver はあなたの入金を自動的に送り、funding offer を出します。資金は常にあなた自身の KYC 済み Bitfinex アカウント内 — Quiver には出金権限はありません。",
+        "Bitfinex API キー + Funding ウォレットの入金アドレスを提供してください。Quiver はあなたの入金を自動的に送り、funding offer を出します。資金は常にあなた自身の KYC 済み Bitfinex アカウント内に保管されます。",
       cta: "接続を開始",
       viewGuide: "完全なガイドを見る",
     },

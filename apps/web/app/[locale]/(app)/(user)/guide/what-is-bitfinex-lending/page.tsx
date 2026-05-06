@@ -93,7 +93,7 @@ const STRINGS: Record<Locale, Strings> = {
         "Bitfinex 倒掉風險(Counterparty risk)— Bitfinex 本身的體質決定。歷史紀錄:2016 年被駭損失 1.2 億美元,Bitfinex 用 BFX token 全額補償用戶 + 後續完整買回。",
         "市場利率風險 — 利率隨市場波動,有可能很長時間維持低檔。",
         "鎖倉期風險 — 你掛的 offer 通常 2-30 天到期。中途想提錢需先取消尚未被接走的 offer,已被接走的部分要等到期。",
-        "API key 外洩風險 — Quiver 用最小權限 + IP allowlist,即使 key 外洩,攻擊者也無法提走你的錢(沒 Withdrawal 權限)。",
+        "API key 外洩風險 — Quiver 用最小權限 + IP allowlist,並建議在 Bitfinex 設「提領白名單」鎖定到你的 Quiver 入金地址,即使 key 外洩,攻擊者也只能把錢提回你 Quiver 帳戶,無法挪到外部錢包。",
       ],
     },
 
@@ -127,7 +127,7 @@ const STRINGS: Record<Locale, Strings> = {
         "On expiry, Bitfinex automatically returns your principal + interest to your Funding wallet",
         "Quiver sees the funds returned and posts a fresh offer to keep earning",
       ],
-      tail: "Throughout this flow your money stays in your own Bitfinex account — Quiver has no withdrawal permission. You can cancel or withdraw at any time on Bitfinex yourself.",
+      tail: "Throughout this flow your money stays in your own Bitfinex account. You can cancel or withdraw at any time on Bitfinex yourself, and we recommend setting up Bitfinex's withdrawal whitelist to lock the API key's withdrawal scope to your Quiver address.",
     },
 
     s3: {
@@ -173,7 +173,7 @@ const STRINGS: Record<Locale, Strings> = {
         "Bitfinex insolvency / counterparty risk — depends on Bitfinex's health. History: 2016 hack of $120M; Bitfinex repaid all users via BFX tokens then bought them back at full value.",
         "Market rate risk — funding rates fluctuate, can stay low for long stretches.",
         "Lock-up risk — your offers typically last 2-30 days. To withdraw early you can cancel unfilled offers, but accepted offers must wait until maturity.",
-        "API key compromise risk — Quiver uses minimal permissions + IP allowlist. Even if your key leaks, attackers cannot withdraw your funds (no Withdrawal permission).",
+        "API key compromise risk — Quiver uses minimal permissions + IP allowlist, and we recommend setting up Bitfinex's withdrawal whitelist locked to your Quiver deposit address. Even if your key leaks, attackers can only send funds back to your own Quiver account — never to any external wallet.",
       ],
     },
 
@@ -207,7 +207,7 @@ const STRINGS: Record<Locale, Strings> = {
         "満期時、Bitfinex は自動で元本 + 利息を Funding ウォレットに返却",
         "Quiver が返金を検知し、次のラウンドを稼ぐため新しい offer を出します",
       ],
-      tail: "全工程を通じて資金は常にあなた自身の Bitfinex アカウント内に — Quiver には出金権限はありません。Bitfinex 上のポジションはいつでも自分で取消・出金可能。",
+      tail: "全工程を通じて資金は常にあなた自身の Bitfinex アカウント内に保管されます。Bitfinex 上のポジションはいつでも自分で取消・出金可能。Bitfinex 側で「出金ホワイトリスト」を Quiver 入金アドレスに固定することを推奨。",
     },
 
     s3: {
@@ -253,7 +253,7 @@ const STRINGS: Record<Locale, Strings> = {
         "Bitfinex 破綻 / カウンターパーティリスク — Bitfinex 自体の健全性次第。過去:2016 年 1.2 億ドルのハック、Bitfinex は BFX トークンで全ユーザーに補償後、額面で買戻し。",
         "市場金利リスク — funding レートは変動し、低水準が長期化することもあります。",
         "ロックアップリスク — offer の期間は通常 2-30 日。早期引出は未約定 offer は取消可、約定済みは満期まで待つ必要があります。",
-        "API キー漏洩リスク — Quiver は最小権限 + IP Allowlist を使用。鍵が漏れても攻撃者は資金を引き出せません(出金権限なし)。",
+        "API キー漏洩リスク — Quiver は最小権限 + IP Allowlist を使用し、Bitfinex 側で「出金ホワイトリスト」を Quiver 入金アドレスに固定することを推奨。鍵が漏れても攻撃者は資金を Quiver アカウントへ戻すことしかできず、外部ウォレットへ流出させることはできません。",
       ],
     },
 

@@ -72,7 +72,7 @@ const STRINGS: Record<Locale, FeeStrings> = {
   "zh-TW": {
     title: "Quiver 平台費",
     subtitlePublic: (pct) =>
-      `從你的利息收入抽 ${pct}% 績效費。Quiver 沒有 Bitfinex 提現權限,所以 fee 從你的 Quiver wallet 餘額扣 — Quiver wallet 留 buffer 才不會延遲扣款。`,
+      `從你的利息收入抽 ${pct}% 績效費。Fee 從你的 Quiver wallet 餘額扣，留 buffer 可避免結算時餘額不足延遲扣款。`,
     subtitleFriend:
       "你在 Friend 等級，不收績效費。\n下面紀錄留空是正常的。謝謝你早期支持 🙇",
     subtitlePremium:
@@ -118,7 +118,7 @@ const STRINGS: Record<Locale, FeeStrings> = {
   en: {
     title: "Quiver platform fee",
     subtitlePublic: (pct) =>
-      `${pct}% performance fee from your interest income. Quiver has no withdrawal permission on Bitfinex, so the fee is deducted from your Quiver wallet balance — keep a buffer to avoid arrears.`,
+      `${pct}% performance fee from your interest income. The fee is deducted from your Quiver wallet balance — keep a buffer to avoid arrears at settlement.`,
     subtitleFriend:
       "You're on the Friend tier — no performance fee. The history below stays empty. Thanks for the early support 🙇",
     subtitlePremium:
@@ -164,7 +164,7 @@ const STRINGS: Record<Locale, FeeStrings> = {
   ja: {
     title: "Quiver プラットフォームフィー",
     subtitlePublic: (pct) =>
-      `利息収入から ${pct}% のパフォーマンスフィーを徴収。Quiver は Bitfinex の出金権限を持たないため、フィーは Quiver wallet 残高から差し引かれます — バッファを保って延滞を回避してください。`,
+      `利息収入から ${pct}% のパフォーマンスフィーを徴収。フィーは Quiver wallet 残高から差し引かれます — バッファを保って決済時の延滞を回避してください。`,
     subtitleFriend:
       "あなたは Friend ティア — パフォーマンスフィーなし。下記履歴が空なのが正常です。早期サポート感謝 🙇",
     subtitlePremium:
